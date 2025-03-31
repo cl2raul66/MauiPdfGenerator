@@ -19,17 +19,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <AndroidResource Remove="Core\PdfObjects\**" />
-	  <Compile Remove="Core\PdfObjects\**" />
-	  <EmbeddedResource Remove="Core\PdfObjects\**" />
-	  <MauiCss Remove="Core\PdfObjects\**" />
-	  <MauiXaml Remove="Core\PdfObjects\**" />
-	  <None Remove="Core\PdfObjects\**" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+	  <Folder Include="Fluent\" />
 	</ItemGroup>
 
 </Project>

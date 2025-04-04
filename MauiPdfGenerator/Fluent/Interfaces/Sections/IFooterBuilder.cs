@@ -14,7 +14,7 @@ public interface IFooterBuilder
     /// </summary>
     /// <param name="paragraphAction">Action to configure the paragraph.</param>
     /// <returns>The footer builder instance for chaining.</returns>
-    IFooterBuilder AddParagraph(Action<IParagraphBuilder> paragraphAction); 
+    IFooterBuilder AddParagraph(Action<IPdfParagraphBuilder> paragraphAction); 
 
     // Futuro: AddImage, AddGrid, AddVerticalStackLayout, etc.
     // Futuro: Métodos de configuración específicos del footer (ej: Height, Border)

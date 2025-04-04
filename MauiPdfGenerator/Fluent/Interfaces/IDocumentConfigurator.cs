@@ -35,19 +35,11 @@ public interface IDocumentConfigurator
     // IDocumentConfigurator Margins(float top, float right, float bottom, float left);
     // IDocumentConfigurator Margins(PdfMargins margins); // Usando un modelo
 
-    /// <summary>
-    /// Accesses the metadata configuration section.
-    /// (Nota: Esta versión simplificada solo retorna el configurador. Una versión más robusta usaría Action&lt;IMetadataConfigurator>)
-    /// </summary>
-    /// <returns>The document configurator instance for chaining.</returns>
-    IDocumentConfigurator Metadata(/* Action<IMetadataConfigurator> metadataAction */); // Placeholder - refinar más tarde
-
-    /// <summary>
-    /// Accesses the security configuration section.
-    /// (Nota: Esta versión simplificada solo retorna el configurador. Una versión más robusta usaría Action&lt;ISecurityConfigurator>)
-    /// </summary>
-    /// <returns>The document configurator instance for chaining.</returns>
-    IDocumentConfigurator SetSecurity(/* Action<ISecurityConfigurator> securityAction */); // Placeholder - refinar más tarde
-
-    // Futuro: Se necesitarán IMetadataConfigurator y ISecurityConfigurator aquí cuando se usen Actions.
+    // --- These would now likely take Actions with specific configurator interfaces ---
+    IDocumentConfigurator Metadata(Action<IMetadataConfigurator> metadataAction); // Placeholder interface
+    IDocumentConfigurator SetSecurity(Action<ISecurityConfigurator> securityAction); // Placeholder interface
 }
+
+// Placeholder interfaces needed for Metadata/Security Actions
+public interface IMetadataConfigurator { /* Title, Author, Subject... */ }
+public interface ISecurityConfigurator { /* Password, Permissions... */ }

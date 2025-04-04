@@ -14,7 +14,7 @@ public interface IBodyBuilder
     /// </summary>
     /// <param name="paragraphAction">Action to configure the paragraph.</param>
     /// <returns>The body builder instance for chaining.</returns>
-    IBodyBuilder AddParagraph(Action<IParagraphBuilder> paragraphAction); // Placeholder
+    IBodyBuilder AddParagraph(Action<IPdfParagraphBuilder> paragraphAction); // Placeholder
 
     // Futuro: AddImage, AddGrid, AddVerticalStackLayout, AddTable, AddBulletList, etc.
 }

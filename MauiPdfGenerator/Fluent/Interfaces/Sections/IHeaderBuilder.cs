@@ -14,7 +14,7 @@ public interface IHeaderBuilder
     /// </summary>
     /// <param name="paragraphAction">Action to configure the paragraph.</param>
     /// <returns>The header builder instance for chaining.</returns>
-    IHeaderBuilder AddParagraph(Action<IParagraphBuilder> paragraphAction); // Placeholder
+    IHeaderBuilder AddParagraph(Action<IPdfParagraphBuilder> paragraphAction); // Placeholder
 
     // Futuro: AddImage, AddGrid, AddVerticalStackLayout, etc.
     // Futuro: Métodos de configuración específicos del header (ej: Height, Border)

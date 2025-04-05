@@ -17,7 +17,7 @@ public interface IDocumentBuilder : IDisposable
     /// </summary>
     /// <param name="pageAction">Action to build the content of the page.</param>
     /// <returns>The document builder instance for chaining (to add more pages).</returns>
-    IDocumentBuilder AddPage(Action<IPdfPageBuilder> pageAction);
+    IDocumentBuilder PdfPage(Action<IPdfPageBuilder> pageAction);
 
     /// <summary>
     /// Generates the PDF document and saves it to the specified file path asynchronously.

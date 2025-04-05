@@ -1,4 +1,6 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces;
+﻿using MauiPdfGenerator.Fluent.Enums;
+
+namespace MauiPdfGenerator.Fluent.Interfaces;
 
 /// <summary>
 /// Base interface for all Fluent PDF view builders (elements and layouts).
@@ -53,14 +55,14 @@ public interface IPdfViewBuilder<TBuilder> where TBuilder : IPdfViewBuilder<TBui
     /// </summary>
     /// <param name="alignment">The horizontal alignment option.</param>
     /// <returns>The builder instance for chaining.</returns>
-    TBuilder HorizontalAlignment(HorizontalAlignment alignment);
+    TBuilder HorizontalOptions(PdfHorizontalAlignment alignment);
 
     /// <summary>
     /// Sets the vertical alignment of the view within its allocated space.
     /// </summary>
     /// <param name="alignment">The vertical alignment option.</param>
     /// <returns>The builder instance for chaining.</returns>
-    TBuilder VerticalAlignment(VerticalAlignment alignment);
+    TBuilder VerticalOptions(PdfVerticalAlignment alignment);
 
     /// <summary>
     /// Sets the background color of the view.

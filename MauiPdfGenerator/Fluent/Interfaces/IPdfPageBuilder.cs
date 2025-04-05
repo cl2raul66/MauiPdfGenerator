@@ -13,9 +13,9 @@ public interface IPdfPageBuilder
     /// <summary>
     /// Defines the content (elements and layouts) for this page.
     /// </summary>
-    /// <param name="childrenAction">Action to add content using the provided builder.</param>
+    /// <param name="contentAction">Action to add content using the provided builder.</param>
     /// <returns>The page builder instance (potentially for future chaining if needed).</returns>
-    IPdfPageBuilder Children(Action<IPdfContainerContentBuilder> childrenAction);
+    IPdfPageBuilder Content(Action<IPdfContainerContentBuilder> contentAction);
 
     // --- Page Context ---
     // int CurrentPageNumber { get; } // Potentially useful in Footer/Header scenarios

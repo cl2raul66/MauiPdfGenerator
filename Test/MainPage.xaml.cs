@@ -1,6 +1,8 @@
 ﻿using MauiPdfGenerator;
 using MauiPdfGenerator.Fluent.Enums;
 
+using static Microsoft.Maui.Graphics.Colors;
+
 namespace Test;
 
 public partial class MainPage : ContentPage
@@ -23,25 +25,31 @@ public partial class MainPage : ContentPage
                 {
                     config.PageSize(PageSizeType.A4)
                         .Spacing(16)
-                        .Margins(50)
-                        .Metadata()
-                        .SetSecurity();
+                        .Margins(50);
                 });
 
-                doc.AddPage(p =>
+                doc.PdfPage(p =>
                 {
-                    p.AddGrid(g =>
-                    {    
-                        g.r
-                        g.AddParagraph("Aquí esta el header");
-                    });
-                    p.ad(b =>
+                    p.Content(c =>
                     {
-                        b.AddParagraph("Aquí esta el Body");
-                    });
-                    p.Footer(f =>
-                    {
-                        f.AddParagraph("Aquí esta el footer");
+                        c.Grid(g =>
+                        {
+                            g.Children(c =>
+                            {
+                                c.Paragraph(p =>
+                                { 
+                                    p.Text("Hola Mundo!")
+                                    .HorizontalOptions(PdfHorizontalAlignment.Center)
+                                    .FormattedText(ft =>
+                                    {
+                                        ft.AddSpan(s =>
+                                        {
+                                            s.TextColor(Blue).Text(" cruel");
+                                        });
+                                    });
+                                }).Text("Hola mundo");
+                            });
+                        });
                     });
                 });
 

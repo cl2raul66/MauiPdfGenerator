@@ -1,7 +1,7 @@
 ﻿namespace MauiPdfGenerator.Fluent.Enums;
 
 [Flags]
-public enum FontAttributes
+public enum PdfFontAttributes
 {
     None = 0,
     Bold = 1 << 0,

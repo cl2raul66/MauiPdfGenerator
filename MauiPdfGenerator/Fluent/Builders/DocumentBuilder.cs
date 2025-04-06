@@ -1,0 +1,303 @@
+﻿using MauiPdfGenerator.Core.Structure;
+using MauiPdfGenerator.Core.IO;
+using MauiPdfGenerator.Core.Objects; // Necesario para PdfReference
+using MauiPdfGenerator.Fluent.Interfaces;
+using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Common.Geometry;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using System.Linq; // Para Count() en SaveAsync (si se usa LINQ)
+using Microsoft.Maui.Graphics; // Asegurarse que se usa Color de MAUI si es necesario (no usado directamente aquí)
+
+namespace MauiPdfGenerator.Fluent.Builders;
+
+/// <summary>
+/// Internal implementation of the main document builder interfaces.
+/// Manages document configuration and page creation actions.
+/// </summary>
+internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
+{
+    private readonly PdfDocument _pdfDocument; // La instancia del documento Core
+
+    // Configuraciones globales (defaults)
+    private PageSizeType _defaultPageSizeType = PageSizeType.A4;
+    private PdfRectangle _defaultMediaBox; // Calculado desde _defaultPageSizeType (usa double internamente)
+    private float _defaultMarginLeft = 50f; // Usar float para coincidir con interfaz
+    private float _defaultMarginTop = 50f;
+    private float _defaultMarginRight = 50f;
+    private float _defaultMarginBottom = 50f;
+    private float _defaultSpacing = 10f; // Espaciado por defecto, tipo float
+
+    // Lista de acciones para construir cada página
+    private readonly List<Action<IPdfPageBuilder>> _pageBuildActions = new List<Action<IPdfPageBuilder>>();
+
+    // TODO: Security settings storage
+    // private PdfSecuritySettings _securitySettings = new PdfSecuritySettings();
+
+    /// <summary>
+    /// Initializes a new instance of the DocumentBuilder class.
+    /// </summary>
+    public DocumentBuilder()
+    {
+        _pdfDocument = new PdfDocument();
+        // Establecer MediaBox inicial basado en A4 por defecto
+        SetDefaultMediaBoxFromPageSize(_defaultPageSizeType);
+        _pdfDocument.DefaultMediaBox = _defaultMediaBox; // Actualizar el default en el doc Core
+
+        // Configurar metadatos básicos por defecto
+        _pdfDocument.Info.Producer = "MauiPdfGenerator Library v0.1"; // Ejemplo con versión
+        // _pdfDocument.Info.Creator = "Your Application Name"; // Puede ser configurado por el usuario
+        _pdfDocument.Info.CreationDate = DateTimeOffset.Now; // Fecha de creación inicial
+    }
+
+    // --- IDocumentBuilder Implementation ---
+
+    /// <summary>
+    /// Configures global document settings.
+    /// </summary>
+    /// <param name="configAction">Action to configure the document settings.</param>
+    /// <returns>The document builder instance for chaining.</returns>
+    public IDocumentBuilder Configure(Action<IDocumentConfigurator> configAction)
+    {
+        if (configAction == null) throw new ArgumentNullException(nameof(configAction));
+        // Como esta misma clase implementa IDocumentConfigurator, nos pasamos a nosotros mismos
+        configAction(this);
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an action to build a new page to the document.
+    /// </summary>
+    /// <param name="pageAction">Action to build the content of the page.</param>
+    /// <returns>The document builder instance for chaining.</returns>
+    public IDocumentBuilder PdfPage(Action<IPdfPageBuilder> pageAction) // Corregido nombre
+    {
+        if (pageAction == null) throw new ArgumentNullException(nameof(pageAction));
+        _pageBuildActions.Add(pageAction);
+        return this;
+    }
+
+    /// <summary>
+    /// Generates the PDF document by executing page build actions and writing to the specified file path.
+    /// </summary>
+    /// <param name="filePath">The full path where the PDF file will be saved.</param>
+    /// <returns>A task representing the asynchronous save operation.</returns>
+    public async Task SaveAsync(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath));
+
+        // --- Proceso de Generación ---
+
+        // 1. Actualizar Metadata (ModDate) justo antes de guardar
+        _pdfDocument.Info.ModDate = DateTimeOffset.Now;
+
+        // 2. Construir Páginas
+        foreach (var pageAction in _pageBuildActions)
+        {
+            // TODO: Obtener MediaBox específico de la página si el usuario lo configura en pageAction
+            // Por ahora, usamos el default global.
+            var pageMediaBox = _defaultMediaBox;
+
+            // Crear el objeto PdfPage (Core). El padre se asignará después.
+            var pdfPage = new PdfPage(_pdfDocument, pageMediaBox);
+
+            // Crear el PageBuilder (Fluent) para esta página Core (CLASE AÚN NO EXISTE)
+            // Esta línea causará error hasta que PageBuilder.cs se cree.
+            var pageBuilder = new PageBuilder(_pdfDocument, pdfPage, this); // Pasamos defaults/contexto
+
+            // Ejecutar la acción del usuario para llenar la página usando el builder
+            pageAction(pageBuilder);
+
+            // Finalizar la página: PageBuilder debe haber creado el ContentStream,
+            // asignado recursos, y asignado el stream a pdfPage.Contents
+            pageBuilder.FinalizePage(); // Método necesario en PageBuilder
+
+            // Añadir la página Core completada al documento (esto la añade al árbol y asigna Parent)
+            _pdfDocument.AddPage(pdfPage);
+        }
+
+        // 3. Escribir el Documento PDF final
+        // Se asume que el PdfDocument ahora contiene todos los objetos necesarios (Catalog, Info, Pages, Resources, Streams...)
+        using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            var writer = new PdfWriter(_pdfDocument);
+            await writer.WriteAsync(fileStream);
+        }
+    }
+
+    // --- IDocumentConfigurator Implementation ---
+
+    /// <summary>
+    /// Sets the default page size.
+    /// </summary>
+    /// <param name="size">The predefined page size.</param>
+    /// <returns>The document configurator instance.</returns>
+    public IDocumentConfigurator PageSize(PageSizeType size)
+    {
+        _defaultPageSizeType = size;
+        SetDefaultMediaBoxFromPageSize(size);
+        _pdfDocument.DefaultMediaBox = _defaultMediaBox; // Actualizar el default en el doc Core
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default spacing value.
+    /// </summary>
+    /// <param name="value">The spacing value.</param>
+    /// <returns>The document configurator instance.</returns>
+    public IDocumentConfigurator Spacing(float value) // Corregido tipo a float
+    {
+        if (value < 0) value = 0;
+        _defaultSpacing = value;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default uniform page margin.
+    /// </summary>
+    /// <param name="uniformMargin">The margin value.</param>
+    /// <returns>The document configurator instance.</returns>
+    public IDocumentConfigurator Margins(float uniformMargin) // Corregido tipo a float
+    {
+        if (uniformMargin < 0) uniformMargin = 0;
+        _defaultMarginLeft = uniformMargin;
+        _defaultMarginTop = uniformMargin;
+        _defaultMarginRight = uniformMargin;
+        _defaultMarginBottom = uniformMargin;
+        return this;
+    }
+    // TODO: Implementar el overload Margins(float left, float top, float right, float bottom) si se añade a la interfaz
+
+    /// <summary>
+    /// Configures document metadata using an action.
+    /// </summary>
+    /// <param name="metadataAction">Action to configure metadata.</param>
+    /// <returns>The document configurator instance.</returns>
+    public IDocumentConfigurator Metadata(Action<IMetadataConfigurator> metadataAction)
+    {
+        if (metadataAction == null) throw new ArgumentNullException(nameof(metadataAction));
+        // Usamos un adaptador simple que opera sobre _pdfDocument.Info
+        var infoAdapter = new MetadataConfiguratorAdapter(_pdfDocument.Info);
+        metadataAction(infoAdapter);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures document security settings using an action. (Not Implemented Yet)
+    /// </summary>
+    /// <param name="securityAction">Action to configure security.</param>
+    /// <returns>The document configurator instance.</returns>
+    public IDocumentConfigurator SetSecurity(Action<ISecurityConfigurator> securityAction)
+    {
+        // TODO: Implementar ISecurityConfigurator y la lógica de seguridad en Core
+        if (securityAction == null) throw new ArgumentNullException(nameof(securityAction));
+        Console.WriteLine("Warning: DocumentBuilder.SetSecurity is not implemented yet."); // Placeholder
+        // var securityAdapter = new SecurityConfiguratorAdapter(_securitySettings);
+        // securityAction(securityAdapter);
+        return this;
+    }
+
+    // --- IDisposable Implementation ---
+    /// <summary>
+    /// Disposes resources (if any). Currently no unmanaged resources directly held.
+    /// </summary>
+    public void Dispose()
+    {
+        // Implement IDisposable pattern if needed in the future for unmanaged resources
+        GC.SuppressFinalize(this);
+    }
+
+
+    // --- Internal Helpers / Properties for PageBuilder ---
+
+    /// <summary>
+    /// Gets the default media box for pages.
+    /// </summary>
+    internal PdfRectangle DefaultPageMediaBox => _defaultMediaBox;
+    /// <summary>
+    /// Gets the default left margin for pages.
+    /// </summary>
+    internal float DefaultPageMarginLeft => _defaultMarginLeft;
+    /// <summary>
+    /// Gets the default top margin for pages.
+    /// </summary>
+    internal float DefaultPageMarginTop => _defaultMarginTop;
+    /// <summary>
+    /// Gets the default right margin for pages.
+    /// </summary>
+    internal float DefaultPageMarginRight => _defaultMarginRight;
+    /// <summary>
+    /// Gets the default bottom margin for pages.
+    /// </summary>
+    internal float DefaultPageMarginBottom => _defaultMarginBottom;
+    /// <summary>
+    /// Gets the default spacing between elements.
+    /// </summary>
+    internal float DefaultElementSpacing => _defaultSpacing;
+
+
+    // --- Private Helpers ---
+
+    /// <summary>
+    /// Updates the internal default media box based on the selected page size type.
+    /// </summary>
+    /// <param name="size">The page size type.</param>
+    private void SetDefaultMediaBoxFromPageSize(PageSizeType size)
+    {
+        _defaultMediaBox = GetStandardPageSize(size);
+    }
+
+    /// <summary>
+    /// Gets the dimensions (as PdfRectangle starting at 0,0) for standard page sizes in PDF points.
+    /// </summary>
+    /// <param name="size">The standard page size enum value.</param>
+    /// <returns>A PdfRectangle representing the page dimensions.</returns>
+    private static PdfRectangle GetStandardPageSize(PageSizeType size)
+    {
+        // PDF units are points (1/72 inch)
+        const double mmToPt = 72.0 / 25.4;
+        const double inchToPt = 72.0;
+
+        switch (size)
+        {
+            case PageSizeType.A4:
+                // A4: 210 x 297 mm
+                return new PdfRectangle(0, 0, Math.Round(210 * mmToPt), Math.Round(297 * mmToPt)); // Rounded values common
+            case PageSizeType.Letter:
+                // Letter: 8.5 x 11 inches
+                return new PdfRectangle(0, 0, 8.5 * inchToPt, 11 * inchToPt); // 612 x 792 pt
+            case PageSizeType.Legal:
+                // Legal: 8.5 x 14 inches
+                return new PdfRectangle(0, 0, 8.5 * inchToPt, 14 * inchToPt); // 612 x 1008 pt
+                                                                              // Add other standard sizes (A3, A5, B5, Tabloid, etc.)
+            default:
+                // Default to A4 if unknown or not specified
+                Console.WriteLine($"Warning: Unknown PageSizeType '{size}'. Defaulting to A4.");
+                return new PdfRectangle(0, 0, Math.Round(210 * mmToPt), Math.Round(297 * mmToPt));
+        }
+    }
+
+    // --- Adaptador simple para IMetadataConfigurator usando PdfInfo ---
+    /// <summary>
+    /// Internal adapter to allow PdfInfo to be configured via IMetadataConfigurator.
+    /// </summary>
+    private class MetadataConfiguratorAdapter : IMetadataConfigurator
+    {
+        private readonly PdfInfo _info;
+        public MetadataConfiguratorAdapter(PdfInfo info) { _info = info ?? throw new ArgumentNullException(nameof(info)); }
+
+        public IMetadataConfigurator Title(string title) { _info.Title = title; return this; }
+        public IMetadataConfigurator Author(string author) { _info.Author = author; return this; }
+        public IMetadataConfigurator Subject(string subject) { _info.Subject = subject; return this; }
+        public IMetadataConfigurator Keywords(string keywords) { _info.Keywords = keywords; return this; }
+        // Add Creator, Producer if needed in public interface IMetadataConfigurator
+    }
+
+    // TODO: Implement SecurityConfiguratorAdapter class and PdfSecuritySettings class/logic
+
+} // Fin clase DocumentBuilder
+
+// Fin namespace MauiPdfGenerator.Fluent.Builders

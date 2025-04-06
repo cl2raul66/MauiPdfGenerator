@@ -1,100 +1,63 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces;
+using MauiPdfGenerator.Fluent.Builders; // Namespace for GridChildInfo
+using System;
 
 namespace MauiPdfGenerator.Fluent.Extensions;
 
-/// <summary>
-/// Provides extension methods for positioning elements within a PdfGrid.
-/// Mimics MAUI's Grid attached properties.
-/// </summary>
 public static class PdfGridPositionExtensions
 {
-    // --- Keys for storing position info (Example - implementation depends on builders) ---
-    internal static readonly object RowKey = new object();
-    internal static readonly object ColumnKey = new object();
-    internal static readonly object RowSpanKey = new object();
-    internal static readonly object ColumnSpanKey = new object();
+    // No necesitamos las Keys si usamos ConditionalWeakTable
 
-    /// <summary>
-    /// Sets the row index for an element within a PdfGrid.
-    /// </summary>
-    /// <typeparam name="TBuilder">The type of the view builder.</typeparam>
-    /// <param name="builder">The view builder instance.</param>
-    /// <param name="row">The zero-based row index.</param>
-    /// <returns>The builder instance for chaining.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">If row is negative.</exception>
     public static TBuilder Row<TBuilder>(this TBuilder builder, int row)
-        where TBuilder : IPdfViewBuilder<TBuilder>
+        where TBuilder : IPdfViewBuilder<TBuilder> // O la interfaz base común que usen los builders
     {
         if (row < 0) throw new ArgumentOutOfRangeException(nameof(row), "Row index must be non-negative.");
-        // --- Implementation Detail ---
-        // How this is stored depends on the concrete builder implementation.
-        // Option 1: Builders have internal methods/properties.
-        // Option 2: Builders use a dictionary/property bag (e.g., via Get/SetProperty on base).
-        // builder.SetProperty(RowKey, row); // Example using property bag
+        // Get existing info or create new, then update row
+        var info = GridChildInfo.GetAndRemovePositionInfo(builder); // Get (potentially default)
+        info.Row = row;
+        GridChildInfo.SetPositionInfo(builder, info.Row, info.Column, info.RowSpan, info.ColumnSpan); // Set updated info
         return builder;
     }
 
-    /// <summary>
-    /// Sets the column index for an element within a PdfGrid.
-    /// </summary>
-    /// <typeparam name="TBuilder">The type of the view builder.</typeparam>
-    /// <param name="builder">The view builder instance.</param>
-    /// <param name="column">The zero-based column index.</param>
-    /// <returns>The builder instance for chaining.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">If column is negative.</exception>
     public static TBuilder Column<TBuilder>(this TBuilder builder, int column)
         where TBuilder : IPdfViewBuilder<TBuilder>
     {
         if (column < 0) throw new ArgumentOutOfRangeException(nameof(column), "Column index must be non-negative.");
-        // builder.SetProperty(ColumnKey, column); // Example
+        var info = GridChildInfo.GetAndRemovePositionInfo(builder);
+        info.Column = column;
+        GridChildInfo.SetPositionInfo(builder, info.Row, info.Column, info.RowSpan, info.ColumnSpan);
         return builder;
     }
 
-    /// <summary>
-    /// Sets the number of rows an element spans within a PdfGrid.
-    /// </summary>
-    /// <typeparam name="TBuilder">The type of the view builder.</typeparam>
-    /// <param name="builder">The view builder instance.</param>
-    /// <param name="span">The number of rows to span (must be 1 or greater).</param>
-    /// <returns>The builder instance for chaining.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">If span is less than 1.</exception>
     public static TBuilder RowSpan<TBuilder>(this TBuilder builder, int span)
         where TBuilder : IPdfViewBuilder<TBuilder>
     {
         if (span < 1) throw new ArgumentOutOfRangeException(nameof(span), "Row span must be 1 or greater.");
-        // builder.SetProperty(RowSpanKey, span); // Example
+        var info = GridChildInfo.GetAndRemovePositionInfo(builder);
+        info.RowSpan = span;
+        GridChildInfo.SetPositionInfo(builder, info.Row, info.Column, info.RowSpan, info.ColumnSpan);
         return builder;
     }
 
-    /// <summary>
-    /// Sets the number of columns an element spans within a PdfGrid.
-    /// </summary>
-    /// <typeparam name="TBuilder">The type of the view builder.</typeparam>
-    /// <param name="builder">The view builder instance.</param>
-    /// <param name="span">The number of columns to span (must be 1 or greater).</param>
-    /// <returns>The builder instance for chaining.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">If span is less than 1.</exception>
     public static TBuilder ColumnSpan<TBuilder>(this TBuilder builder, int span)
          where TBuilder : IPdfViewBuilder<TBuilder>
     {
         if (span < 1) throw new ArgumentOutOfRangeException(nameof(span), "Column span must be 1 or greater.");
-        // builder.SetProperty(ColumnSpanKey, span); // Example
+        var info = GridChildInfo.GetAndRemovePositionInfo(builder);
+        info.ColumnSpan = span;
+        GridChildInfo.SetPositionInfo(builder, info.Row, info.Column, info.RowSpan, info.ColumnSpan);
         return builder;
     }
 
-    // --- Helper methods (Internal or Public?) to retrieve the values ---
-    // These would be used by the PdfGrid layout logic internally.
-    /*
-    internal static int GetRow<TBuilder>(this TBuilder builder) where TBuilder : IPdfViewBuilder<TBuilder>
-        => (int?)builder.GetProperty(RowKey) ?? 0; // Default to 0 if not set
-
-    internal static int GetColumn<TBuilder>(this TBuilder builder) where TBuilder : IPdfViewBuilder<TBuilder>
-        => (int?)builder.GetProperty(ColumnKey) ?? 0; // Default to 0
-
-    internal static int GetRowSpan<TBuilder>(this TBuilder builder) where TBuilder : IPdfViewBuilder<TBuilder>
-        => (int?)builder.GetProperty(RowSpanKey) ?? 1; // Default to 1
-
-    internal static int GetColumnSpan<TBuilder>(this TBuilder builder) where TBuilder : IPdfViewBuilder<TBuilder>
-        => (int?)builder.GetProperty(ColumnSpanKey) ?? 1; // Default to 1
-    */
+    // Helper para simplificar la asignación conjunta (opcional)
+    public static TBuilder GridPosition<TBuilder>(this TBuilder builder, int row, int column, int rowSpan = 1, int columnSpan = 1)
+        where TBuilder : IPdfViewBuilder<TBuilder>
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(row);
+        ArgumentOutOfRangeException.ThrowIfNegative(column);
+        ArgumentOutOfRangeException.ThrowIfLessThan(rowSpan, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(columnSpan, 1);
+        GridChildInfo.SetPositionInfo(builder, row, column, rowSpan, columnSpan);
+        return builder;
+    }
 }

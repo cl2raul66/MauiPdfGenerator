@@ -4,7 +4,7 @@ using MauiPdfGenerator.Core.Structure;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 
-namespace MauiPdfGenerator.Fluent.Builders;
+namespace MauiPdfGenerator.Implementation.Builders;
 
 /// <summary>
 /// Internal implementation for building PDF Image elements.
@@ -21,7 +21,7 @@ internal class ImageBuilder : IPdfImageBuilder
     private string? _sourcePathOrUrl;
     private byte[]? _sourceBytes;
     private Stream? _sourceStream;
-    private SourceType _sourceType = SourceType.None;
+    private PdfImageSourceType _sourceType = PdfImageSourceType.None;
 
     // Presentation
     private PdfAspect _aspect = PdfAspect.AspectFit; // Default aspect
@@ -29,23 +29,20 @@ internal class ImageBuilder : IPdfImageBuilder
     // View Properties (from IPdfViewBuilder)
     private double? _explicitWidth;
     private double? _explicitHeight;
-    private PdfMargin _margin = PdfMargin.Zero; // Usa el struct auxiliar definido en ParagraphBuilder.cs o muévelo a Common
+    private Thickness _margin = Thickness.Zero; // Usa el struct auxiliar definido en ParagraphBuilder.cs o muévelo a Common
     private PdfHorizontalAlignment _horizontalOptions = PdfHorizontalAlignment.Start;
     private PdfVerticalAlignment _verticalOptions = PdfVerticalAlignment.Start;
     private Color? _backgroundColor; // Less common for images, but possible
 
-    // Enum interno para rastrear el tipo de fuente
-    private enum SourceType { None, PathOrUrl, Bytes, Stream }
-
     // Propiedades públicas para PageBuilder/Layout
-    public SourceType ConfiguredSourceType => _sourceType;
+    public PdfImageSourceType ConfiguredSourceType => _sourceType;
     public string? ConfiguredSourcePathOrUrl => _sourcePathOrUrl;
     public byte[]? ConfiguredSourceBytes => _sourceBytes;
     public Stream? ConfiguredSourceStream => _sourceStream;
     public PdfAspect ConfiguredAspect => _aspect;
     public double? ConfiguredWidth => _explicitWidth;
     public double? ConfiguredHeight => _explicitHeight;
-    public PdfMargin ConfiguredMargin => _margin;
+    public Thickness ConfiguredMargin => _margin;
     public PdfHorizontalAlignment ConfiguredHorizontalOptions => _horizontalOptions;
     public PdfVerticalAlignment ConfiguredVerticalOptions => _verticalOptions;
     public Color? ConfiguredBackgroundColor => _backgroundColor;
@@ -65,7 +62,7 @@ internal class ImageBuilder : IPdfImageBuilder
     {
         ClearSources();
         _sourcePathOrUrl = pathOrUrl;
-        _sourceType = SourceType.PathOrUrl;
+        _sourceType = PdfImageSourceType.PathOrUrl;
         return this;
     }
 
@@ -73,7 +70,7 @@ internal class ImageBuilder : IPdfImageBuilder
     {
         ClearSources();
         _sourceBytes = imageData;
-        _sourceType = SourceType.Bytes;
+        _sourceType = PdfImageSourceType.Bytes;
         return this;
     }
 
@@ -81,7 +78,7 @@ internal class ImageBuilder : IPdfImageBuilder
     {
         ClearSources();
         _sourceStream = imageStream;
-        _sourceType = SourceType.Stream;
+        _sourceType = PdfImageSourceType.Stream;
         return this;
     }
 
@@ -95,31 +92,31 @@ internal class ImageBuilder : IPdfImageBuilder
 
     public IPdfImageBuilder Width(double width)
     {
-        _explicitWidth = width >= 0 ? width : (double?)null;
+        _explicitWidth = width >= 0 ? width : null;
         return this;
     }
 
     public IPdfImageBuilder Height(double height)
     {
-        _explicitHeight = height >= 0 ? height : (double?)null;
+        _explicitHeight = height >= 0 ? height : null;
         return this;
     }
 
     public IPdfImageBuilder Margin(double uniformMargin)
     {
-        _margin = new PdfMargin(uniformMargin);
+        _margin = new Thickness(uniformMargin);
         return this;
     }
 
     public IPdfImageBuilder Margin(double horizontal, double vertical)
     {
-        _margin = new PdfMargin(horizontal, vertical);
+        _margin = new Thickness(horizontal, vertical);
         return this;
     }
 
     public IPdfImageBuilder Margin(double left, double top, double right, double bottom)
     {
-        _margin = new PdfMargin(left, top, right, bottom);
+        _margin = new Thickness(left, top, right, bottom);
         return this;
     }
 
@@ -135,7 +132,7 @@ internal class ImageBuilder : IPdfImageBuilder
         return this;
     }
 
-    public IPdfImageBuilder BackgroundColor(Color color)
+    public IPdfImageBuilder BackgroundColor(Color? color)
     {
         _backgroundColor = color;
         return this;
@@ -171,13 +168,13 @@ internal class ImageBuilder : IPdfImageBuilder
         // The caller who provided the stream is responsible for its lifetime.
         // If we created a MemoryStream internally, we should dispose it. Needs careful handling.
         _sourceStream = null; // Clear the reference
-        _sourceType = SourceType.None;
+        _sourceType = PdfImageSourceType.None;
         PdfImageXObject = null; // Reset created object if source changes
     }
 
     private void CreatePdfImageXObject()
     {
-        if (_sourceType == SourceType.None)
+        if (_sourceType == PdfImageSourceType.None)
         {
             Console.WriteLine("Warning: Attempting to create image object with no source set.");
             return; // Or throw?
@@ -195,7 +192,7 @@ internal class ImageBuilder : IPdfImageBuilder
 
             switch (_sourceType)
             {
-                case SourceType.PathOrUrl:
+                case PdfImageSourceType.PathOrUrl:
                     if (!string.IsNullOrEmpty(_sourcePathOrUrl))
                     {
                         // Simplistic file handling - NO URL or MAUI Resource handling yet!
@@ -213,14 +210,14 @@ internal class ImageBuilder : IPdfImageBuilder
                         }
                     }
                     break;
-                case SourceType.Bytes:
+                case PdfImageSourceType.Bytes:
                     if (_sourceBytes != null)
                     {
                         imageStream = new MemoryStream(_sourceBytes);
                         ownStream = true; // We created it from bytes
                     }
                     break;
-                case SourceType.Stream:
+                case PdfImageSourceType.Stream:
                     imageStream = _sourceStream;
                     ownStream = false; // Assume external stream, caller manages lifetime
                     break;
@@ -231,7 +228,7 @@ internal class ImageBuilder : IPdfImageBuilder
                 try
                 {
                     // Use the Core factory method which uses the abstracted IPdfImageProcessor
-                    PdfImageXObject = Core.Images.PdfImageXObject.Create(_pdfDocument, imageStream);
+                    PdfImageXObject = PdfImageXObject.Create(_pdfDocument, imageStream);
                 }
                 finally
                 {

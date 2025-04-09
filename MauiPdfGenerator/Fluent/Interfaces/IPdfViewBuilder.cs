@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+﻿using Microsoft.Maui.Graphics;
+using MauiPdfGenerator.Fluent.Enums;
 
 namespace MauiPdfGenerator.Fluent.Interfaces;
 
@@ -69,7 +70,7 @@ public interface IPdfViewBuilder<TBuilder> where TBuilder : IPdfViewBuilder<TBui
     /// </summary>
     /// <param name="color">The background color (from Microsoft.Maui.Graphics).</param>
     /// <returns>The builder instance for chaining.</returns>
-    TBuilder BackgroundColor(Color color);
+    TBuilder BackgroundColor(Color? color);
 
     // --- Internal Use / Advanced ---
     // This method might be needed by extensions or internal logic

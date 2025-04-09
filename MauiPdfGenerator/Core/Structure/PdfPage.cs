@@ -1,5 +1,6 @@
 ﻿using MauiPdfGenerator.Common.Geometry;
 using MauiPdfGenerator.Core.Objects;
+using MauiPdfGenerator.Core.Content;
 
 namespace MauiPdfGenerator.Core.Structure;
 
@@ -9,7 +10,10 @@ namespace MauiPdfGenerator.Core.Structure;
 /// </summary>
 internal class PdfPage : PdfDictionary
 {
-    private readonly PdfDocument _document;
+    private readonly PdfDocument _document; 
+
+    internal PdfResources PageResources => _pageResources;
+    private readonly PdfResources _pageResources; // Mover la declaración aquí
 
     /// <summary>
     /// Gets or sets the reference to the parent node in the page tree. REQUIRED.
@@ -24,26 +28,18 @@ internal class PdfPage : PdfDictionary
         }
     }
 
-    /// <summary>
-    /// Gets or sets the rectangle defining the boundaries of the physical medium (/MediaBox). REQUIRED.
-    /// Expressed in default user space units. Inheritable.
-    /// </summary>
     public PdfRectangle MediaBox
     {
-        // TODO: Implement inheritance lookup if not set directly
-        get => GetRectangle(PdfName.MediaBox) ?? throw new InvalidOperationException("Page /MediaBox is missing.");
-        set => Add(PdfName.MediaBox, CreatePdfArray(value));
+        // Usa el getter que convierte DESDE PDF Array
+        get => GetRectangle(PdfName.MediaBox) ?? throw new InvalidOperationException("Page /MediaBox is missing or invalid.");
+        // Usa el setter que convierte HACIA PDF Array
+        set => Add(PdfName.MediaBox, CreatePdfArray(value)); // value está en UI Coords
     }
 
-    /// <summary>
-    /// Gets or sets the rectangle defining the visible region (/CropBox). Optional.
-    /// Defaults to MediaBox if not specified. Inheritable.
-    /// </summary>
     public PdfRectangle? CropBox
     {
-        // TODO: Implement inheritance lookup
-        get => GetRectangle(PdfName.CropBox);
-        set => AddOrRemoveRectangle(PdfName.CropBox, value);
+        get => GetRectangle(PdfName.CropBox); // Usa el getter que convierte DESDE PDF Array
+        set => AddOrRemoveRectangle(PdfName.CropBox, value); // value está en UI Coords
     }
 
     /// <summary>
@@ -103,54 +99,86 @@ internal class PdfPage : PdfDictionary
 
         Add(PdfName.Type, PdfName.Page); // Required /Type entry
         Parent = parentRef;             // Required /Parent entry
-        MediaBox = mediaBox;            // Required /MediaBox entry
 
-        // Initialize required Resources dictionary (will be populated later)
-        Resources = new PdfDictionary(); // Start with an empty dictionary
+        // !! Importante: Establecer MediaBox PRIMERO usando el método que hace la conversión !!
+        this.MediaBox = mediaBox; // Usa el setter, que llama a CreatePdfArray
+
+        // Ahora es seguro usar this.MediaBox en otras conversiones si fuera necesario
+
+        // Initialize required Resources dictionary
+        _pageResources = new PdfResources(document); // PdfResources needs PdfDocument reference
+        Add(PdfName.Resources, _pageResources); // Add the dictionary directly for now? Or add indirectly? Check PdfDocument.AddPage
 
         // Contents will be set later when the content stream is created
     }
 
-
     // --- Helper Methods ---
-    private static PdfArray CreatePdfArray(PdfRectangle rect)
+    private PdfArray CreatePdfArray(PdfRectangle rect) // Recibe rect en coords UI (Top-Left)
     {
-        // PDF rectangle: [lower-left-x lower-left-y upper-right-x upper-right-y]
-        // Our PdfRectangle origin is top-left, PDF coordinate system origin is bottom-left usually.
-        // For now, assume rect coordinates are already in PDF space (LLX, LLY, URX, URY?)
-        // Let's assume our PdfRectangle uses PDF coordinates for MediaBox/CropBox directly.
-        // LLX = rect.Left, LLY = rect.Bottom (if Y increases upwards), URX = rect.Right, URY = rect.Top
-        // Common PDF convention: Y increases upwards from bottom-left origin.
-        // Our PdfRectangle: X, Y (TopLeft), Width, Height
-        // We need: [X, Y+Height, X+Width, Y] ? NO, PDF origin is Bottom-Left!
-        // PDF Spec: [LLx LLy URx URy]
-        // So: [rect.Left, rect.Bottom, rect.Right, rect.Top] assuming our Y increases upwards for rect.
-        // BUT our rect assumes Y increases DOWNWARDS (Top, Bottom properties).
-        // --> Let's assume the passed PdfRectangle ALREADY uses the PDF coordinate system (origin bottom-left, Y increases up)
-        // --> So, LLx = rect.X, LLy = rect.Y, URx = rect.X + rect.Width, URy = rect.Y + rect.Height
+        // Necesitamos la altura total del MediaBox para la conversión de Y
+        double mediaBoxHeight = this.MediaBox.Height; // Asume que MediaBox ya está establecido
+
+        // PDF rectangle: [LLx LLy URx URy]
+        double llx = rect.X;
+        // LLY: El Y de PDF es la distancia desde el borde inferior.
+        // Es igual a AlturaTotal - Y_UI_Top - AlturaRect
+        // O también: AlturaTotal - Y_UI_Bottom
+        double lly = mediaBoxHeight - rect.Bottom;
+        double urx = rect.Right;
+        // URY: El Y de PDF es la distancia desde el borde inferior.
+        // Es igual a AlturaTotal - Y_UI_Top
+        double ury = mediaBoxHeight - rect.Top;
+
+        // Asegurarse que lly <= ury
+        if (lly > ury)
+        {
+            // Esto podría pasar si height es negativo, aunque el constructor de PdfRectangle lo impide.
+            // O si mediaBoxHeight es incorrecto. Por seguridad, intercambiamos.
+            (lly, ury) = (ury, lly);
+            Console.WriteLine("Warning: Corrected inverted Y coordinates in CreatePdfArray for PdfPage.");
+        }
+
+
         return new PdfArray(
-            new PdfNumber(rect.X),                 // LLx
-            new PdfNumber(rect.Y),                 // LLy
-            new PdfNumber(rect.X + rect.Width),    // URx
-            new PdfNumber(rect.Y + rect.Height)    // URy
+            new PdfNumber(llx),
+            new PdfNumber(lly),
+            new PdfNumber(urx),
+            new PdfNumber(ury)
         );
     }
 
     private PdfRectangle? GetRectangle(PdfName key)
     {
         if (this[key] is PdfArray arr && arr.Count == 4 &&
-            arr.ElementAtOrDefault(0) is PdfNumber n1 &&
-            arr.ElementAtOrDefault(1) is PdfNumber n2 &&
-            arr.ElementAtOrDefault(2) is PdfNumber n3 &&
-            arr.ElementAtOrDefault(3) is PdfNumber n4)
+            arr.ElementAtOrDefault(0) is PdfNumber n1 && // LLx
+            arr.ElementAtOrDefault(1) is PdfNumber n2 && // LLy
+            arr.ElementAtOrDefault(2) is PdfNumber n3 && // URx
+            arr.ElementAtOrDefault(3) is PdfNumber n4)   // URy
         {
-            // Assuming array is [LLx LLy URx URy]
+            // Necesitamos la altura del MediaBox para la conversión inversa
+            double mediaBoxHeight = this.MediaBox.Height;
+
             double llx = n1.Value;
             double lly = n2.Value;
             double urx = n3.Value;
             double ury = n4.Value;
-            // Convert back to our PdfRectangle (X, Y, Width, Height) assuming bottom-left origin
-            return new PdfRectangle(llx, lly, urx - llx, ury - lly);
+
+            // Convertir de PDF [LLx LLy URx URy] a nuestro PdfRectangle (X, Y_TopLeft, Width, Height)
+            double topLeftX = llx;
+            // Y_TopLeft = AlturaTotal - URY_pdf
+            double topLeftY = mediaBoxHeight - ury;
+            double width = urx - llx;
+            // Height = URY_pdf - LLY_pdf
+            double height = ury - lly;
+
+            if (width < 0 || height < 0)
+            {
+                Console.WriteLine($"Warning: Calculated negative width/height ({width}x{height}) when reading rectangle '{key.Value}'. PDF data might be invalid: [{llx} {lly} {urx} {ury}] with MediaBoxHeight {mediaBoxHeight}");
+                // Decide cómo manejar esto: devolver null, Empty, o intentar corregir? Devolver null es más seguro.
+                return null;
+            }
+
+            return new PdfRectangle(topLeftX, topLeftY, width, height);
         }
         return null;
     }

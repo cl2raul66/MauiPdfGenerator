@@ -4,7 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
-namespace MauiPdfGenerator.Fluent.Builders;
+namespace MauiPdfGenerator.Implementation.Builders;
 
 /// <summary>
 /// Internal implementation of the content builder used within .Content()/.Children() lambdas.

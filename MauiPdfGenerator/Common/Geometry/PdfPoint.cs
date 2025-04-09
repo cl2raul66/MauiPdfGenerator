@@ -1,42 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace MauiPdfGenerator.Common.Geometry;
 
 /// <summary>
-/// Represents an immutable point with X and Y coordinates (typically in PDF units).
-/// Marked internal as it's primarily for internal library use.
+/// Representa un punto 2D en coordenadas PDF.
 /// </summary>
 internal readonly struct PdfPoint : IEquatable<PdfPoint>
 {
     /// <summary>
-    /// Gets the point at the origin (0, 0).
-    /// </summary>
-    public static readonly PdfPoint Zero = new PdfPoint(0, 0);
-
-    /// <summary>
-    /// Gets the X-coordinate of the point.
+    /// La coordenada X del punto.
     /// </summary>
     public double X { get; }
 
     /// <summary>
-    /// Gets the Y-coordinate of the point.
+    /// La coordenada Y del punto.
     /// </summary>
     public double Y { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PdfPoint"/> struct.
+    /// Inicializa una nueva instancia de PdfPoint.
     /// </summary>
-    /// <param name="x">The X-coordinate.</param>
-    /// <param name="y">The Y-coordinate.</param>
     public PdfPoint(double x, double y)
     {
         X = x;
         Y = y;
+    }
+
+    public static PdfPoint Zero => new(0, 0);
+
+    public void Deconstruct(out double x, out double y)
+    {
+        x = X;
+        y = Y;
     }
 
     // --- Equality Methods ---

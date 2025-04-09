@@ -6,6 +6,17 @@
 public interface IDocumentBuilder : IDisposable
 {
     /// <summary>
+    /// Indica si se debe continuar con la iteración actual
+    /// </summary>
+    bool ContinueIteration { get; }
+
+    /// <summary>
+    /// Pregunta al usuario si desea continuar con la iteración actual
+    /// </summary>
+    /// <returns>true si el usuario desea continuar, false en caso contrario</returns>
+    bool AskToContinue();
+
+    /// <summary>
     /// Configures global document settings like default page size, margins, metadata, and security.
     /// </summary>
     /// <param name="configAction">Action to configure the document settings.</param>

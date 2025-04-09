@@ -120,15 +120,17 @@ internal class PdfStream : PdfObject
     {
         if (data is null || data.Length == 0) return [];
 
-        using (var outputStream = new MemoryStream())
+        using var outputStream = new MemoryStream();
         {
-            // Use CompressionLevel.Optimal or SmallestSize depending on priority
-            using (var deflateStream = new DeflateStream(outputStream, CompressionLevel.Optimal, leaveOpen: true))
+            using (var deflateStream = new DeflateStream(outputStream, CompressionLevel.SmallestSize))
             {
                 deflateStream.Write(data, 0, data.Length);
-            } // Dispose/Flush DeflateStream here before reading MemoryStream
+            } // El Dispose del DeflateStream hace un flush implícito
+
+            // Obtener los datos comprimidos después de que DeflateStream se haya cerrado
+            // pero antes de que outputStream se cierre
             return outputStream.ToArray();
-        }
+        } // outputStream se cierra aquí
     }
 
 

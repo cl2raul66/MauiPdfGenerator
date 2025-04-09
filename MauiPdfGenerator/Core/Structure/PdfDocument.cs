@@ -1,5 +1,7 @@
 ﻿using MauiPdfGenerator.Core.Objects;
 using MauiPdfGenerator.Common.Geometry;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MauiPdfGenerator.Core.Structure;
 
@@ -10,14 +12,16 @@ namespace MauiPdfGenerator.Core.Structure;
 /// </summary>
 internal class PdfDocument
 {
-    private readonly List<PdfIndirectObject> _objects = new List<PdfIndirectObject>();
+    private readonly List<PdfIndirectObject> _objects = new();
     private int _nextObjectId = 1; // Object IDs start at 1
 
     // --- Core Structure References ---
     public PdfCatalog Catalog { get; }
-    public PdfInfo Info { get; }
     public PdfPageTreeNode PageTreeRoot { get; }
     private readonly PdfReference _pageTreeRootRef; // Stores the reference to the PageTreeRoot indirect object
+
+    // Agregar propiedad Info para metadatos
+    public PdfInfo? Info { get; private set; }
 
     // Default page size, margins etc can be stored here, derived from Fluent API config
     public PdfRectangle DefaultMediaBox { get; set; } // Example
@@ -29,21 +33,18 @@ internal class PdfDocument
         // TODO: Initialize DefaultMediaBox based on config (e.g., A4 from Common or Fluent config)
         // Example: DefaultMediaBox = PdfPageSizes.A4; // Assuming a static class PdfPageSizes exists
 
-        // Create essential structures
-        Info = new PdfInfo();
+        // Crear estructuras esenciales
         PageTreeRoot = new PdfPageTreeNode(this);
 
-        // Create the indirect object for the PageTreeRoot *first* and store its reference
+        // Crear el objeto indirecto para PageTreeRoot primero y almacenar su referencia
         var pageTreeRootIndirect = AddIndirectObject(PageTreeRoot);
         _pageTreeRootRef = pageTreeRootIndirect.Reference;
 
-        // Now create the Catalog using the obtained reference
+        // Crear el Catalog usando la referencia obtenida
         Catalog = new PdfCatalog(this, _pageTreeRootRef);
-
-        // **** NUEVO: Añadir Catalog como objeto indirecto ****
-        AddIndirectObject(Catalog); // Aseguramos que Catalog tenga un ID
-
-        // Info dictionary is added later during writing process if needed
+        
+        // Añadir Catalog como objeto indirecto
+        AddIndirectObject(Catalog);
     }
 
     /// <summary>
@@ -81,6 +82,25 @@ internal class PdfDocument
     /// </summary>
     public IEnumerable<PdfIndirectObject> GetIndirectObjects() => _objects;
 
+    /// <summary>
+    /// Gets the reference for an indirect object in the document.
+    /// If the object is not yet in the document, it will be added.
+    /// </summary>
+    public PdfReference GetReference(PdfObject obj)
+    {
+        // If it's already a reference, return it
+        if (obj is PdfReference reference)
+            return reference;
+
+        // Look for existing indirect object containing this direct object
+        var existingIndirect = _objects.FirstOrDefault(io => ReferenceEquals(io.Value, obj));
+        if (existingIndirect != null)
+            return existingIndirect.Reference;
+
+        // Not found, add it as a new indirect object
+        var newIndirect = AddIndirectObject(obj);
+        return newIndirect.Reference;
+    }
 
     /// <summary>
     /// Adds a new page to the document's page tree.
@@ -106,6 +126,21 @@ internal class PdfDocument
         PageTreeRoot.SetParentReference();
     }
 
+    /// <summary>
+    /// Establece la información de metadatos del documento PDF.
+    /// </summary>
+    /// <param name="info">La información del documento. Si es null, se eliminará la información existente.</param>
+    public void SetInfo(PdfInfo? info)
+    {
+        if (info == null)
+        {
+            Info = null;
+            return;
+        }
+
+        Info = info;
+        AddIndirectObject(info);
+    }
 
     // --- Methods for Writing the Document ---
     // public Task WriteAsync(Stream stream, PdfWriterOptions options = null)

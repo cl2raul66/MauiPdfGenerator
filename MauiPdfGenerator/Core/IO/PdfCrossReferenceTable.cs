@@ -10,7 +10,7 @@ namespace MauiPdfGenerator.Core.IO;
 internal class PdfCrossReferenceTable
 {
     // Stores the byte offset for each object ID. Key: ObjectID, Value: Byte Offset
-    private readonly Dictionary<int, long> _objectOffsets = new Dictionary<int, long>();
+    private readonly Dictionary<int, long> _objectOffsets =[];
     private int _highestObjectId = 0; // Track the highest ID used for table size
 
     /// <summary>

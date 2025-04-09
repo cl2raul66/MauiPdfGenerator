@@ -1,24 +1,16 @@
 ﻿using MauiPdfGenerator.Core.Structure;
 using MauiPdfGenerator.Core.IO;
-using MauiPdfGenerator.Core.Objects; // Necesario para PdfReference
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Common.Geometry;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using System.Linq; // Para Count() en SaveAsync (si se usa LINQ)
-using Microsoft.Maui.Graphics; // Asegurarse que se usa Color de MAUI si es necesario (no usado directamente aquí)
 
-namespace MauiPdfGenerator.Fluent.Builders;
+namespace MauiPdfGenerator.Implementation.Builders;
 
 /// <summary>
 /// Internal implementation of the main document builder interfaces.
 /// Manages document configuration and page creation actions.
 /// </summary>
-internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
+internal partial class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
 {
     private readonly PdfDocument _pdfDocument; // La instancia del documento Core
 
@@ -31,8 +23,27 @@ internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
     private float _defaultMarginBottom = 50f;
     private float _defaultSpacing = 10f; // Espaciado por defecto, tipo float
 
+    private bool _continueIteration = true;
+
+    /// <summary>
+    /// Indica si se debe continuar con la iteración actual
+    /// </summary>
+    public bool ContinueIteration => _continueIteration;
+
+    /// <summary>
+    /// Pregunta al usuario si desea continuar con la iteración actual
+    /// </summary>
+    /// <returns>true si el usuario desea continuar, false en caso contrario</returns>
+    public bool AskToContinue()
+    {
+        Console.Write("¿Desea continuar con la iteración? (S/N): ");
+        var response = Console.ReadLine()?.Trim().ToUpper();
+        _continueIteration = response == "S";
+        return _continueIteration;
+    }
+
     // Lista de acciones para construir cada página
-    private readonly List<Action<IPdfPageBuilder>> _pageBuildActions = new List<Action<IPdfPageBuilder>>();
+    private readonly List<Action<IPdfPageBuilder>> _pageBuildActions = [];
 
     // TODO: Security settings storage
     // private PdfSecuritySettings _securitySettings = new PdfSecuritySettings();
@@ -47,10 +58,13 @@ internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
         SetDefaultMediaBoxFromPageSize(_defaultPageSizeType);
         _pdfDocument.DefaultMediaBox = _defaultMediaBox; // Actualizar el default en el doc Core
 
-        // Configurar metadatos básicos por defecto
-        _pdfDocument.Info.Producer = "MauiPdfGenerator Library v0.1"; // Ejemplo con versión
-        // _pdfDocument.Info.Creator = "Your Application Name"; // Puede ser configurado por el usuario
-        _pdfDocument.Info.CreationDate = DateTimeOffset.Now; // Fecha de creación inicial
+        // Crear y configurar metadatos básicos
+        var info = new PdfInfo
+        {
+            Producer = "MauiPdfGenerator Library v1.1",
+            CreationDate = DateTimeOffset.Now
+        };
+        _pdfDocument.SetInfo(info);
     }
 
     // --- IDocumentBuilder Implementation ---
@@ -62,7 +76,7 @@ internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
     /// <returns>The document builder instance for chaining.</returns>
     public IDocumentBuilder Configure(Action<IDocumentConfigurator> configAction)
     {
-        if (configAction == null) throw new ArgumentNullException(nameof(configAction));
+        ArgumentNullException.ThrowIfNull(configAction);
         // Como esta misma clase implementa IDocumentConfigurator, nos pasamos a nosotros mismos
         configAction(this);
         return this;
@@ -75,7 +89,7 @@ internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
     /// <returns>The document builder instance for chaining.</returns>
     public IDocumentBuilder PdfPage(Action<IPdfPageBuilder> pageAction) // Corregido nombre
     {
-        if (pageAction == null) throw new ArgumentNullException(nameof(pageAction));
+        ArgumentNullException.ThrowIfNull(pageAction);
         _pageBuildActions.Add(pageAction);
         return this;
     }
@@ -102,7 +116,9 @@ internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
             var pageMediaBox = _defaultMediaBox;
 
             // Crear el objeto PdfPage (Core). El padre se asignará después.
-            var pdfPage = new PdfPage(_pdfDocument, pageMediaBox);
+            var pageTreeRoot = _pdfDocument.PageTreeRoot;
+            var pageTreeRootRef = _pdfDocument.GetReference(pageTreeRoot);
+            var pdfPage = new PdfPage(_pdfDocument, pageMediaBox, pageTreeRootRef);
 
             // Crear el PageBuilder (Fluent) para esta página Core (CLASE AÚN NO EXISTE)
             // Esta línea causará error hasta que PageBuilder.cs se cree.
@@ -278,22 +294,6 @@ internal class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
                 Console.WriteLine($"Warning: Unknown PageSizeType '{size}'. Defaulting to A4.");
                 return new PdfRectangle(0, 0, Math.Round(210 * mmToPt), Math.Round(297 * mmToPt));
         }
-    }
-
-    // --- Adaptador simple para IMetadataConfigurator usando PdfInfo ---
-    /// <summary>
-    /// Internal adapter to allow PdfInfo to be configured via IMetadataConfigurator.
-    /// </summary>
-    private class MetadataConfiguratorAdapter : IMetadataConfigurator
-    {
-        private readonly PdfInfo _info;
-        public MetadataConfiguratorAdapter(PdfInfo info) { _info = info ?? throw new ArgumentNullException(nameof(info)); }
-
-        public IMetadataConfigurator Title(string title) { _info.Title = title; return this; }
-        public IMetadataConfigurator Author(string author) { _info.Author = author; return this; }
-        public IMetadataConfigurator Subject(string subject) { _info.Subject = subject; return this; }
-        public IMetadataConfigurator Keywords(string keywords) { _info.Keywords = keywords; return this; }
-        // Add Creator, Producer if needed in public interface IMetadataConfigurator
     }
 
     // TODO: Implement SecurityConfiguratorAdapter class and PdfSecuritySettings class/logic

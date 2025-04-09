@@ -33,7 +33,7 @@ public interface IDocumentConfigurator
 
     // Futuro: Sobrecarga para márgenes individuales
     // IDocumentConfigurator Margins(float top, float right, float bottom, float left);
-    // IDocumentConfigurator Margins(PdfMargins margins); // Usando un modelo
+    // IDocumentConfigurator Margins(Thicknesss margins); // Usando un modelo
 
     // --- These would now likely take Actions with specific configurator interfaces ---
     IDocumentConfigurator Metadata(Action<IMetadataConfigurator> metadataAction); // Placeholder interface

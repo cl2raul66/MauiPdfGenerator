@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+﻿using Microsoft.Maui.Graphics;
+using MauiPdfGenerator.Fluent.Enums;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
 
@@ -19,7 +20,7 @@ public interface IPdfSpanBuilder
     /// </summary>
     /// <param name="color">The text color.</param>
     /// <returns>The builder instance for chaining.</returns>
-    IPdfSpanBuilder TextColor(Color color);
+    IPdfSpanBuilder TextColor(Color? color);
 
     /// <summary>
     /// Sets the font family for this span. Overrides paragraph font if set.
@@ -54,7 +55,7 @@ public interface IPdfSpanBuilder
     /// </summary>
     /// <param name="color">The background color.</param>
     /// <returns>The builder instance for chaining.</returns>
-    IPdfSpanBuilder BackgroundColor(Color color);
+    IPdfSpanBuilder BackgroundColor(Color? color);
 
     /// <summary>
     /// Sets the line height multiplier for this span. Affects the line containing the span.

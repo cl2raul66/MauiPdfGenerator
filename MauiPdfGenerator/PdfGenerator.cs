@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces;
+using MauiPdfGenerator.Implementation.Builders;
 
 namespace MauiPdfGenerator;
 
@@ -11,9 +12,6 @@ public static class PdfGenerator
     /// <returns>An IDocumentBuilder to configure and build the PDF.</returns>
     public static IDocumentBuilder CreateDocument()
     {
-        // Aquí instanciarías y devolverías tu implementación interna
-        // Por ahora, solo la firma:
-        // return new DocumentBuilder();
-        throw new NotImplementedException("Implementación del DocumentBuilder pendiente.");
+        return new DocumentBuilder();
     }
 }

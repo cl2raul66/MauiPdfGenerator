@@ -3,9 +3,9 @@ using MauiPdfGenerator.Core.Structure;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
-using MauiPdfGenerator.Fluent.Models; // Para PdfGridLength
+using MauiPdfGenerator.Fluent.Models;
 
-namespace MauiPdfGenerator.Fluent.Builders;
+namespace MauiPdfGenerator.Implementation.Builders;
 
 /// <summary>
 /// Internal implementation for building PDF Grid Layouts.
@@ -21,7 +21,7 @@ internal class GridBuilder : IPdfGridBuilder
     private List<PdfGridLength> _rowDefinitions = [];
     private double _columnSpacing = 0;
     private double _rowSpacing = 0;
-    private PdfPadding _padding = PdfPadding.Zero;
+    private Thickness _padding = Thickness.Zero;
 
     // Store children along with their grid info
     private readonly List<GridChildInfo> _childrenInfo = [];
@@ -29,7 +29,7 @@ internal class GridBuilder : IPdfGridBuilder
     // View Properties (from IPdfViewBuilder)
     private double? _explicitWidth;
     private double? _explicitHeight;
-    private PdfMargin _margin = PdfMargin.Zero;
+    private Thickness _margin = Thickness.Zero;
     private PdfHorizontalAlignment _horizontalOptions = PdfHorizontalAlignment.Fill; // Grids often fill space
     private PdfVerticalAlignment _verticalOptions = PdfVerticalAlignment.Fill;
     private Color? _backgroundColor;
@@ -39,11 +39,11 @@ internal class GridBuilder : IPdfGridBuilder
     public IReadOnlyList<PdfGridLength> ConfiguredRowDefinitions => _rowDefinitions;
     public double ConfiguredColumnSpacing => _columnSpacing;
     public double ConfiguredRowSpacing => _rowSpacing;
-    public PdfPadding ConfiguredPadding => _padding;
+    public Thickness ConfiguredPadding => _padding;
     public IReadOnlyList<GridChildInfo> ConfiguredChildrenInfo => _childrenInfo;
     public double? ConfiguredWidth => _explicitWidth;
     public double? ConfiguredHeight => _explicitHeight;
-    public PdfMargin ConfiguredMargin => _margin;
+    public Thickness ConfiguredMargin => _margin;
     public PdfHorizontalAlignment ConfiguredHorizontalOptions => _horizontalOptions;
     public PdfVerticalAlignment ConfiguredVerticalOptions => _verticalOptions;
     public Color? ConfiguredBackgroundColor => _backgroundColor;
@@ -118,49 +118,49 @@ internal class GridBuilder : IPdfGridBuilder
 
     public IPdfGridBuilder Padding(double uniformPadding)
     {
-        _padding = new PdfPadding(uniformPadding);
+        _padding = new Thickness(uniformPadding);
         return this;
     }
 
     public IPdfGridBuilder Padding(double horizontal, double vertical)
     {
-        _padding = new PdfPadding(horizontal, vertical);
+        _padding = new Thickness(horizontal, vertical);
         return this;
     }
 
     public IPdfGridBuilder Padding(double left, double top, double right, double bottom)
     {
-        _padding = new PdfPadding(left, top, right, bottom);
+        _padding = new Thickness(left, top, right, bottom);
         return this;
     }
 
     public IPdfGridBuilder Width(double width)
     {
-        _explicitWidth = width >= 0 ? width : (double?)null;
+        _explicitWidth = width >= 0 ? width : null;
         return this;
     }
 
     public IPdfGridBuilder Height(double height)
     {
-        _explicitHeight = height >= 0 ? height : (double?)null;
+        _explicitHeight = height >= 0 ? height : null;
         return this;
     }
 
     public IPdfGridBuilder Margin(double uniformMargin)
     {
-        _margin = new PdfMargin(uniformMargin);
+        _margin = new Thickness(uniformMargin);
         return this;
     }
 
     public IPdfGridBuilder Margin(double horizontal, double vertical)
     {
-        _margin = new PdfMargin(horizontal, vertical);
+        _margin = new Thickness(horizontal, vertical);
         return this;
     }
 
     public IPdfGridBuilder Margin(double left, double top, double right, double bottom)
     {
-        _margin = new PdfMargin(left, top, right, bottom);
+        _margin = new Thickness(left, top, right, bottom);
         return this;
     }
 
@@ -176,7 +176,7 @@ internal class GridBuilder : IPdfGridBuilder
         return this;
     }
 
-    public IPdfGridBuilder BackgroundColor(Color color)
+    public IPdfGridBuilder BackgroundColor(Color? color)
     {
         _backgroundColor = color;
         return this;

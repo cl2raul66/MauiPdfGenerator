@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Fluent.Builders;
+﻿namespace MauiPdfGenerator.Implementation.Builders;
 
 /// <summary>
 /// Internal helper to store a child element/layout builder along with its grid positioning info.

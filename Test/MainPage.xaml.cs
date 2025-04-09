@@ -1,14 +1,14 @@
 ﻿using MauiPdfGenerator;
 using MauiPdfGenerator.Fluent.Enums;
-
+using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Fluent.Extensions;
+using static MauiPdfGenerator.Fluent.Models.PdfGridLength;
 using static Microsoft.Maui.Graphics.Colors;
 
 namespace Test;
 
 public partial class MainPage : ContentPage
 {
-
-
     public MainPage()
     {
         InitializeComponent();
@@ -19,47 +19,27 @@ public partial class MainPage : ContentPage
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
         try
         {
-            using (var doc = PdfGenerator.CreateDocument())
+            using var doc = PdfGenerator.CreateDocument();
+            doc.Configure(config =>
             {
-                doc.Configure(config =>
-                {
-                    config.PageSize(PageSizeType.A4)
-                        .Spacing(16)
-                        .Margins(50);
-                });
+                config.PageSize(PageSizeType.A4);
+                config.Margins(50);
+            });
 
-                doc.PdfPage(p =>
+            doc.PdfPage(pg =>
+            {
+                pg.Content(c =>
                 {
-                    p.Content(c =>
-                    {
-                        c.Grid(g =>
-                        {
-                            g.Children(c =>
-                            {
-                                c.Paragraph(p =>
-                                { 
-                                    p.Text("Hola Mundo!")
-                                    .HorizontalOptions(PdfHorizontalAlignment.Center)
-                                    .FormattedText(ft =>
-                                    {
-                                        ft.AddSpan(s =>
-                                        {
-                                            s.TextColor(Blue).Text(" cruel");
-                                        });
-                                    });
-                                }).Text("Hola mundo");
-                            });
-                        });
-                    });
+                    c.Paragraph(p => p.Text("¡Hola Mundo!"));
                 });
+            });
 
-                await doc.SaveAsync(targetFilePath);
-
-                await Launcher.OpenAsync(new OpenFileRequest
-                {
-                    File = new ReadOnlyFile(targetFilePath)
-                });
-            }
+            // Guardar y abrir el documento
+            await doc.SaveAsync(targetFilePath);
+            await Launcher.OpenAsync(new OpenFileRequest
+            {
+                File = new ReadOnlyFile(targetFilePath)
+            });
         }
         catch (Exception ex)
         {

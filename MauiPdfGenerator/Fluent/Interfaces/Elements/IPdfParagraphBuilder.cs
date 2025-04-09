@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+﻿using Microsoft.Maui.Graphics;
+using MauiPdfGenerator.Fluent.Enums;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
 
@@ -46,7 +47,7 @@ public interface IPdfParagraphBuilder : IPdfViewBuilder<IPdfParagraphBuilder> //
     /// </summary>
     /// <param name="color">The text color.</param>
     /// <returns>The builder instance for chaining.</returns>
-    IPdfParagraphBuilder TextColor(Color color);
+    IPdfParagraphBuilder TextColor(Color? color);
 
     /// <summary>
     /// Sets the default font attributes (e.g., Bold, Italic) for the paragraph. Can be combined or overridden by spans.

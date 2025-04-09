@@ -9,7 +9,7 @@ using MauiPdfGenerator.Core.Fonts;
 using System.Globalization;
 using MauiPdfGenerator.Fluent.Enums;
 
-namespace MauiPdfGenerator.Fluent.Builders;
+namespace MauiPdfGenerator.Implementation.Builders;
 
 /// <summary>
 /// Internal implementation of the page builder interface.
@@ -50,7 +50,7 @@ internal class PageBuilder : IPdfPageBuilder
         _marginBottom = _documentBuilder.DefaultPageMarginBottom;
 
         // Assign the pre-created Resources dictionary from PdfPage
-        _pageResources = (_pdfPage.Resources as PdfDictionary) as PdfResources ??
+        _pageResources = _pdfPage.Resources as PdfDictionary as PdfResources ??
                          throw new InvalidOperationException("PdfPage is missing its Resources dictionary.");
         if (!(_pdfPage.Resources is PdfResources)) // Ensure it's our specific type if needed later
         {
@@ -236,11 +236,11 @@ internal class PageBuilder : IPdfPageBuilder
     }
 
     // Internal properties to provide context to child builders if needed
-    internal double GetAvailableWidth() => _mediaBox.Width - (double)_marginLeft - (double)_marginRight;
-    internal double GetAvailableHeight() => _mediaBox.Height - (double)_marginTop - (double)_marginBottom;
+    internal double GetAvailableWidth() => _mediaBox.Width - _marginLeft - _marginRight;
+    internal double GetAvailableHeight() => _mediaBox.Height - _marginTop - _marginBottom;
     internal PdfRectangle GetContentArea() => new PdfRectangle(
-             _mediaBox.X + (double)_marginLeft,
-             _mediaBox.Y + (double)_marginBottom,
+             _mediaBox.X + _marginLeft,
+             _mediaBox.Y + _marginBottom,
              GetAvailableWidth(),
              GetAvailableHeight()
          );

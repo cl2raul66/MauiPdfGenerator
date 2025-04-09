@@ -3,8 +3,9 @@ using MauiPdfGenerator.Core.Structure;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using Microsoft.Maui.Graphics;
 
-namespace MauiPdfGenerator.Fluent.Builders;
+namespace MauiPdfGenerator.Implementation.Builders;
 
 /// <summary>
 /// Internal implementation for building PDF Vertical Stack Layouts.
@@ -17,33 +18,32 @@ internal class VerticalStackLayoutBuilder : IPdfVerticalStackLayoutBuilder
 
     // --- Configuration Storage ---
     private float _spacing = 0f; // Default spacing
-    private PdfPadding _padding = PdfPadding.Zero; // Usa el struct auxiliar
-    private readonly List<object> _children = new List<object>(); // Stores child builders
+    private Thickness _padding = Thickness.Zero;
+    private readonly List<object> _children = new();
 
     // View Properties (from IPdfViewBuilder)
     private double? _explicitWidth;
     private double? _explicitHeight;
-    private PdfMargin _margin = PdfMargin.Zero; // Usa el struct auxiliar
-    private PdfHorizontalAlignment _horizontalOptions = PdfHorizontalAlignment.Fill; // StackLayouts often fill horizontally
-    private PdfVerticalAlignment _verticalOptions = PdfVerticalAlignment.Start;   // And start vertically
+    private Thickness _margin = Thickness.Zero;
+    private PdfHorizontalAlignment _horizontalOptions = PdfHorizontalAlignment.Fill;
+    private PdfVerticalAlignment _verticalOptions = PdfVerticalAlignment.Start;
     private Color? _backgroundColor;
 
     // Public properties for PageBuilder/Layout engine access
     public float ConfiguredSpacing => _spacing;
-    public PdfPadding ConfiguredPadding => _padding;
+    public Thickness ConfiguredPadding => _padding;
     public IReadOnlyList<object> ConfiguredChildren => _children;
     public double? ConfiguredWidth => _explicitWidth;
     public double? ConfiguredHeight => _explicitHeight;
-    public PdfMargin ConfiguredMargin => _margin;
+    public Thickness ConfiguredMargin => _margin;
     public PdfHorizontalAlignment ConfiguredHorizontalOptions => _horizontalOptions;
     public PdfVerticalAlignment ConfiguredVerticalOptions => _verticalOptions;
     public Color? ConfiguredBackgroundColor => _backgroundColor;
 
-
     public VerticalStackLayoutBuilder(PdfDocument pdfDocument, PdfResources resources)
     {
-        _pdfDocument = pdfDocument;
-        _resources = resources;
+        _pdfDocument = pdfDocument ?? throw new ArgumentNullException(nameof(pdfDocument));
+        _resources = resources ?? throw new ArgumentNullException(nameof(resources));
     }
 
     // --- IPdfVerticalStackLayoutBuilder Implementation ---
@@ -56,8 +56,8 @@ internal class VerticalStackLayoutBuilder : IPdfVerticalStackLayoutBuilder
 
     public IPdfVerticalStackLayoutBuilder Children(Action<IPdfContainerContentBuilder> childrenAction)
     {
-        if (childrenAction == null) throw new ArgumentNullException(nameof(childrenAction));
-        var contentBuilder = new ContainerContentBuilder(_pdfDocument, _resources, this); // Pass self as context?
+        ArgumentNullException.ThrowIfNull(childrenAction);
+        var contentBuilder = new ContainerContentBuilder(_pdfDocument, _resources, this);
         childrenAction(contentBuilder);
         _children.AddRange(contentBuilder.GetAddedElements());
         return this;
@@ -67,49 +67,49 @@ internal class VerticalStackLayoutBuilder : IPdfVerticalStackLayoutBuilder
 
     public IPdfVerticalStackLayoutBuilder Padding(double uniformPadding)
     {
-        _padding = new PdfPadding(uniformPadding);
+        _padding = new Thickness(uniformPadding);
         return this;
     }
 
     public IPdfVerticalStackLayoutBuilder Padding(double horizontal, double vertical)
     {
-        _padding = new PdfPadding(horizontal, vertical);
+        _padding = new Thickness(horizontal, vertical);
         return this;
     }
 
     public IPdfVerticalStackLayoutBuilder Padding(double left, double top, double right, double bottom)
     {
-        _padding = new PdfPadding(left, top, right, bottom);
+        _padding = new Thickness(left, top, right, bottom);
         return this;
     }
 
     public IPdfVerticalStackLayoutBuilder Width(double width)
     {
-        _explicitWidth = width >= 0 ? width : (double?)null;
+        _explicitWidth = width >= 0 ? width : null;
         return this;
     }
 
     public IPdfVerticalStackLayoutBuilder Height(double height)
     {
-        _explicitHeight = height >= 0 ? height : (double?)null;
+        _explicitHeight = height >= 0 ? height : null;
         return this;
     }
 
     public IPdfVerticalStackLayoutBuilder Margin(double uniformMargin)
     {
-        _margin = new PdfMargin(uniformMargin);
+        _margin = new Thickness(uniformMargin);
         return this;
     }
 
     public IPdfVerticalStackLayoutBuilder Margin(double horizontal, double vertical)
     {
-        _margin = new PdfMargin(horizontal, vertical);
+        _margin = new Thickness(horizontal, vertical);
         return this;
     }
 
     public IPdfVerticalStackLayoutBuilder Margin(double left, double top, double right, double bottom)
     {
-        _margin = new PdfMargin(left, top, right, bottom);
+        _margin = new Thickness(left, top, right, bottom);
         return this;
     }
 
@@ -125,7 +125,7 @@ internal class VerticalStackLayoutBuilder : IPdfVerticalStackLayoutBuilder
         return this;
     }
 
-    public IPdfVerticalStackLayoutBuilder BackgroundColor(Color color)
+    public IPdfVerticalStackLayoutBuilder BackgroundColor(Color? color)
     {
         _backgroundColor = color;
         return this;

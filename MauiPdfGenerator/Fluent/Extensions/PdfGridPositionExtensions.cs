@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces;
-using MauiPdfGenerator.Fluent.Builders; // Namespace for GridChildInfo
 using System;
+using MauiPdfGenerator.Implementation.Builders;
 
 namespace MauiPdfGenerator.Fluent.Extensions;
 

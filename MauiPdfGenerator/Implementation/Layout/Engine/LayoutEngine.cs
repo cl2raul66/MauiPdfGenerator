@@ -11,28 +11,22 @@ namespace MauiPdfGenerator.Implementation.Layout.Engine;
 /// </summary>
 internal class LayoutEngine : IMeasureEngine, IArrangeEngine
 {
-    private readonly Dictionary<object, LayoutResult> _layoutCache = new();
+    private readonly Dictionary<object, LayoutResult> _layoutCache = [];
     private readonly VerticalStackLayoutManager _verticalStackLayoutManager;
     private readonly ParagraphManager _paragraphManager;
-    private LayoutContext? _currentContext;
+    // private LayoutContext? _currentContext; // Eliminado - El contexto se pasa como parámetro
 
     public LayoutEngine()
     {
-        _verticalStackLayoutManager = new VerticalStackLayoutManager(this, this);
+        _verticalStackLayoutManager = new VerticalStackLayoutManager(this, this); // Pasamos this (el propio engine) como IMeasureEngine e IArrangeEngine
         _paragraphManager = new ParagraphManager();
+        // TODO: Inicializar los otros managers (Image, HSL, Grid) cuando existan
     }
 
-    public void BeginLayout(LayoutContext context)
-    {
-        _currentContext = context;
-    }
+    // Eliminados BeginLayout/EndLayout ya que _currentContext se eliminó
 
-    public void EndLayout()
-    {
-        _currentContext = null;
-    }
-
-    public PdfSize Measure(object element, PdfSize availableSize)
+    // --- IMeasureEngine Implementation ---
+    public PdfSize Measure(object element, LayoutContext context) // Firma CORRECTA (usa LayoutContext)
     {
         // Si el elemento ya está en caché y no necesita remedirse, devolver el tamaño medido
         if (_layoutCache.TryGetValue(element, out var cachedResult) && !NeedsRemeasure(element))
@@ -40,9 +34,9 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
             return cachedResult.MeasuredSize;
         }
 
-        // Realizar la medición específica según el tipo de elemento
-        var measuredSize = MeasureElement(element, availableSize);
-        
+        // Realizar la medición específica según el tipo de elemento, pasando el contexto
+        var measuredSize = MeasureElement(element, context); // Llama al helper con contexto
+
         // Almacenar o actualizar el resultado en caché
         var result = LayoutResult.CreateSuccess(element, measuredSize);
         _layoutCache[element] = result;
@@ -50,151 +44,170 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
         return measuredSize;
     }
 
-    public void Arrange(object element, PdfRectangle finalRect)
+    // --- IArrangeEngine Implementation ---
+    public void Arrange(object element, LayoutContext context) // Firma CORRECTA (usa LayoutContext)
     {
-        if (!_layoutCache.TryGetValue(element, out var result))
+        var finalRect = context.AvailableArea; // El rect final viene del contexto
+        LayoutResult? result; // Usar nullable
+
+        // Intentar obtener del caché. Si no existe O necesita remedirse, medir primero.
+        if (!_layoutCache.TryGetValue(element, out result) || result == null || NeedsRemeasure(element))
         {
-            // Si el elemento no ha sido medido, medirlo primero
-            var measuredSize = Measure(element, new PdfSize(finalRect.Width, finalRect.Height));
-            result = _layoutCache[element];
+            // Medir para obtener el tamaño y poblar/actualizar caché
+            // No necesitamos crear un 'measureContext' especial aquí, el 'context'
+            // recibido ya tiene el área disponible correcta para esta fase.
+            var measuredSize = Measure(element, context); // Llama a Measure con el contexto actual
+
+            // Volver a intentar obtener del caché después de Measure
+            if (!_layoutCache.TryGetValue(element, out result) || result == null)
+            {
+                // Si Measure falló o no añadió al caché
+                throw new InvalidOperationException($"Element of type {element.GetType().Name} could not be measured and cannot be arranged.");
+            }
         }
 
-        // Actualizar el rectángulo final
-        result.SetFinalRect(finalRect);
+        // Establecer/Actualizar el rectángulo final en el resultado cacheado
+        result.SetFinalRect(finalRect); // finalRect viene del 'context' de Arrange
 
-        // Realizar el posicionamiento específico según el tipo de elemento
-        ArrangeElement(element, finalRect);
+        // Realizar el posicionamiento específico si es necesario, pasando el contexto
+        if (NeedsArrange(element))
+        {
+            ArrangeElement(element, context); // Llama al helper con contexto
+        }
     }
 
+    // --- Helpers Internos ---
+
+    private PdfSize MeasureElement(object element, LayoutContext context) // Firma CORRECTA (usa LayoutContext)
+    {
+        // Llama a los métodos Measure... específicos, pasando el CONTEXTO
+        return element switch
+        {
+            ParagraphBuilder paragraphBuilder => MeasureParagraph(paragraphBuilder, context),
+            ImageBuilder imageBuilder => MeasureImage(imageBuilder, context),
+            VerticalStackLayoutBuilder vslBuilder => MeasureVerticalStackLayout(vslBuilder, context),
+            HorizontalStackLayoutBuilder hslBuilder => MeasureHorizontalStackLayout(hslBuilder, context),
+            GridBuilder gridBuilder => MeasureGrid(gridBuilder, context),
+            _ => throw new ArgumentException($"MeasureElement: Tipo de elemento no soportado: {element.GetType()}")
+        };
+    }
+
+    private void ArrangeElement(object element, LayoutContext context) // Firma CORRECTA (usa LayoutContext)
+    {
+        // Llama a los métodos Arrange... específicos, pasando el CONTEXTO
+        switch (element)
+        {
+            case ParagraphBuilder paragraphBuilder:
+                ArrangeParagraph(paragraphBuilder, context);
+                break;
+            case ImageBuilder imageBuilder:
+                ArrangeImage(imageBuilder, context);
+                break;
+            case VerticalStackLayoutBuilder vslBuilder:
+                ArrangeVerticalStackLayout(vslBuilder, context);
+                break;
+            case HorizontalStackLayoutBuilder hslBuilder:
+                ArrangeHorizontalStackLayout(hslBuilder, context);
+                break;
+            case GridBuilder gridBuilder:
+                ArrangeGrid(gridBuilder, context);
+                break;
+            default:
+                throw new ArgumentException($"ArrangeElement: Tipo de elemento no soportado: {element.GetType()}");
+        }
+    }
+
+    // --- Métodos de Medición Específicos ---
+    // Todos deben aceptar LayoutContext y llamar al Measure del Manager correspondiente con el contexto.
+
+    private PdfSize MeasureParagraph(ParagraphBuilder builder, LayoutContext context)
+    {
+        return _paragraphManager.Measure(builder, context); // Pasa el contexto
+    }
+
+    private PdfSize MeasureImage(ImageBuilder builder, LayoutContext context)
+    {
+        // TODO: Implementar Manager y llamar: return _imageManager.Measure(builder, context);
+        Console.WriteLine($"Warning: MeasureImage for {builder.GetType().Name} not implemented.");
+        return PdfSize.Zero; // Placeholder temporal
+        // throw new NotImplementedException("MeasureImage");
+    }
+
+    private PdfSize MeasureVerticalStackLayout(VerticalStackLayoutBuilder builder, LayoutContext context)
+    {
+        return _verticalStackLayoutManager.Measure(builder, context); // Pasa el contexto
+    }
+
+    private PdfSize MeasureHorizontalStackLayout(HorizontalStackLayoutBuilder builder, LayoutContext context)
+    {
+        // TODO: Implementar Manager y llamar: return _hslManager.Measure(builder, context);
+        Console.WriteLine($"Warning: MeasureHorizontalStackLayout for {builder.GetType().Name} not implemented.");
+        return PdfSize.Zero; // Placeholder temporal
+        // throw new NotImplementedException("MeasureHorizontalStackLayout");
+    }
+
+    private PdfSize MeasureGrid(GridBuilder builder, LayoutContext context)
+    {
+        // TODO: Implementar Manager y llamar: return _gridManager.Measure(builder, context);
+        Console.WriteLine($"Warning: MeasureGrid for {builder.GetType().Name} not implemented.");
+        return PdfSize.Zero; // Placeholder temporal
+        // throw new NotImplementedException("MeasureGrid");
+    }
+
+    // --- Métodos de Posicionamiento Específicos ---
+    // Todos deben aceptar LayoutContext y llamar al Arrange del Manager correspondiente con el contexto.
+
+    private void ArrangeParagraph(ParagraphBuilder builder, LayoutContext context)
+    {
+        _paragraphManager.Arrange(builder, context); // Pasa el contexto
+    }
+
+    private void ArrangeImage(ImageBuilder builder, LayoutContext context)
+    {
+        // TODO: Implementar Manager y llamar: _imageManager.Arrange(builder, context);
+        Console.WriteLine($"Warning: ArrangeImage for {builder.GetType().Name} not implemented.");
+        // throw new NotImplementedException("ArrangeImage");
+    }
+
+    private void ArrangeVerticalStackLayout(VerticalStackLayoutBuilder builder, LayoutContext context)
+    {
+        _verticalStackLayoutManager.Arrange(builder, context); // Pasa el contexto
+    }
+
+    private void ArrangeHorizontalStackLayout(HorizontalStackLayoutBuilder builder, LayoutContext context)
+    {
+        // TODO: Implementar Manager y llamar: _hslManager.Arrange(builder, context);
+        Console.WriteLine($"Warning: ArrangeHorizontalStackLayout for {builder.GetType().Name} not implemented.");
+        // throw new NotImplementedException("ArrangeHorizontalStackLayout");
+    }
+
+    private void ArrangeGrid(GridBuilder builder, LayoutContext context)
+    {
+        // TODO: Implementar Manager y llamar: _gridManager.Arrange(builder, context);
+        Console.WriteLine($"Warning: ArrangeGrid for {builder.GetType().Name} not implemented.");
+        // throw new NotImplementedException("ArrangeGrid");
+    }
+
+
+    // --- Métodos de Invalidadción (Simplificados) ---
     public bool NeedsRemeasure(object element)
     {
-        // Por defecto, asumimos que los elementos necesitan remedirse
-        // Esta lógica puede mejorarse con un sistema de invalidación más sofisticado
-        return true;
+        // TODO: Implementar lógica de invalidación real (ej. si propiedades del elemento cambiaron)
+        return true; // Por ahora, siempre remedir
     }
 
     public bool NeedsArrange(object element)
     {
-        // Por defecto, asumimos que los elementos necesitan reposicionarse
-        // Esta lógica puede mejorarse con un sistema de invalidación más sofisticado
-        return true;
+        // TODO: Implementar lógica de invalidación real (ej. si tamaño medido cambió o posición padre cambió)
+        return true; // Por ahora, siempre reposicionar
     }
 
-    private PdfSize MeasureElement(object element, PdfSize availableSize)
-    {
-        return element switch
-        {
-            // Implementar la lógica de medición específica para cada tipo de elemento
-            // Por ejemplo:
-            ParagraphBuilder paragraphBuilder => MeasureParagraph(paragraphBuilder, availableSize),
-            ImageBuilder imageBuilder => MeasureImage(imageBuilder, availableSize),
-            VerticalStackLayoutBuilder vslBuilder => MeasureVerticalStackLayout(vslBuilder, availableSize),
-            HorizontalStackLayoutBuilder hslBuilder => MeasureHorizontalStackLayout(hslBuilder, availableSize),
-            GridBuilder gridBuilder => MeasureGrid(gridBuilder, availableSize),
-            _ => throw new ArgumentException($"Tipo de elemento no soportado: {element.GetType()}")
-        };
-    }
 
-    private void ArrangeElement(object element, PdfRectangle finalRect)
-    {
-        switch (element)
-        {
-            // Implementar la lógica de posicionamiento específica para cada tipo de elemento
-            case ParagraphBuilder paragraphBuilder:
-                ArrangeParagraph(paragraphBuilder, finalRect);
-                break;
-            case ImageBuilder imageBuilder:
-                ArrangeImage(imageBuilder, finalRect);
-                break;
-            case VerticalStackLayoutBuilder vslBuilder:
-                ArrangeVerticalStackLayout(vslBuilder, finalRect);
-                break;
-            case HorizontalStackLayoutBuilder hslBuilder:
-                ArrangeHorizontalStackLayout(hslBuilder, finalRect);
-                break;
-            case GridBuilder gridBuilder:
-                ArrangeGrid(gridBuilder, finalRect);
-                break;
-            default:
-                throw new ArgumentException($"Tipo de elemento no soportado: {element.GetType()}");
-        }
-    }
+    // --- Método Arrange(object, PdfRectangle) ELIMINADO ---
+    // Este método duplicado que aceptaba PdfRectangle causaba ambigüedad y errores.
+    // public void Arrange(object element, PdfRectangle finalRect)
+    // {
+    //     throw new NotImplementedException(); // ¡Eliminar completamente!
+    // }
 
-    private PdfSize MeasureParagraph(ParagraphBuilder builder, PdfSize availableSize)
-    {
-        if (_currentContext == null)
-            throw new InvalidOperationException("Layout operation must be performed within a layout context.");
-
-        var childContext = _currentContext.CreateChildContext(
-            new PdfRectangle(0, 0, availableSize.Width, availableSize.Height)
-        );
-
-        return _paragraphManager.Measure(builder, childContext);
-    }
-
-    private void ArrangeParagraph(ParagraphBuilder builder, PdfRectangle finalRect)
-    {
-        if (_currentContext == null)
-            throw new InvalidOperationException("Layout operation must be performed within a layout context.");
-
-        var childContext = _currentContext.CreateChildContext(finalRect);
-        _paragraphManager.Arrange(builder, childContext);
-    }
-
-    private PdfSize MeasureImage(ImageBuilder builder, PdfSize availableSize)
-    {
-        // Implementación pendiente
-        throw new NotImplementedException();
-    }
-
-    private void ArrangeImage(ImageBuilder builder, PdfRectangle finalRect)
-    {
-        // Implementación pendiente
-        throw new NotImplementedException();
-    }
-
-    private PdfSize MeasureVerticalStackLayout(VerticalStackLayoutBuilder builder, PdfSize availableSize)
-    {
-        if (_currentContext == null)
-            throw new InvalidOperationException("Layout operation must be performed within a layout context.");
-
-        var childContext = _currentContext.CreateChildContext(
-            new PdfRectangle(0, 0, availableSize.Width, availableSize.Height)
-        );
-
-        return _verticalStackLayoutManager.Measure(builder, childContext);
-    }
-
-    private void ArrangeVerticalStackLayout(VerticalStackLayoutBuilder builder, PdfRectangle finalRect)
-    {
-        if (_currentContext == null)
-            throw new InvalidOperationException("Layout operation must be performed within a layout context.");
-
-        var childContext = _currentContext.CreateChildContext(finalRect);
-        _verticalStackLayoutManager.Arrange(builder, childContext);
-    }
-
-    private PdfSize MeasureHorizontalStackLayout(HorizontalStackLayoutBuilder builder, PdfSize availableSize)
-    {
-        // Implementación pendiente
-        throw new NotImplementedException();
-    }
-
-    private void ArrangeHorizontalStackLayout(HorizontalStackLayoutBuilder builder, PdfRectangle finalRect)
-    {
-        // Implementación pendiente
-        throw new NotImplementedException();
-    }
-
-    private PdfSize MeasureGrid(GridBuilder builder, PdfSize availableSize)
-    {
-        // Implementación pendiente
-        throw new NotImplementedException();
-    }
-
-    private void ArrangeGrid(GridBuilder builder, PdfRectangle finalRect)
-    {
-        // Implementación pendiente
-        throw new NotImplementedException();
-    }
 }

@@ -23,7 +23,7 @@ namespace MauiPdfGenerator.Core.Content
             _document = document ?? throw new ArgumentNullException(nameof(document));
             _resources = resources ?? throw new ArgumentNullException(nameof(resources));
             _writer = new StreamWriter(_contentBytes, Encoding.ASCII, leaveOpen: true);
-            Dictionary.Add(PdfName.Filter, PdfName.FlateDecode);
+            //Dictionary.Add(PdfName.Filter, PdfName.FlateDecode);
         }
 
         // --- Operadores básicos de texto ---
@@ -58,7 +58,7 @@ namespace MauiPdfGenerator.Core.Content
         public void SetFont(PdfFontBase font, double size)
         {
             PdfName fontName = _resources.GetResourceName(font);
-            AppendOperator($"{fontName.Value} {FormatDouble(size)} Tf");
+            AppendOperator($"{fontName} {FormatDouble(size)} Tf");
             CurrentGraphicsState.CurrentFont = font;
             CurrentGraphicsState.CurrentFontSize = size;
         }

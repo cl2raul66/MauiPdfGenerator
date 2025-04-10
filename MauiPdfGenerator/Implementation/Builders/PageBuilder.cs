@@ -50,9 +50,9 @@ internal class PageBuilder : IPdfPageBuilder
         _marginBottom = _documentBuilder.DefaultPageMarginBottom;
 
         // Assign the pre-created Resources dictionary from PdfPage
-        _pageResources = _pdfPage.Resources as PdfDictionary as PdfResources ??
+        _pageResources = _pdfPage.PageResources as PdfDictionary as PdfResources ??
                          throw new InvalidOperationException("PdfPage is missing its Resources dictionary.");
-        if (!(_pdfPage.Resources is PdfResources)) // Ensure it's our specific type if needed later
+        if (!(_pdfPage.PageResources is PdfResources)) // Ensure it's our specific type if needed later
         {
             // This might indicate an issue if PdfPage constructor created a plain PdfDictionary
             Console.WriteLine("Warning: Page Resources dictionary is not of type PdfResources.");
@@ -222,7 +222,8 @@ internal class PageBuilder : IPdfPageBuilder
 
         // 4. Finalizar Content Stream y asignarlo a la página
         contentStream.Dispose(); // Esto llama a GetContentBytes y actualiza UnfilteredData
-                                 // Ya no necesitamos llamar a GetContentBytes explícitamente aquí si Dispose lo hace.
+        var contentStreamRef = _pdfDocument.GetReference(contentStream);
+        _pdfPage.Contents = contentStreamRef;
 
         // 5. Añadir el stream como objeto indirecto y asignar a /Contents
         var contentStreamIndirect = _pdfDocument.AddIndirectObject(contentStream);

@@ -1,9 +1,5 @@
 ﻿using MauiPdfGenerator;
 using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Models;
-using MauiPdfGenerator.Fluent.Extensions;
-using static MauiPdfGenerator.Fluent.Models.PdfGridLength;
-using static Microsoft.Maui.Graphics.Colors;
 
 namespace Test;
 
@@ -30,7 +26,15 @@ public partial class MainPage : ContentPage
             {
                 pg.Content(c =>
                 {
-                    c.Paragraph(p => p.Text("¡Hola Mundo!"));
+                    //c.VerticalStackLayout(vsl =>
+                    //{
+                    //    vsl.Children(c =>
+                    //    {
+                    //        c.Paragraph(p => p.Text("¡Hola Mundo!"));
+                    //        c.Paragraph(p => p.Text("¡Hola Mundo!")).BackgroundColor(Colors.Yellow);
+                    //    });
+                    //});
+                    c.Paragraph(p => p.Text("¡Hola Mundo!").TextColor(Colors.Purple).FontSize(32));
                 });
             });
 

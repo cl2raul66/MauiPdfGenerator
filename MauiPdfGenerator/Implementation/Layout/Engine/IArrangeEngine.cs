@@ -1,18 +1,18 @@
-using MauiPdfGenerator.Common.Geometry;
+using MauiPdfGenerator.Implementation.Layout.Models;
 
 namespace MauiPdfGenerator.Implementation.Layout.Engine;
 
 /// <summary>
 /// Define el contrato para posicionar elementos dentro de un área específica.
 /// </summary>
-internal interface IArrangeEngine
+internal interface IArrangeEngine // La interfaz en sí es pública, lo cual es debatible si solo la usa el LayoutEngine interno, pero no causa el error.
 {
     /// <summary>
-    /// Posiciona un elemento en una ubicación específica.
+    /// Posiciona un elemento según el contexto proporcionado.
     /// </summary>
     /// <param name="element">El elemento a posicionar</param>
-    /// <param name="finalRect">El rectángulo donde se debe posicionar el elemento</param>
-    void Arrange(object element, PdfRectangle finalRect);
+    /// <param name="context">El contexto que incluye el área final y otras infos</param>
+    void Arrange(object element, LayoutContext context); // <--- Firma Correcta
 
     /// <summary>
     /// Determina si un elemento necesita ser reposicionado.

@@ -59,58 +59,61 @@ internal class PdfStream : PdfObject
     /// <exception cref="NotSupportedException">If an unsupported filter is specified.</exception>
     protected virtual byte[] ApplyFilters()
     {
-        // Check the /Filter entry in the dictionary
-        PdfObject? filterEntry = Dictionary[PdfName.Filter];
-        if (filterEntry is null || filterEntry is PdfNull)
-        {
-            return UnfilteredData; // No filter specified
-        }
+        Console.WriteLine("DEBUG: Applying Filters - SKIPPING COMPRESSION"); // Mensaje Debug
+                                                           
+        return UnfilteredData; 
+        //// Check the /Filter entry in the dictionary
+        //PdfObject? filterEntry = Dictionary[PdfName.Filter];
+        //if (filterEntry is null || filterEntry is PdfNull)
+        //{
+        //    return UnfilteredData; // No filter specified
+        //}
 
-        // We'll process filters sequentially if it's an array
-        var filters = new List<PdfName>();
-        if (filterEntry is PdfName singleFilter)
-        {
-            filters.Add(singleFilter);
-        }
-        else if (filterEntry is PdfArray filterArray)
-        {
-            filters.AddRange(filterArray.OfType<PdfName>());
-        }
-        else
-        {
-            throw new NotSupportedException($"Unsupported /Filter type: {filterEntry.GetType().Name}");
-        }
+        //// We'll process filters sequentially if it's an array
+        //var filters = new List<PdfName>();
+        //if (filterEntry is PdfName singleFilter)
+        //{
+        //    filters.Add(singleFilter);
+        //}
+        //else if (filterEntry is PdfArray filterArray)
+        //{
+        //    filters.AddRange(filterArray.OfType<PdfName>());
+        //}
+        //else
+        //{
+        //    throw new NotSupportedException($"Unsupported /Filter type: {filterEntry.GetType().Name}");
+        //}
 
-        if (filters.Count == 0)
-        {
-            return UnfilteredData;
-        }
+        //if (filters.Count == 0)
+        //{
+        //    return UnfilteredData;
+        //}
 
-        byte[] currentData = UnfilteredData;
+        //byte[] currentData = UnfilteredData;
 
-        // TODO: Implement support for /DecodeParms dictionary associated with filters.
+        //// TODO: Implement support for /DecodeParms dictionary associated with filters.
 
-        foreach (var filterName in filters)
-        {
-            if (filterName == PdfName.FlateDecode)
-            {
-                currentData = FlateEncode(currentData);
-            }
-            // --- Add support for other filters here ---
-            // else if (filterName == PdfName.DCTDecode) { /* Handled by image data usually */ }
-            // else if (filterName == PdfName.ASCIIHexDecode) { ... }
-            // else if (filterName == PdfName.ASCII85Decode) { ... }
-            // else if (filterName == PdfName.LZWDecode) { ... } // Requires LZW implementation
-            // else if (filterName == PdfName.RunLengthDecode) { ... }
-            else
-            {
-                // If filter not supported, should we throw or write unfiltered?
-                // Throwing is safer to indicate lack of support.
-                throw new NotSupportedException($"Unsupported stream filter: {filterName.Value}");
-            }
-        }
+        //foreach (var filterName in filters)
+        //{
+        //    if (filterName == PdfName.FlateDecode)
+        //    {
+        //        currentData = FlateEncode(currentData);
+        //    }
+        //    // --- Add support for other filters here ---
+        //    // else if (filterName == PdfName.DCTDecode) { /* Handled by image data usually */ }
+        //    // else if (filterName == PdfName.ASCIIHexDecode) { ... }
+        //    // else if (filterName == PdfName.ASCII85Decode) { ... }
+        //    // else if (filterName == PdfName.LZWDecode) { ... } // Requires LZW implementation
+        //    // else if (filterName == PdfName.RunLengthDecode) { ... }
+        //    else
+        //    {
+        //        // If filter not supported, should we throw or write unfiltered?
+        //        // Throwing is safer to indicate lack of support.
+        //        throw new NotSupportedException($"Unsupported stream filter: {filterName.Value}");
+        //    }
+        //}
 
-        return currentData;
+        //return currentData;
     }
 
     /// <summary>

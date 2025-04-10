@@ -23,6 +23,15 @@ internal class PdfResources : PdfDictionary
     public PdfResources(PdfDocument document) : base()
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
+
+        var procSetArray = new PdfArray(
+            PdfName.Get("PDF"),
+            PdfName.Get("Text"),
+            PdfName.Get("ImageB"), // O ImageC, ImageI dependiendo de lo que uses
+            PdfName.Get("ImageC")
+        // PdfName.Get("ImageI")
+        );
+        this.Add(PdfName.Get("ProcSet"), procSetArray);
     }
 
     /// <summary>

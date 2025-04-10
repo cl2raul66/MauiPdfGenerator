@@ -4,6 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Implementation.Builders;
 using MauiPdfGenerator.Implementation.Layout.Engine;
 using MauiPdfGenerator.Implementation.Layout.Models;
+using MauiPdfGenerator.Implementation.Layout;
 
 namespace MauiPdfGenerator.Implementation.Layout.Managers;
 
@@ -136,22 +137,10 @@ internal class VerticalStackLayoutManager
     // Helper (podría ir en una clase de utilidad de Layout)
     private PdfHorizontalAlignment GetChildHorizontalAlignment(object childBuilder, PdfHorizontalAlignment defaultAlignment)
     {
-        // Intentar obtener la configuración HorizontalOptions del builder hijo
-        if (childBuilder is IPdfViewBuilder<IPdfViewBuilder> viewBuilder) // Usar interfaz base no genérica si existe, o reflection/patrones
+        if (childBuilder is IInternalViewBuilder internalBuilder)
         {
-            // Necesitamos una forma de leer la propiedad ConfiguredHorizontalOptions.
-            // Esto podría requerir que los builders implementen una interfaz interna
-            // o usar reflection (menos ideal).
-            // Ejemplo con interfaz interna:
-            if (childBuilder is IInternalViewBuilder internalBuilder)
-            {
-                return internalBuilder.ConfiguredHorizontalOptions;
-            }
-            // Ejemplo simplificado asumiendo que podemos castear (frágil):
-            // dynamic dynBuilder = childBuilder;
-            // try { return dynBuilder.ConfiguredHorizontalOptions; } catch { /* Ignorar */ }
-
+            return internalBuilder.ConfiguredHorizontalOptions;
         }
-        return defaultAlignment; // Devolver el default del layout si no se puede obtener del hijo
+        return defaultAlignment;
     }
 }

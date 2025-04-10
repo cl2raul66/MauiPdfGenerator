@@ -3,6 +3,7 @@ using MauiPdfGenerator.Core.Structure;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Implementation.Layout.Managers;
 using Microsoft.Maui.Graphics;
 
 namespace MauiPdfGenerator.Implementation.Builders;
@@ -11,7 +12,7 @@ namespace MauiPdfGenerator.Implementation.Builders;
 /// Internal implementation for building PDF Horizontal Stack Layouts.
 /// Arranges children horizontally.
 /// </summary>
-internal class HorizontalStackLayoutBuilder : IPdfHorizontalStackLayoutBuilder
+internal class HorizontalStackLayoutBuilder : IPdfHorizontalStackLayoutBuilder, IInternalViewBuilder
 {
     private readonly PdfDocument _pdfDocument;
     private readonly PdfResources _resources;

@@ -3,6 +3,7 @@ using MauiPdfGenerator.Core.Images; // Necesario para PdfImageXObject
 using MauiPdfGenerator.Core.Structure;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Implementation.Layout.Managers;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -10,7 +11,7 @@ namespace MauiPdfGenerator.Implementation.Builders;
 /// Internal implementation for building PDF Image elements.
 /// Stores configuration set via the fluent API.
 /// </summary>
-internal class ImageBuilder : IPdfImageBuilder
+internal class ImageBuilder : IPdfImageBuilder, IInternalViewBuilder
 {
     private readonly PdfDocument _pdfDocument;
     private readonly PdfResources _resources;

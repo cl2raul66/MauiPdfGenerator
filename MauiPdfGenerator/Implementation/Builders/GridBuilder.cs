@@ -4,6 +4,7 @@ using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Implementation.Layout.Managers;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -11,7 +12,7 @@ namespace MauiPdfGenerator.Implementation.Builders;
 /// Internal implementation for building PDF Grid Layouts.
 /// Stores configuration and child positioning info.
 /// </summary>
-internal class GridBuilder : IPdfGridBuilder
+internal class GridBuilder : IPdfGridBuilder, IInternalViewBuilder
 {
     private readonly PdfDocument _pdfDocument;
     private readonly PdfResources _resources;

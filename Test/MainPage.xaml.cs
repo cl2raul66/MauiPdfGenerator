@@ -26,15 +26,8 @@ public partial class MainPage : ContentPage
             {
                 pg.Content(c =>
                 {
-                    //c.VerticalStackLayout(vsl =>
-                    //{
-                    //    vsl.Children(c =>
-                    //    {
-                    //        c.Paragraph(p => p.Text("¡Hola Mundo!"));
-                    //        c.Paragraph(p => p.Text("¡Hola Mundo!")).BackgroundColor(Colors.Yellow);
-                    //    });
-                    //});
-                    c.Paragraph(p => p.Text("¡Hola Mundo!").TextColor(Colors.Purple).FontSize(32));
+                    c.Paragraph(p => p.Text("¡Hola Mundo 1!"));
+                    c.Paragraph(p => p.Text("¡Hola Mundo 2!"));
                 });
             });
 

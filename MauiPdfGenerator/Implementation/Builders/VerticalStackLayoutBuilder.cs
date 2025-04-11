@@ -4,7 +4,6 @@ using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Implementation.Layout.Managers;
-using Microsoft.Maui.Graphics;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -20,7 +19,7 @@ internal class VerticalStackLayoutBuilder : IPdfVerticalStackLayoutBuilder, IInt
     // --- Configuration Storage ---
     private float _spacing = 0f; // Default spacing
     private Thickness _padding = Thickness.Zero;
-    private readonly List<object> _children = new();
+    private readonly List<object> _children = [];
 
     // View Properties (from IPdfViewBuilder)
     private double? _explicitWidth;

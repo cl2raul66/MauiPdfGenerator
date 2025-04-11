@@ -20,7 +20,7 @@ internal class HorizontalStackLayoutBuilder : IPdfHorizontalStackLayoutBuilder, 
     // --- Configuration Storage ---
     private float _spacing = 0f; // Default spacing
     private Thickness _padding = Thickness.Zero;
-    private readonly List<object> _children = new();
+    private readonly List<object> _children = [];
 
     // View Properties (from IPdfViewBuilder)
     private double? _explicitWidth;

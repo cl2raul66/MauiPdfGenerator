@@ -6,6 +6,7 @@ using MauiPdfGenerator.Core.Fonts;
 using MauiPdfGenerator.Fluent.Enums;
 using System.Text;
 using MauiPdfGenerator.Implementation.Extensions;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Implementation.Layout.Managers; 
 
@@ -27,6 +28,8 @@ internal class ParagraphManager
     /// </summary>
     public PdfSize Measure(ParagraphBuilder builder, LayoutContext context)
     {
+        Debug.WriteLine($"context.AvailableArea: {context.AvailableArea}");
+        Debug.WriteLine($"builder.ConfiguredText: {builder.ConfiguredText}");
         var padding = builder.ConfiguredPadding; // Usa Microsoft.Maui.Thickness
         var availableWidth = context.AvailableArea.Width - padding.Left - padding.Right;
         if (availableWidth < 0) availableWidth = 0;
@@ -51,7 +54,7 @@ internal class ParagraphManager
         {
             // TODO: Implementar medición precisa para texto formateado, considerando cada span.
             textHeight = builder.ConfiguredFontSize * 1.2 * 2; // Placeholder: Asumir 2 líneas
-            Console.WriteLine("Warning: Measure for FormattedText is not accurately implemented yet.");
+            Debug.WriteLine("Warning: Measure for FormattedText is not accurately implemented yet.");
         }
 
         // Sumar padding vertical
@@ -74,7 +77,7 @@ internal class ParagraphManager
         {
             // Placeholder para ancho formateado
             measuredWidth = availableWidth * 0.8; // Asumir 80% como placeholder
-            Console.WriteLine("Warning: Measure width for FormattedText is not accurately implemented yet.");
+            Debug.WriteLine("Warning: Measure width for FormattedText is not accurately implemented yet.");
         }
 
         measuredWidth += padding.Left + padding.Right;
@@ -91,8 +94,9 @@ internal class ParagraphManager
         if (finalWidth < 0) finalWidth = 0;
         if (finalHeight < 0) finalHeight = 0;
 
-
-        return new PdfSize(finalWidth, finalHeight);
+        var pdfSize = new PdfSize(finalWidth, finalHeight);
+        Debug.WriteLine($"PdfSize: {pdfSize}");
+        return pdfSize;
     }
 
     /// <summary>
@@ -100,6 +104,7 @@ internal class ParagraphManager
     /// </summary>
     public void Arrange(ParagraphBuilder builder, LayoutContext context)
     {
+        Debug.WriteLine($"context.AvailableArea: {context.AvailableArea}");
         var finalRect = context.AvailableArea; // Rectángulo PDF [LLx, LLy, Width, Height] asignado por el padre
         var padding = builder.ConfiguredPadding; // Usa Microsoft.Maui.Thickness
         var contentStream = context.ContentStream;
@@ -156,6 +161,7 @@ internal class ParagraphManager
                                         double areaX, double areaYBottom, double areaYTop,
                                         double areaWidth, double areaHeight)
     {
+        Debug.WriteLine($"areaX, areaYBottom, areaYTop, areaWidth, areaHeight: {areaX}, {areaYBottom}, {areaYTop}, {areaWidth}, {areaHeight}");
         var text = builder.ConfiguredText ?? string.Empty;
         var font = GetFont(builder.ConfiguredFontFamily, builder.ConfiguredFontAttributes);
         var fontSize = builder.ConfiguredFontSize;
@@ -212,7 +218,7 @@ internal class ParagraphManager
             // Comprobar contra la parte inferior del área de contenido
             if (currentPdfY < areaYBottom - (fontSize * 0.2)) // Pequeña tolerancia
             {
-                Console.WriteLine("Warning: Text overflow in ParagraphManager.Arrange. Stopping rendering.");
+                Debug.WriteLine("Warning: Text overflow in ParagraphManager.Arrange. Stopping rendering.");
                 break;
             }
 
@@ -243,6 +249,8 @@ internal class ParagraphManager
                 // TODO: Usar operador Td o T* para eficiencia
                 contentStream.MoveTextPosition(currentPdfX, currentPdfY);
             }
+            Debug.WriteLine($"line, currentPdfX, currentPdfY: {line}, {currentPdfX}, {currentPdfY}");
+            Debug.WriteLine(">> Appending Tj <<");
             contentStream.ShowText(line, font); // <-- Pasar la fuente
 
             // Preparar Y para la siguiente línea
@@ -266,7 +274,7 @@ internal class ParagraphManager
         contentStream.SetTextColor(1, 0, 0); // Rojo para indicar no implementado
         contentStream.MoveTextPosition(areaX, areaYTop - 10); // Posicionar arriba
         contentStream.ShowText("[Formatted Text Rendering Not Implemented]", defaultFont);
-        Console.WriteLine("Warning: Arrange for FormattedText is not implemented yet.");
+        Debug.WriteLine("Warning: Arrange for FormattedText is not implemented yet.");
     }
 
 

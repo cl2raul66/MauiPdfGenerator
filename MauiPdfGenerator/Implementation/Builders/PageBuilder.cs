@@ -5,6 +5,7 @@ using MauiPdfGenerator.Common.Geometry;
 using MauiPdfGenerator.Core.Objects;
 using MauiPdfGenerator.Implementation.Layout.Engine;
 using MauiPdfGenerator.Implementation.Layout.Models;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -67,9 +68,10 @@ internal class PageBuilder : IPdfPageBuilder
     // --- FinalizePage (Usa LayoutEngine con el Contenedor Raíz) ---
     internal void FinalizePage()
     {
-        if (_rootLayoutBuilder == null)
+        Debug.WriteLine("FinalizePage Started");
+        if (_rootLayoutBuilder is null)
         {
-            Console.WriteLine("Warning: Page has no content defined via Content(). Skipping layout.");
+            Debug.WriteLine("Warning: Page has no content defined via Content(). Skipping layout.");
             // Añadir stream vacío? O lanzar error? Añadir stream vacío es más seguro.
             var emptyStream = new PdfContentStream(_pdfDocument, _pageResources);
             emptyStream.Dispose(); // Genera bytes vacíos
@@ -90,8 +92,15 @@ internal class PageBuilder : IPdfPageBuilder
         // 4. Iniciar Layout en el elemento Raíz
         // _layoutEngine.BeginLayout(initialContext); // Eliminado si _currentContext se eliminó
 
+        Debug.WriteLine($"_rootLayoutBuilder.GetType().Name: {_rootLayoutBuilder.GetType().Name}");
+        Debug.WriteLine($"initialContext.AvailableArea: {initialContext.AvailableArea}");
+
         // Medir el árbol completo desde la raíz
         var totalNeededSize = _layoutEngine.Measure(_rootLayoutBuilder, initialContext);
+
+        Debug.WriteLine($"totalNeededSize: {totalNeededSize}");
+
+        Debug.WriteLine("Calling Arrange on Root");
 
         // Posicionar el árbol completo desde la raíz dentro del área inicial
         _layoutEngine.Arrange(_rootLayoutBuilder, initialContext);
@@ -105,6 +114,8 @@ internal class PageBuilder : IPdfPageBuilder
         var contentStreamRef = _pdfDocument.GetReference(contentStream);
         _pdfPage.Contents = contentStreamRef;
 
-        Console.WriteLine($"Page finalized. Root: {_rootLayoutBuilder.GetType().Name}, Content stream {contentStreamRef}, Resources {_pdfPage[PdfName.Resources]}.");
+        Debug.WriteLine("FinalizePage Finished");
+
+        Debug.WriteLine($"Page finalized. Root: {_rootLayoutBuilder.GetType().Name}, Content stream {contentStreamRef}, Resources {_pdfPage[PdfName.Resources]}.");
     }
 }

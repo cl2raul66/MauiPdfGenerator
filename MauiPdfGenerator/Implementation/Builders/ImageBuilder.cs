@@ -4,6 +4,7 @@ using MauiPdfGenerator.Core.Structure;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Implementation.Layout.Managers;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -177,7 +178,7 @@ internal class ImageBuilder : IPdfImageBuilder, IInternalViewBuilder
     {
         if (_sourceType == PdfImageSourceType.None)
         {
-            Console.WriteLine("Warning: Attempting to create image object with no source set.");
+            Debug.WriteLine("Warning: Attempting to create image object with no source set.");
             return; // Or throw?
         }
 
@@ -204,7 +205,7 @@ internal class ImageBuilder : IPdfImageBuilder, IInternalViewBuilder
                         }
                         else
                         {
-                            Console.WriteLine($"Error: Image file not found at path: {_sourcePathOrUrl}");
+                            Debug.WriteLine($"Error: Image file not found at path: {_sourcePathOrUrl}");
                             // How to handle MAUI embedded resources? Needs investigation.
                             // Example: var stream = await FileSystem.OpenAppPackageFileAsync(path); ??
                             throw new FileNotFoundException("Image file not found (URL/Resource handling not implemented).", _sourcePathOrUrl);
@@ -249,7 +250,7 @@ internal class ImageBuilder : IPdfImageBuilder, IInternalViewBuilder
         catch (Exception ex)
         {
             // Log error appropriately
-            Console.WriteLine($"Error creating PDF image object: {ex.Message}");
+            Debug.WriteLine($"Error creating PDF image object: {ex.Message}");
             // Optionally re-throw or handle gracefully
             // throw; // Re-throw to indicate failure
             PdfImageXObject = null; // Ensure it's null on failure

@@ -3,6 +3,7 @@ using MauiPdfGenerator.Core.IO;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Common.Geometry;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -209,8 +210,8 @@ internal partial class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
     public IDocumentConfigurator SetSecurity(Action<ISecurityConfigurator> securityAction)
     {
         // TODO: Implementar ISecurityConfigurator y la lógica de seguridad en Core
-        if (securityAction == null) throw new ArgumentNullException(nameof(securityAction));
-        Console.WriteLine("Warning: DocumentBuilder.SetSecurity is not implemented yet."); // Placeholder
+        ArgumentNullException.ThrowIfNull(securityAction);
+        Debug.WriteLine("Warning: DocumentBuilder.SetSecurity is not implemented yet."); // Placeholder
         // var securityAdapter = new SecurityConfiguratorAdapter(_securitySettings);
         // securityAction(securityAdapter);
         return this;
@@ -291,7 +292,7 @@ internal partial class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
                                                                               // Add other standard sizes (A3, A5, B5, Tabloid, etc.)
             default:
                 // Default to A4 if unknown or not specified
-                Console.WriteLine($"Warning: Unknown PageSizeType '{size}'. Defaulting to A4.");
+                Debug.WriteLine($"Warning: Unknown PageSizeType '{size}'. Defaulting to A4.");
                 return new PdfRectangle(0, 0, Math.Round(210 * mmToPt), Math.Round(297 * mmToPt));
         }
     }

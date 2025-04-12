@@ -12,7 +12,7 @@ internal readonly struct PdfSize : IEquatable<PdfSize>
     /// <summary>
     /// Gets a size with zero width and height.
     /// </summary>
-    public static readonly PdfSize Zero = new PdfSize(0, 0);
+    public static readonly PdfSize Zero = new(0, 0);
 
     /// <summary>
     /// Gets the width component of the size.

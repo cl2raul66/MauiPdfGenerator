@@ -1,10 +1,9 @@
 using MauiPdfGenerator.Common.Geometry;
 using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Implementation.Builders;
 using MauiPdfGenerator.Implementation.Layout.Engine;
 using MauiPdfGenerator.Implementation.Layout.Models;
-using MauiPdfGenerator.Implementation.Layout;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Implementation.Layout.Managers;
 
@@ -24,6 +23,7 @@ internal class VerticalStackLayoutManager
 
     public PdfSize Measure(VerticalStackLayoutBuilder builder, LayoutContext context)
     {
+        Debug.WriteLine($"context.AvailableArea: {context.AvailableArea}");
         var padding = builder.ConfiguredPadding;
         var spacing = builder.ConfiguredSpacing;
         var children = builder.ConfiguredChildren;
@@ -53,6 +53,7 @@ internal class VerticalStackLayoutManager
             // Medir usando el contexto hijo. El contexto ya contiene el área disponible.
             var childSize = _measureEngine.Measure(child, childMeasureContextBase);
             // --- FIN CORRECCIÓN ---
+            Debug.WriteLine($"childSize: {childSize}");
 
             maxWidth = Math.Max(maxWidth, childSize.Width);
             totalHeight += childSize.Height;
@@ -75,12 +76,14 @@ internal class VerticalStackLayoutManager
         if (maxWidth < 0) maxWidth = 0;
         if (totalHeight < 0) totalHeight = 0;
 
-
-        return new PdfSize(maxWidth, totalHeight);
+        var pdfSize = new PdfSize(maxWidth, totalHeight);
+        Debug.WriteLine($"PdfSize: {pdfSize}");
+        return pdfSize;
     }
 
     public void Arrange(VerticalStackLayoutBuilder builder, LayoutContext context)
     {
+        Debug.WriteLine($"context.AvailableArea: {context.AvailableArea}");
         var padding = builder.ConfiguredPadding;
         var spacing = builder.ConfiguredSpacing;
         var children = builder.ConfiguredChildren;
@@ -99,12 +102,12 @@ internal class VerticalStackLayoutManager
        );
 
         foreach (var child in children)
-        {
+        {            
             // --- CORRECCIÓN ---
             // Volver a medir (o obtener del caché) usando el contexto apropiado
             var childMeasuredSize = _measureEngine.Measure(child, childMeasureContextBaseForArrange);
             // --- FIN CORRECCIÓN ---
-
+            Debug.WriteLine($"childMeasuredSize: {childMeasuredSize}");
 
             double childX = childLeft;
             if (childMeasuredSize.Width < availableChildWidth)
@@ -122,6 +125,9 @@ internal class VerticalStackLayoutManager
 
             // Crear el contexto para la operación Arrange del hijo
             var childArrangeContext = context.CreateChildContext(childFinalRect);
+
+            Debug.WriteLine($"child.GetType: {child.GetType}");
+            Debug.WriteLine($"childFinalRect: {childFinalRect}");
 
             // Posicionar usando el contexto de Arrange
             _arrangeEngine.Arrange(child, childArrangeContext);

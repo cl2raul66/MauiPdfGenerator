@@ -1,4 +1,5 @@
-﻿using System.IO.Compression; // For FlateDecode (DeflateStream)
+﻿using System.Diagnostics;
+using System.IO.Compression; // For FlateDecode (DeflateStream)
 using System.Text;
 
 namespace MauiPdfGenerator.Core.Objects;
@@ -59,7 +60,7 @@ internal class PdfStream : PdfObject
     /// <exception cref="NotSupportedException">If an unsupported filter is specified.</exception>
     protected virtual byte[] ApplyFilters()
     {
-        Console.WriteLine("DEBUG: Applying Filters - SKIPPING COMPRESSION"); // Mensaje Debug
+        Debug.WriteLine("DEBUG: Applying Filters - SKIPPING COMPRESSION"); // Mensaje Debug
                                                            
         return UnfilteredData; 
         //// Check the /Filter entry in the dictionary

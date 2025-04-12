@@ -1,6 +1,7 @@
 ﻿using MauiPdfGenerator.Common.Geometry;
 using MauiPdfGenerator.Core.Objects;
-using MauiPdfGenerator.Core.Content; // Para PdfResources
+using MauiPdfGenerator.Core.Content;
+using System.Diagnostics; // Para PdfResources
 
 namespace MauiPdfGenerator.Core.Structure;
 
@@ -103,7 +104,7 @@ internal class PdfPage : PdfDictionary
             // Evitar división por cero o resultados extraños si la altura de referencia no es válida
             // Podría pasar si se llama antes de establecer MediaBox correctamente.
             // Considera lanzar una excepción o usar un valor por defecto seguro.
-            Console.WriteLine($"Warning: Invalid referenceHeight ({referenceHeight}) in CreatePdfArrayFromUiRect. Using fallback.");
+            Debug.WriteLine($"Warning: Invalid referenceHeight ({referenceHeight}) in CreatePdfArrayFromUiRect. Using fallback.");
             referenceHeight = rectUi.Height > 0 ? rectUi.Height : 792; // Fallback a Letter height
         }
 

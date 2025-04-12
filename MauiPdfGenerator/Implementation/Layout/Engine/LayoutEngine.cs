@@ -2,6 +2,7 @@ using MauiPdfGenerator.Common.Geometry;
 using MauiPdfGenerator.Implementation.Builders;
 using MauiPdfGenerator.Implementation.Layout.Managers;
 using MauiPdfGenerator.Implementation.Layout.Models;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Implementation.Layout.Engine;
 
@@ -128,7 +129,7 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
     private PdfSize MeasureImage(ImageBuilder builder, LayoutContext context)
     {
         // TODO: Implementar Manager y llamar: return _imageManager.Measure(builder, context);
-        Console.WriteLine($"Warning: MeasureImage for {builder.GetType().Name} not implemented.");
+        Debug.WriteLine($"Warning: MeasureImage for {builder.GetType().Name} not implemented.");
         return PdfSize.Zero; // Placeholder temporal
         // throw new NotImplementedException("MeasureImage");
     }
@@ -141,7 +142,7 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
     private PdfSize MeasureHorizontalStackLayout(HorizontalStackLayoutBuilder builder, LayoutContext context)
     {
         // TODO: Implementar Manager y llamar: return _hslManager.Measure(builder, context);
-        Console.WriteLine($"Warning: MeasureHorizontalStackLayout for {builder.GetType().Name} not implemented.");
+        Debug.WriteLine($"Warning: MeasureHorizontalStackLayout for {builder.GetType().Name} not implemented.");
         return PdfSize.Zero; // Placeholder temporal
         // throw new NotImplementedException("MeasureHorizontalStackLayout");
     }
@@ -149,7 +150,7 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
     private PdfSize MeasureGrid(GridBuilder builder, LayoutContext context)
     {
         // TODO: Implementar Manager y llamar: return _gridManager.Measure(builder, context);
-        Console.WriteLine($"Warning: MeasureGrid for {builder.GetType().Name} not implemented.");
+        Debug.WriteLine($"Warning: MeasureGrid for {builder.GetType().Name} not implemented.");
         return PdfSize.Zero; // Placeholder temporal
         // throw new NotImplementedException("MeasureGrid");
     }
@@ -165,7 +166,7 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
     private void ArrangeImage(ImageBuilder builder, LayoutContext context)
     {
         // TODO: Implementar Manager y llamar: _imageManager.Arrange(builder, context);
-        Console.WriteLine($"Warning: ArrangeImage for {builder.GetType().Name} not implemented.");
+        Debug.WriteLine($"Warning: ArrangeImage for {builder.GetType().Name} not implemented.");
         // throw new NotImplementedException("ArrangeImage");
     }
 
@@ -177,14 +178,14 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
     private void ArrangeHorizontalStackLayout(HorizontalStackLayoutBuilder builder, LayoutContext context)
     {
         // TODO: Implementar Manager y llamar: _hslManager.Arrange(builder, context);
-        Console.WriteLine($"Warning: ArrangeHorizontalStackLayout for {builder.GetType().Name} not implemented.");
+        Debug.WriteLine($"Warning: ArrangeHorizontalStackLayout for {builder.GetType().Name} not implemented.");
         // throw new NotImplementedException("ArrangeHorizontalStackLayout");
     }
 
     private void ArrangeGrid(GridBuilder builder, LayoutContext context)
     {
         // TODO: Implementar Manager y llamar: _gridManager.Arrange(builder, context);
-        Console.WriteLine($"Warning: ArrangeGrid for {builder.GetType().Name} not implemented.");
+        Debug.WriteLine($"Warning: ArrangeGrid for {builder.GetType().Name} not implemented.");
         // throw new NotImplementedException("ArrangeGrid");
     }
 

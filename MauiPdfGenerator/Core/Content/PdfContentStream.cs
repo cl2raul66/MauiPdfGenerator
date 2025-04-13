@@ -193,8 +193,15 @@ namespace MauiPdfGenerator.Core.Content
 
         public void Dispose()
         {
+            // GetContentBytes(); // <-- Asegura que _writer flushed y UnfilteredData está actualizado ANTES de que se cierren los streams
+            _writer?.Flush(); // Flush explícito antes de cerrar puede ser más seguro
+            if (_contentBytes != null && UnfilteredData == null) // Poblar si no se ha hecho
+            {
+                UnfilteredData = _contentBytes.ToArray();
+            }
             _writer?.Dispose();
             _contentBytes?.Dispose();
+            GC.SuppressFinalize(this); // Añadir por buena práctica IDisposable
         }
     }
 }

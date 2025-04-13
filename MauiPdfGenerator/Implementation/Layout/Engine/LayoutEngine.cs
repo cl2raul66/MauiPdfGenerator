@@ -29,11 +29,15 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
     // --- IMeasureEngine Implementation ---
     public PdfSize Measure(object element, LayoutContext context) // Firma CORRECTA (usa LayoutContext)
     {
+        Debug.WriteLine($"---> LayoutEngine.Measure START for Element: {element.GetType().Name}"); // <-- AÑADIR LOG
         // Si el elemento ya está en caché y no necesita remedirse, devolver el tamaño medido
         if (_layoutCache.TryGetValue(element, out var cachedResult) && !NeedsRemeasure(element))
         {
+            Debug.WriteLine($"     Measure CACHED. Returning: {cachedResult.MeasuredSize}"); // <-- AÑADIR LOG
             return cachedResult.MeasuredSize;
         }
+
+        Debug.WriteLine($"     Measure NOT CACHED or needs remeasure. Calling MeasureElement..."); // <-- AÑADIR LOG
 
         // Realizar la medición específica según el tipo de elemento, pasando el contexto
         var measuredSize = MeasureElement(element, context); // Llama al helper con contexto
@@ -41,6 +45,7 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
         // Almacenar o actualizar el resultado en caché
         var result = LayoutResult.CreateSuccess(element, measuredSize);
         _layoutCache[element] = result;
+        Debug.WriteLine($"---> LayoutEngine.Measure END. Measured & Cached: {measuredSize}"); // <-- AÑADIR LOG
 
         return measuredSize;
     }
@@ -81,8 +86,10 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
 
     private PdfSize MeasureElement(object element, LayoutContext context) // Firma CORRECTA (usa LayoutContext)
     {
+        Debug.WriteLine($"    MeasureElement START for Element: {element.GetType().Name} with ContextArea: {context.AvailableArea}"); // <-- AÑADIR LOG
+
         // Llama a los métodos Measure... específicos, pasando el CONTEXTO
-        return element switch
+        var size = element switch
         {
             ParagraphBuilder paragraphBuilder => MeasureParagraph(paragraphBuilder, context),
             ImageBuilder imageBuilder => MeasureImage(imageBuilder, context),
@@ -91,6 +98,10 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
             GridBuilder gridBuilder => MeasureGrid(gridBuilder, context),
             _ => throw new ArgumentException($"MeasureElement: Tipo de elemento no soportado: {element.GetType()}")
         };
+
+        Debug.WriteLine($"    MeasureElement END for Element: {element.GetType().Name}. Returning Size: {size}"); // <-- AÑADIR LOG
+
+        return size;
     }
 
     private void ArrangeElement(object element, LayoutContext context) // Firma CORRECTA (usa LayoutContext)
@@ -123,6 +134,7 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
 
     private PdfSize MeasureParagraph(ParagraphBuilder builder, LayoutContext context)
     {
+        Debug.WriteLine($"     MeasureParagraph - Calling _paragraphManager.Measure for text '{builder.ConfiguredText?.Substring(0, 5)}...'"); // LOG CLAVE AQUÍ
         return _paragraphManager.Measure(builder, context); // Pasa el contexto
     }
 
@@ -136,6 +148,7 @@ internal class LayoutEngine : IMeasureEngine, IArrangeEngine
 
     private PdfSize MeasureVerticalStackLayout(VerticalStackLayoutBuilder builder, LayoutContext context)
     {
+        Debug.WriteLine($"     MeasureVerticalStackLayout - Calling _verticalStackLayoutManager.Measure"); // <-- AÑADIR LOG
         return _verticalStackLayoutManager.Measure(builder, context); // Pasa el contexto
     }
 

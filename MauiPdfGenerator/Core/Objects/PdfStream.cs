@@ -22,6 +22,14 @@ internal class PdfStream : PdfObject
     /// </summary>
     protected byte[] UnfilteredData { get; set; }
 
+    // --- NUEVA PROPIEDAD ---
+    /// <summary>
+    /// Obtiene la longitud de los datos sin filtrar antes de la compresión.
+    /// Útil para depuración. Devuelve -1 si los datos son null.
+    /// </summary>
+    internal int UnfilteredDataLength => UnfilteredData?.Length ?? -1;
+    // --- FIN NUEVA PROPIEDAD ---
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PdfStream"/> class with empty data.
     /// </summary>

@@ -126,8 +126,10 @@ internal class VerticalStackLayoutManager
             // Crear el contexto para la operación Arrange del hijo
             var childArrangeContext = context.CreateChildContext(childFinalRect);
 
-            Debug.WriteLine($"child.GetType: {child.GetType}");
+            Debug.WriteLine($"child.GetType: {child.GetType().Name}");
             Debug.WriteLine($"childFinalRect: {childFinalRect}");
+
+            Debug.WriteLine($"---> VSLManager.Arrange: Calling Arrange for child {child.GetType().Name} in Rect {childFinalRect}");
 
             // Posicionar usando el contexto de Arrange
             _arrangeEngine.Arrange(child, childArrangeContext);

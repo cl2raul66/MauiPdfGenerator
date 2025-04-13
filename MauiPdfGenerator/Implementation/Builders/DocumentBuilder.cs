@@ -4,6 +4,8 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Common.Geometry;
 using System.Diagnostics;
+using MauiPdfGenerator.Core.Content;
+using MauiPdfGenerator.Core.Fonts;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -296,6 +298,79 @@ internal partial class DocumentBuilder : IDocumentBuilder, IDocumentConfigurator
                 return new PdfRectangle(0, 0, Math.Round(210 * mmToPt), Math.Round(297 * mmToPt));
         }
     }
+
+    // --- MÉTODO DE PRUEBA PARA GENERACIÓN SIMPLE ---
+    internal async Task GenerateSimpleTextPage(string textToDraw, string filePath)
+    {
+        Debug.WriteLine("GenerateSimpleTextPage Started");
+
+        // 1. Asegurar Metadata
+        if (_pdfDocument.Info == null) _pdfDocument.SetInfo(new PdfInfo());
+        _pdfDocument.Info.ModDate = DateTimeOffset.Now;
+
+        // 2. Crear la Página Core directamente
+        var pageMediaBox = _pdfDocument.DefaultMediaBox; // Usar el A4 configurado
+        var pageTreeRootRef = _pdfDocument.GetReference(_pdfDocument.PageTreeRoot);
+        var pdfPage = new PdfPage(_pdfDocument, pageMediaBox, pageTreeRootRef);
+        Debug.WriteLine($"PdfPage created. MediaBox: {pdfPage.MediaBox}"); // Verifica que MediaBox se lee bien
+
+        // 3. Obtener Recursos y ContentStream
+        var pageResources = pdfPage.PageResources; // Obtener de la página
+        var contentStream = new PdfContentStream(_pdfDocument, pageResources);
+        Debug.WriteLine("PdfContentStream created.");
+
+        // --- DIBUJO DIRECTO Y SIMPLE ---
+        try
+        {
+            // Obtener fuente (simple)
+            var font = new PdfStandardFont(StandardFontType.Helvetica); // Fuente fija
+            double fontSize = 12;
+            var fontRef = pageResources.GetResourceName(font); // Asegurar que se añade a recursos
+            Debug.WriteLine($"Font {fontRef} obtained/added to resources.");
+
+            // Posición fija (Coordenadas PDF: origen abajo-izquierda)
+            double x = 100;
+            double y = 700;
+
+            // Generar comandos PDF
+            contentStream.BeginText(); Debug.WriteLine("  -> BT");
+            contentStream.SetFont(font, fontSize); Debug.WriteLine($"  -> SetFont: {fontRef} {fontSize} Tf"); // Verifica la salida de SetFont
+            contentStream.SetTextColor(0, 0, 0); Debug.WriteLine("  -> SetTextColor: 0 0 0 rg"); // Negro
+            contentStream.MoveTextPosition(x, y); Debug.WriteLine($"  -> MoveTextPosition: {x} {y} Td");
+            contentStream.ShowText(textToDraw, font); Debug.WriteLine($"  -> ShowText: '{textToDraw}'"); // Verifica el texto y la llamada
+            contentStream.EndText(); Debug.WriteLine("  -> ET");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ERROR during content stream generation: {ex.ToString()}");
+        }
+        // --- FIN DIBUJO DIRECTO ---
+
+        // 4. Finalizar Stream y Asignar a Página
+        contentStream.Dispose(); // Genera los bytes internos
+        Debug.WriteLine($"ContentStream disposed. UnfilteredData Length: {contentStream.UnfilteredDataLength}"); // Verifica si se generaron bytes
+        var contentStreamRef = _pdfDocument.GetReference(contentStream); // Añade stream como objeto indirecto
+        pdfPage.Contents = contentStreamRef; // Asigna referencia a la página
+        Debug.WriteLine($"ContentStream Ref {contentStreamRef} assigned to Page.");
+
+
+        // Añadir la página al documento AHORA
+        _pdfDocument.AddPage(pdfPage);
+        Debug.WriteLine($"PdfPage added to document. Total objects before write: {_pdfDocument.GetIndirectObjects().Count()}");
+
+
+        // 5. Escribir el Documento PDF final
+        Debug.WriteLine("Writing PDF document...");
+        using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            var writer = new PdfWriter(_pdfDocument);
+            await writer.WriteAsync(fileStream);
+        }
+        Debug.WriteLine("PDF document written.");
+    }
+
+    // --- Fin Método de Prueba ---
+
 
     // TODO: Implement SecurityConfiguratorAdapter class and PdfSecuritySettings class/logic
 

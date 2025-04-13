@@ -28,75 +28,66 @@ internal class ParagraphManager
     /// </summary>
     public PdfSize Measure(ParagraphBuilder builder, LayoutContext context)
     {
-        Debug.WriteLine($"context.AvailableArea: {context.AvailableArea}");
-        Debug.WriteLine($"builder.ConfiguredText: {builder.ConfiguredText}");
-        var padding = builder.ConfiguredPadding; // Usa Microsoft.Maui.Thickness
+        Debug.WriteLine($"---> ParagraphManager.Measure START for text: '{builder.ConfiguredText?.Substring(0, 10)}...'"); // Log inicio
+        Debug.WriteLine($"     Context Area: {context.AvailableArea}");
+        var padding = builder.ConfiguredPadding;
         var availableWidth = context.AvailableArea.Width - padding.Left - padding.Right;
         if (availableWidth < 0) availableWidth = 0;
+        Debug.WriteLine($"     Available Width (after padding): {availableWidth}");
 
         double textHeight = 0;
-        double finalLineHeight = builder.ConfiguredLineHeight * builder.ConfiguredFontSize; // Default
+        double finalLineHeight = builder.ConfiguredLineHeight * builder.ConfiguredFontSize;
 
         if (builder.ConfiguredText != null)
         {
             var font = GetFont(builder.ConfiguredFontFamily, builder.ConfiguredFontAttributes);
             var fontSize = builder.ConfiguredFontSize;
-            finalLineHeight = builder.ConfiguredLineHeight * fontSize; // Recalcular por si acaso
+            finalLineHeight = builder.ConfiguredLineHeight * fontSize;
 
-            // Usar BreakTextIntoLines para obtener una cuenta más precisa
+            Debug.WriteLine($"     Measuring simple text with Font: {font}, Size: {fontSize}, LineHeight: {finalLineHeight}");
             var lines = BreakTextIntoLines(builder.ConfiguredText, availableWidth, font, fontSize);
-            textHeight = lines.Count * finalLineHeight;
-            // Considerar línea vacía si el texto es vacío pero no null?
-            if (lines.Count == 0 && builder.ConfiguredText == "") textHeight = finalLineHeight;
-            else if (lines.Count == 0 && builder.ConfiguredText == null) textHeight = 0; // Si el texto es null, altura 0
-        }
-        else if (builder.ConfiguredFormattedText != null)
-        {
-            // TODO: Implementar medición precisa para texto formateado, considerando cada span.
-            textHeight = builder.ConfiguredFontSize * 1.2 * 2; // Placeholder: Asumir 2 líneas
-            Debug.WriteLine("Warning: Measure for FormattedText is not accurately implemented yet.");
-        }
+            Debug.WriteLine($"     BreakTextIntoLines returned {lines.Count} lines.");
+            //foreach(var l in lines) Debug.WriteLine($"       Line: '{l}'"); // Descomentar si es necesario
 
-        // Sumar padding vertical
+            if (lines.Count == 1) textHeight = fontSize;
+            else if (lines.Count > 1) textHeight = (lines.Count - 1) * finalLineHeight + fontSize;
+            else textHeight = 0; // Sin lineas
+            if (lines.Count == 0 && builder.ConfiguredText == "") textHeight = finalLineHeight; // Texto vacío = 1 línea
+            Debug.WriteLine($"     Calculated textHeight: {textHeight}");
+        }
+        // ... (manejo formatted text placeholder) ...
+
         var totalHeight = textHeight + padding.Top + padding.Bottom;
+        Debug.WriteLine($"     Total Height (with padding): {totalHeight}");
 
-        // Determinar el ancho final
-        // Por defecto, el párrafo ocupa el ancho disponible (menos padding),
-        // a menos que tenga un ancho explícito o su contenido medido sea menor.
-        // La lógica de 'Measure' debería devolver el ancho *necesario*, no el disponible.
-        // Recalculemos el ancho necesario basado en las líneas (simplificado).
+        // ... (cálculo de measuredWidth) ...
         double measuredWidth = 0;
+        // ... (cálculo simplificado de measuredWidth como antes) ...
         if (builder.ConfiguredText != null)
         {
             var font = GetFont(builder.ConfiguredFontFamily, builder.ConfiguredFontAttributes);
             var fontSize = builder.ConfiguredFontSize;
-            var lines = BreakTextIntoLines(builder.ConfiguredText, double.PositiveInfinity, font, fontSize); // Medir sin wrapping
+            var lines = BreakTextIntoLines(builder.ConfiguredText, double.PositiveInfinity, font, fontSize);
             measuredWidth = lines.Count > 0 ? lines.Max(line => font.GetTextWidth(line, fontSize)) : 0;
         }
-        else if (builder.ConfiguredFormattedText != null)
-        {
-            // Placeholder para ancho formateado
-            measuredWidth = availableWidth * 0.8; // Asumir 80% como placeholder
-            Debug.WriteLine("Warning: Measure width for FormattedText is not accurately implemented yet.");
-        }
-
         measuredWidth += padding.Left + padding.Right;
+        Debug.WriteLine($"     Measured Width (with padding): {measuredWidth}");
 
-        // Aplicar restricciones del builder y contexto
+
+        // Aplicar restricciones
         var finalWidth = builder.ConfiguredWidth ?? Math.Min(measuredWidth, context.AvailableArea.Width);
         var finalHeight = builder.ConfiguredHeight ?? totalHeight;
+        Debug.WriteLine($"     Final Width (pre-clamp): {finalWidth}, Final Height (pre-clamp): {finalHeight}");
 
-        // Asegurarse de no exceder el área disponible si no hay tamaño explícito
+        // Clamp final
         if (!builder.ConfiguredWidth.HasValue) finalWidth = Math.Min(finalWidth, context.AvailableArea.Width);
         if (!builder.ConfiguredHeight.HasValue) finalHeight = Math.Min(finalHeight, context.AvailableArea.Height);
-
-        // Asegurar dimensiones no negativas
         if (finalWidth < 0) finalWidth = 0;
         if (finalHeight < 0) finalHeight = 0;
 
-        var pdfSize = new PdfSize(finalWidth, finalHeight);
-        Debug.WriteLine($"PdfSize: {pdfSize}");
-        return pdfSize;
+        var finalSize = new PdfSize(finalWidth, finalHeight);
+        Debug.WriteLine($"---> ParagraphManager.Measure END. Returning Size: {finalSize}"); // Log final
+        return finalSize; // ASEGÚRATE QUE ES ESTE RETURN
     }
 
     /// <summary>
@@ -104,6 +95,7 @@ internal class ParagraphManager
     /// </summary>
     public void Arrange(ParagraphBuilder builder, LayoutContext context)
     {
+        Debug.WriteLine($"---> ParagraphManager.Arrange START for text: '{builder.ConfiguredText?.Substring(0, 10)}...' in Rect {context.AvailableArea}");
         Debug.WriteLine($"context.AvailableArea: {context.AvailableArea}");
         var finalRect = context.AvailableArea; // Rectángulo PDF [LLx, LLy, Width, Height] asignado por el padre
         var padding = builder.ConfiguredPadding; // Usa Microsoft.Maui.Thickness

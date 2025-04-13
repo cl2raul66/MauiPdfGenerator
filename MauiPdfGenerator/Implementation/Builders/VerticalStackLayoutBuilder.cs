@@ -4,6 +4,7 @@ using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Implementation.Layout.Managers;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Implementation.Builders;
 
@@ -59,9 +60,21 @@ internal class VerticalStackLayoutBuilder : IPdfVerticalStackLayoutBuilder, IInt
         ArgumentNullException.ThrowIfNull(childrenAction);
         var contentBuilder = new ContainerContentBuilder(_pdfDocument, _resources, this);
         childrenAction(contentBuilder);
-        _children.AddRange(contentBuilder.GetAddedElements());
+        //_children.AddRange(contentBuilder.GetAddedElements());
+        this.AddChildren(contentBuilder.GetAddedElements()); // <-- Llamar al método interno
         return this;
     }
+
+    // --- NUEVO MÉTODO INTERNO ---
+    internal void AddChildren(List<object> childrenBuilders)
+    {
+        if (childrenBuilders != null)
+        {
+            _children.AddRange(childrenBuilders);
+            Debug.WriteLine($"VerticalStackLayoutBuilder: Added {childrenBuilders.Count} children."); // Log
+        }
+    }
+    // --- FIN NUEVO MÉTODO ---
 
     // --- IPdfLayoutConfigurator<TBuilder> / IPdfViewBuilder Implementation ---
 

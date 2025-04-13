@@ -62,6 +62,15 @@ internal class PageBuilder : IPdfPageBuilder
         contentAction(contentBuilder);
         // Los elementos añadidos ahora son hijos de rootVSLBuilder, no directamente de PageBuilder
 
+        // --- AÑADIR ESTA LÍNEA ---
+        var childrenBuilders = contentBuilder.GetAddedElements();
+        if (_rootLayoutBuilder is VerticalStackLayoutBuilder vslRoot) // Asegurar que es el tipo correcto
+        {
+            vslRoot.AddChildren(childrenBuilders); // Asigna los hijos
+        }
+        // TODO: Manejar otros tipos de layout raíz si es necesario
+        // --- FIN LÍNEA AÑADIDA ---
+
         return this;
     }
 

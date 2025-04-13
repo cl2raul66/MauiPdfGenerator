@@ -28,6 +28,7 @@ public partial class MainPage : ContentPage
                 {
                     c.Paragraph(p => p.Text("¡Hola Mundo 1!"));
                     c.Paragraph(p => p.Text("¡Hola Mundo 2!"));
+                    c.Paragraph(p => p.Text("¡Hola Mundo 3!"));
                 });
             });
 

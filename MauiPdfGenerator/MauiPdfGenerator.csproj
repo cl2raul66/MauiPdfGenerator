@@ -24,4 +24,9 @@
 		<PackageReference Include="SkiaSharp" Version="3.116.1" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Fluent\Interfaces\" />
+	  <Folder Include="Implementation\" />
+	</ItemGroup>
+
 </Project>

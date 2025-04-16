@@ -1,5 +1,5 @@
 ﻿using MauiPdfGenerator;
-using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Primitives;
 
 namespace Test;
 
@@ -15,25 +15,30 @@ public partial class MainPage : ContentPage
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
         try
         {
-            using var doc = PdfGenerator.CreateDocument();
+            // Usa Unit en Fluent API
+            var doc = PdfGenerator.CreateDocument();
             doc.Configure(config =>
             {
-                config.PageSize(PageSizeType.A4);
-                config.Margins(50);
+                config.Unit(Unit.Millimeters); // Set default unit for margins etc.
+                config.PageSize(PageSizeType.Letter, PageOrientationType.Landscape);                
+                config.Margins(20); // Margins ahora usan el Unit configurado (mm)
+                config.Font("Helvetica", 12); // Set default font
             });
 
             doc.PdfPage(pg =>
             {
-                pg.Content(c =>
-                {
-                    c.Paragraph(p => p.Text("¡Hola Mundo 1!"));
-                    c.Paragraph(p => p.Text("¡Hola Mundo 2!"));
-                    c.Paragraph(p => p.Text("¡Hola Mundo 3!"));
-                });
+                // Añadir texto en coordenadas específicas (usando el Unit especificado)
+                pg.AddText("¡Hola Mundo 1!", 20, 30, Unit.Millimeters, textColor: Colors.Blue);
+                pg.AddText("¡Hola Mundo 2!", 20, 45, Unit.Millimeters, fontSize: 16, attributes: FontAttributes.Bold);
+                pg.AddText("¡Hola Mundo 3!", 20, 60, Unit.Millimeters); // Usa defaults
+
+                // Añadir una imagen (ejemplo)
+                // Supongamos que tienes un Stream llamado imageStream
+                // pg.AddImage(imageStream, 20, 80, 50, 50, Unit.Millimeters);
             });
 
-            // Guardar y abrir el documento
-            await doc.SaveAsync(targetFilePath);
+            // Guardar y abrir
+            await doc.SaveAsync(targetFilePath); // No hace falta Stream aquí
             await Launcher.OpenAsync(new OpenFileRequest
             {
                 File = new ReadOnlyFile(targetFilePath)

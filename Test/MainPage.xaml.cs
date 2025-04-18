@@ -19,8 +19,7 @@ public partial class MainPage : ContentPage
             var doc = PdfGenerator.CreateDocument();
             doc.Configure(config =>
             {
-                config.Unit(Unit.Millimeters); // Set default unit for margins etc.
-                config.PageSize(PageSizeType.Letter, PageOrientationType.Landscape);                
+                config.PageSize(PageSizeType.Letter);                
                 config.Margins(20); // Margins ahora usan el Unit configurado (mm)
                 config.Font("Helvetica", 12); // Set default font
             });

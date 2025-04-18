@@ -41,8 +41,7 @@ internal class PdfGenerationEngine
                 Producer = "SkiaSharp", // SkiaSharp usually sets this, but we can be explicit
                 Creation = DateTime.Now, // SkiaSharp sets this automatically
                 Modified = DateTime.Now, // SkiaSharp sets this automatically
-                RasterDpi = 300, // Example DPI for rasterized content (if any)
-                EncodingQuality = 85, // Example JPEG quality (0-100)
+                EncodingQuality = 100, // Example JPEG quality (0-100)
                 PdfA = false // Set to true for PDF/A-1b compliance (requires font embedding, etc.)
             };
 

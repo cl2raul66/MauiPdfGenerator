@@ -14,26 +14,26 @@ public static class StandardPageSize
     // the library Core handles these point values correctly.
 
     /// <summary>ISO A4 (595.28 x 841.89 points).</summary>
-    public static readonly Size A4 = new Size(595.276f, 841.89f);
+    public static readonly Size A4 = new(595.276f, 841.89f);
 
     /// <summary>US Letter (612 x 792 points).</summary>
-    public static readonly Size Letter = new Size(612f, 792f);
+    public static readonly Size Letter = new(612f, 792f);
 
     /// <summary>US Legal (612 x 1008 points).</summary>
-    public static readonly Size Legal = new Size(612f, 1008f);
+    public static readonly Size Legal = new(612f, 1008f);
 
     /// <summary>ISO A3 (841.89 x 1190.55 points).</summary>
-    public static readonly Size A3 = new Size(841.89f, 1190.55f);
+    public static readonly Size A3 = new(841.89f, 1190.55f);
 
     /// <summary>ISO A5 (419.81 x 595.28 points).</summary>
-    public static readonly Size A5 = new Size(419.811f, 595.276f);
+    public static readonly Size A5 = new(419.811f, 595.276f);
 
     /// <summary>ISO B4 (708.66 x 1000.63 points).</summary>
-    public static readonly Size B4_ISO = new Size(708.661f, 1000.63f);
+    public static readonly Size B4_ISO = new(708.661f, 1000.63f);
 
     /// <summary>ISO B5 (498.90 x 708.66 points).</summary>
-    public static readonly Size B5_ISO = new Size(498.898f, 708.661f);
+    public static readonly Size B5_ISO = new(498.898f, 708.661f);
 
     /// <summary>US Tabloid / Ledger (792 x 1224 points).</summary>
-    public static readonly Size Tabloid = new Size(792f, 1224f);
+    public static readonly Size Tabloid = new(792f, 1224f);
 }

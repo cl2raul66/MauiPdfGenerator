@@ -1,5 +1,5 @@
 ﻿using MauiPdfGenerator;
-using MauiPdfGenerator.Fluent.Primitives;
+using static MauiPdfGenerator.Fluent.Enums.PageSizeType;
 
 namespace Test;
 
@@ -14,30 +14,37 @@ public partial class MainPage : ContentPage
     {
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
         try
-        {
-            // Usa Unit en Fluent API
+        { 
             var doc = PdfGenerator.CreateDocument();
-            doc.Configure(config =>
+            doc.Configuration(config =>
             {
-                config.PageSize(PageSizeType.Letter);                
-                config.Margins(20); // Margins ahora usan el Unit configurado (mm)
-                config.Font("Helvetica", 12); // Set default font
+                config.PageSize(Letter);
+                config.Margins(20);
+                config.PdfFontRegistry(f =>
+                {
+                    f.Font("Helvetica").Default();
+                    f.Font("Arial").IsEmbeddedFont();
+                });
+                config.MetaData(md =>
+                {
+                    md.CreationDate(DateTime.Now);
+                    md.Title("Sample");
+                    md.Author("Test");
+                    md.Creator("Test");
+                });
             });
-
-            doc.PdfPage(pg =>
-            {
-                // Añadir texto en coordenadas específicas (usando el Unit especificado)
-                pg.AddText("¡Hola Mundo 1!", 20, 30, Unit.Millimeters, textColor: Colors.Blue);
-                pg.AddText("¡Hola Mundo 2!", 20, 45, Unit.Millimeters, fontSize: 16, attributes: FontAttributes.Bold);
-                pg.AddText("¡Hola Mundo 3!", 20, 60, Unit.Millimeters); // Usa defaults
-
-                // Añadir una imagen (ejemplo)
-                // Supongamos que tienes un Stream llamado imageStream
-                // pg.AddImage(imageStream, 20, 80, 50, 50, Unit.Millimeters);
-            });
-
-            // Guardar y abrir
-            await doc.SaveAsync(targetFilePath); // No hace falta Stream aquí
+            
+            //doc.Page(pg =>
+            //{
+            //    pg.Paragraph("¡Hola Mundo!").FontFamily(Helvetica).TextColors(Colors.Blue);
+            //    pg.Paragraph(p =>
+            //    {
+            //        p.Text("¡Hola Mundo!").FontSize(16).FontAttributes(FontAttributes.Bold);
+            //        p.Text("¡Hola Mundo!").FontSize(14).TextTransform(TextTransform.Uppercase);
+            //    }).FontFamily(Arial);
+            //});
+            
+            await doc.SaveAsync(targetFilePath);
             await Launcher.OpenAsync(new OpenFileRequest
             {
                 File = new ReadOnlyFile(targetFilePath)

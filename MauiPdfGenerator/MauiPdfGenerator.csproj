@@ -25,8 +25,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Fluent\Interfaces\" />
-	  <Folder Include="Implementation\" />
+	  <Folder Include="Core\" />
+	  <Folder Include="Core\Implementation\" />
 	</ItemGroup>
 
 </Project>

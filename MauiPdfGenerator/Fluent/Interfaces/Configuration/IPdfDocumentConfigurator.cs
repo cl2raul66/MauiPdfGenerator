@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Fluent.Enums;
 
-namespace MauiPdfGenerator.Fluent.Interfaces;
+namespace MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
 /// <summary>
 /// Provides methods for configuring global settings and metadata for the PDF document.

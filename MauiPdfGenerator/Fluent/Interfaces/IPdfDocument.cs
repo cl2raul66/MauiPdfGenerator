@@ -1,4 +1,7 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces;
+﻿using MauiPdfGenerator.Fluent.Interfaces.Configuration;
+using MauiPdfGenerator.Fluent.Interfaces.Pages;
+
+namespace MauiPdfGenerator.Fluent.Interfaces;
 
 public interface IPdfDocument
 {
@@ -7,5 +10,5 @@ public interface IPdfDocument
 
     public void Configuration(Action<IPdfDocumentConfigurator>? configAction);
 
-    public void Page(Action<IPdfPage> page);
+    public IPdfContentPage Page();
 }

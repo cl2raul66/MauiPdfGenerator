@@ -1,5 +1,6 @@
 ﻿
 using MauiPdfGenerator.Fluent.Interfaces;
+using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
 namespace MauiPdfGenerator.Fluent.Models;
 
@@ -17,7 +18,15 @@ public class PdfDocument : IPdfDocument
         throw new NotImplementedException();
     }
 
-    public void Page(Action<Interfaces.IPdfPage> page)
+
+<<<<<<< TODO: cambio sin combinar del proyecto "MauiPdfGenerator (net8.0-windows10.0.19041.0)", Antes:
+    public void Page(Action<Interfaces.IPdfContentPage> page)
+    {
+=======
+    public void Page(Action<IPdfContentPage> page)
+    {
+>>>>>>> Después
+    public void Page(Action<Interfaces.Pages.IPdfContentPage> page)
     {
         throw new NotImplementedException();
     }

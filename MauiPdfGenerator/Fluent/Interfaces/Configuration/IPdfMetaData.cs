@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces;
+﻿namespace MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
 public interface IPdfMetaData
 {

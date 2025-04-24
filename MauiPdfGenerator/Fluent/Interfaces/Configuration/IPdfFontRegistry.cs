@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces;
+﻿namespace MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
 /// <summary>
 /// Provides methods to register fonts that can be used within the PDF document.

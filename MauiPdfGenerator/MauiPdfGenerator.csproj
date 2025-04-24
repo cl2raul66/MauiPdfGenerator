@@ -27,6 +27,7 @@
 	<ItemGroup>
 	  <Folder Include="Core\" />
 	  <Folder Include="Core\Implementation\" />
+	  <Folder Include="Fluent\Interfaces\Layouts\Grid\" />
 	</ItemGroup>
 
 </Project>

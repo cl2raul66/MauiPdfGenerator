@@ -1,8 +1,15 @@
 ﻿namespace MauiPdfGenerator.Fluent.Interfaces;
 
-public interface IPdfVisualElement
+public interface IPdfVisualElement 
 {
-    IPdfVisualElement BackgroundColor(Color backgroundColor);
+    IPdfVisualElement BackgroundColor(Color backgroundColor);    
+
+
+    IPdfVisualElement WidthRequest(double widthRequest);
+
+    IPdfVisualElement MinimumWidthRequest(double minimumWidthRequest);
+
+    IPdfVisualElement MaximumWidthRequest(double maximumWidthRequest);
 
     IPdfVisualElement HeightRequest(double heightRequest);
 
@@ -10,11 +17,16 @@ public interface IPdfVisualElement
 
     IPdfVisualElement MaximumHeightRequest(double maximumHeightRequest);
 
-    IPdfVisualElement WidthRequest(double widthRequest);
 
-    IPdfVisualElement Parent();
+    IPdfVisualElement Margin(double uniformMargin);
 
-    IPdfVisualElement MinimumWidthRequest(double minimumWidthRequest);
+    IPdfVisualElement Margin(double horizontalMargin, double verticalMargin);
 
-    IPdfVisualElement MaximumWidthRequest(double maximumWidthRequest);
+    IPdfVisualElement Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin);
+
+    IPdfVisualElement Padding(double uniformPadding);
+
+    IPdfVisualElement Padding(double horizontalPadding, double verticalPadding);
+
+    IPdfVisualElement Padding(double leftPadding, double topPadding, double rightPadding, double bottomPadding);
 }

@@ -13,13 +13,14 @@ internal class PdfDocumentBuilder : IPdfDocument
     private readonly PdfConfigurationBuilder _configurationBuilder;
     private readonly List<IPdfPageBuilder> _pages;
 
-    private readonly IPdfGenerationService _pdfGenerationService = new SkPdfGenerationService();
+    private readonly IPdfGenerationService _pdfGenerationService;
 
     public PdfDocumentBuilder(string? defaultPath = null)
     {
         _filePath = defaultPath;
         _pages = [];
         _configurationBuilder = new();
+        _pdfGenerationService = new SkPdfGenerationService();
     }
 
     public IPdfDocument Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)
@@ -31,7 +32,7 @@ internal class PdfDocumentBuilder : IPdfDocument
     public IPdfContentPage ContentPage()
     {
         var pageBuilder = new PdfContentPageBuilder(this, _configurationBuilder);
-        _pages.Add(pageBuilder); // Añade el constructor a la lista de páginas del documento
+        _pages.Add(pageBuilder); 
         return pageBuilder;
     }
     public Task SaveAsync()
@@ -49,17 +50,15 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             throw new ArgumentNullException(nameof(path), "La ruta del archivo no puede ser nula o vacía.");
         }
-
-        // 1. Crear modelos Core directamente con los enums PÚBLICOS de Fluent
+                
         var pageDataList = new List<PdfPageData>();
         foreach (var pageBuilder in _pages)
         {
             if (pageBuilder is IPdfContentPageBuilder contentPageBuilder)
-            {
-                // *** YA NO HAY MAPEO AQUÍ ***
+            {                
                 var pageData = new PdfPageData(
-                    contentPageBuilder.GetEffectivePageSize(), // Pasa enum público
-                    contentPageBuilder.GetEffectivePageOrientation(), // Pasa enum público
+                    contentPageBuilder.GetEffectivePageSize(), 
+                    contentPageBuilder.GetEffectivePageOrientation(), 
                     contentPageBuilder.GetEffectiveMargin(),
                     contentPageBuilder.GetEffectiveBackgroundColor(),
                     contentPageBuilder.GetEffectiveDefaultFontAlias()
@@ -71,7 +70,9 @@ internal class PdfDocumentBuilder : IPdfDocument
         var meta = _configurationBuilder.MetaDataBuilder;
         var documentData = new PdfDocumentData(
             pageDataList.AsReadOnly(),
-            meta.GetTitle, /* ... otros metadatos ... */ meta.GetCustomProperties
+            meta.GetTitle, meta.GetAuthor, meta.GetSubject, meta.GetKeywords,
+            meta.GetCreator, meta.GetProducer, meta.GetCreationDate,
+            meta.GetCustomProperties
         );
 
         // 2. Delegar a Core

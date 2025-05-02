@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Configuration;
+using System.Text;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 internal class PdfMetaDataBuilder : IPdfMetaData
@@ -10,11 +11,14 @@ internal class PdfMetaDataBuilder : IPdfMetaData
     public string? GetKeywords { get; private set; }
     public string? GetSubject { get; private set; }
     public string? GetProducer { get; private set; }
-    public string? GetCustomProperty { get; private set; }
+
+    private readonly Dictionary<string, string> _customProperties = [];
+    public IReadOnlyDictionary<string, string> GetCustomProperties => _customProperties;
 
     public IPdfMetaData Author(string author)
     {
-        throw new NotImplementedException();
+        GetAuthor = author;
+        return this;
     }
 
     public IPdfMetaData CreationDate(DateTime creationDate)
@@ -31,7 +35,10 @@ internal class PdfMetaDataBuilder : IPdfMetaData
 
     public IPdfMetaData CustomProperty(string name, string value)
     {
-        GetCustomProperty = name + value;
+        if (!string.IsNullOrEmpty(name)) // Evitar claves nulas o vacías
+        {
+            _customProperties[name] = value ?? string.Empty; // Almacenar o actualizar
+        }
         return this;
     }
 
@@ -59,5 +66,15 @@ internal class PdfMetaDataBuilder : IPdfMetaData
         return this;
     }
 
-    public override string ToString() => $"Title: {Title}, Author: {Author}";
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        if (!string.IsNullOrEmpty(GetTitle)) sb.Append($"Title: {GetTitle}, ");
+        if (!string.IsNullOrEmpty(GetAuthor)) sb.Append($"Author: {GetAuthor}, ");
+        if (!string.IsNullOrEmpty(GetSubject)) sb.Append($"Subject: {GetSubject}, ");
+        if (!string.IsNullOrEmpty(GetKeywords)) sb.Append($"Keywords: {GetKeywords}, ");
+        if (_customProperties.Any()) sb.Append($"CustomProps: {_customProperties.Count}, ");
+        if (sb.Length > 2) sb.Length -= 2; // Eliminar la última coma y espacio
+        return sb.ToString();
+    }
 }

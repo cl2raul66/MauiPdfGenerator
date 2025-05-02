@@ -4,6 +4,20 @@ using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 namespace MauiPdfGenerator.Fluent.Models;
 internal class FontRegistration : IFontRegistrationOptions
 {
+    private readonly PdfFontRegistryBuilder _registry; 
+
+    public string Alias { get; }
+    public bool IsEmbedRequired { get; private set; } = false; 
+
+    public FontRegistration(string alias, PdfFontRegistryBuilder registry)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(alias);
+        ArgumentNullException.ThrowIfNull(registry);
+
+        Alias = alias;
+        _registry = registry;
+    }
+
     public IFontRegistrationOptions Default()
     {
         _registry.SetDefault(this.Alias);
@@ -16,17 +30,8 @@ internal class FontRegistration : IFontRegistrationOptions
         return this;
     }
 
-    public string Alias { get; }
-    public bool IsEmbedRequired { get; private set; } = false; 
-    private readonly PdfFontRegistryBuilder _registry; 
-
-    // Modificado: Aceptar el registro para llamar SetDefault
-    public FontRegistration(string alias, PdfFontRegistryBuilder registry)
+    public override string ToString()
     {
-        ArgumentException.ThrowIfNullOrEmpty(alias);
-        ArgumentNullException.ThrowIfNull(registry);
-
-        Alias = alias;
-        _registry = registry;
+        return $"Font: {Alias}, Embed: {IsEmbedRequired}";
     }
 }

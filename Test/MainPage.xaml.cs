@@ -24,6 +24,8 @@ public partial class MainPage : ContentPage
                 .Build()
                 .ContentPage()
                 .Build()
+                .ContentPage()
+                .Build()
                 .SaveAsync(targetFilePath);
 
             await Launcher.OpenAsync(new OpenFileRequest

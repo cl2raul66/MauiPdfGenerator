@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Core.Models;
+﻿using MauiPdfGenerator.Core.Exceptions;
+using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Enums;
 using SkiaSharp;
 
@@ -47,7 +48,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
             pdfDoc.Close();
             return Task.CompletedTask;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not PdfGenerationException)
         {
             return Task.FromException(new PdfGenerationException($"Error generando PDF con SkiaSharp: {ex.Message}", ex));
         }

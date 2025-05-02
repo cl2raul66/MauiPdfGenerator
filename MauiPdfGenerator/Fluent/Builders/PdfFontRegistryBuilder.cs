@@ -5,7 +5,7 @@ namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PdfFontRegistryBuilder : IPdfFontRegistry
 {
-    private readonly Dictionary<string, FontRegistration> _fonts = [];
+    private readonly Dictionary<string, FontRegistration> _fonts = new(StringComparer.OrdinalIgnoreCase);
     private string? _defaultFontAlias;
 
     public IFontRegistrationOptions Font(string fontAlias)

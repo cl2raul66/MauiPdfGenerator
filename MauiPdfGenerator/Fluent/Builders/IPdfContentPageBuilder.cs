@@ -3,7 +3,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
-internal interface IPdfContentPageBuilder
+internal interface IPdfContentPageBuilder : IPdfPageBuilder
 {
     PageSizeType GetEffectivePageSize();
 

@@ -1,12 +1,18 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
+﻿using MauiPdfGenerator.Fluent.Interfaces.Elements.FormattedText;
+
+namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
 
 public interface IParagraph : IPdfVisualElement
 {
     IParagraph Text(string text);
 
+    IParagraph TextTransform(TextTransform textTransform);
+
     IParagraph FormattedText(Action<FormattedString> formattedString);
 
-    IParagraph FontFamily(string fontFamily);
+    IParagraph FormattedText(Action<IPdfFormattedStringBuilder> formattedString);
+
+    IParagraph FontFamily(string fontFamilyName);
 
     IParagraph FontSize(double fontSize);
 

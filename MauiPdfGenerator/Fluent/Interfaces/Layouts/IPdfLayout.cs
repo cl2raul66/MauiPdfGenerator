@@ -4,9 +4,13 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 public interface IPdfLayout : IPdfVisualElement
 {
-    IPdfVerticalStack Spacing(double spacing);
+    IParagraph Paragraph(string text);
 
-    IPdfVisualElement HorizontalOptions(LayoutOptions layoutOptions);
+    IParagraph Paragraph(Action<IParagraph> paragraph);
 
-    IPdfVisualElement VerticalOptions(LayoutOptions layoutOptions);
+    IPdfVerticalStackLayout PdfVerticalStackLayout(Action<IPdfVerticalStackLayout> verticalStackLayout);
+
+    IPdfHorizontalStackLayout PdfHorizontalStackLayout(Action<IPdfHorizontalStackLayout> horizontalStackLayout);
+
+    IPdfGrid PdfGrid(Action<IPdfGrid> grid);
 }

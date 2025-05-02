@@ -1,5 +1,5 @@
-﻿using MauiPdfGenerator.Fluent.Interfaces;
-using MauiPdfGenerator.Fluent.Models;
+﻿using MauiPdfGenerator.Fluent.Builders;
+using MauiPdfGenerator.Fluent.Interfaces;
 
 namespace MauiPdfGenerator;
 
@@ -8,12 +8,12 @@ public static class PdfGenerator
     public static IPdfDocument CreateDocument()
     {
 
-        return new PdfDocument();
+        return new PdfDocumentBuilder();
     }
 
     public static IPdfDocument CreateDocument(string path)
     {
 
-        return new PdfDocument(path);
+        return new PdfDocumentBuilder(path);
     }
 }

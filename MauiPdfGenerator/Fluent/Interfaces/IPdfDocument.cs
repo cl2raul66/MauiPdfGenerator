@@ -8,7 +8,7 @@ public interface IPdfDocument
     public Task SaveAsync();
     public Task SaveAsync(string path);
 
-    public void Configuration(Action<IPdfDocumentConfigurator>? configAction);
+    IPdfDocument Configuration(Action<IPdfDocumentConfigurator> documentConfigurator);
 
-    public IPdfContentPage Page();
+    IPdfContentPage ContentPage();
 }

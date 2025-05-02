@@ -2,7 +2,12 @@
 
 public interface IPdfVisualElement 
 {
-    IPdfVisualElement BackgroundColor(Color backgroundColor);    
+    IPdfVisualElement BackgroundColor(Color backgroundColor);
+
+
+    IPdfVisualElement HorizontalOptions(LayoutOptions layoutOptions);
+
+    IPdfVisualElement VerticalOptions(LayoutOptions layoutOptions);
 
 
     IPdfVisualElement WidthRequest(double widthRequest);

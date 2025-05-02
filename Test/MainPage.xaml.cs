@@ -1,6 +1,7 @@
 ﻿using MauiPdfGenerator;
-using Microsoft.Maui.Controls;
+using static Microsoft.Maui.Graphics.Colors;
 using static MauiPdfGenerator.Fluent.Enums.PageSizeType;
+using static MauiPdfGenerator.Fluent.Enums.DefaultMarginType;
 using static MauiPdfGenerator.SourceGenerators.MauiFontAliases;
 
 namespace Test;
@@ -18,36 +19,13 @@ public partial class MainPage : ContentPage
         try
         {
             var doc = PdfGenerator.CreateDocument();
-            doc.Configuration(config =>
-            {
-                config.PageSize(Letter);
-                config.Margins(20);
-                config.PdfFontRegistry(f =>
-                {
-                    f.Font(OpenSansRegular).Default();
-                    f.Font(OpenSansSemibold).IsEmbeddedFont();
-                });
-                config.MetaData(md =>
-                {
-                    md.CreationDate(DateTime.Now);
-                    md.Title("Sample");
-                    md.Author("Test");
-                    md.Creator("Test");
-                });
-            });
 
-            doc.Page().Content(c => {
-                {
-                    c.Paragraph("¡Hola Mundo!").FontFamily(OpenSansRegular).TextColors(Colors.Blue);
-                    c.Paragraph(p =>
-                    {
-                        p.Text("¡Hola Mundo!").FontSize(16).FontAttributes(FontAttributes.Bold);
-                        p.Text("¡Hola Mundo!").FontSize(14).TextTransform(TextTransform.Uppercase);
-                    }).FontFamily(OpenSansSemibold);
-                }
-            });
+            await doc.ContentPage()
+                .Build()
+                .ContentPage()
+                .Build()
+                .SaveAsync(targetFilePath);
 
-            await doc.SaveAsync(targetFilePath);
             await Launcher.OpenAsync(new OpenFileRequest
             {
                 File = new ReadOnlyFile(targetFilePath)

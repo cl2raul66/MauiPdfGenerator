@@ -19,3 +19,11 @@ public enum PageOrientationType
     Portrait,
     Landscape
 }
+
+public enum DefaultMarginType
+{
+    Normal, 
+    Narrow, 
+    Moderate, 
+    Wide
+}

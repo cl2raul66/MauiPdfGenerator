@@ -10,8 +10,7 @@ public enum PageSizeType {
     B5,         
     Tabloid,    
     Envelope_10,
-    Envelope_DL,
-    Custom
+    Envelope_DL
 }
 
 public enum PageOrientationType

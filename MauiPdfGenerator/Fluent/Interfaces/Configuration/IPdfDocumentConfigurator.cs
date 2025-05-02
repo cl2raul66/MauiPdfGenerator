@@ -16,7 +16,7 @@ public interface IPdfDocumentConfigurator
 
     IPdfDocumentConfigurator Margins(DefaultMarginType defaultMarginType);
 
-    IPdfDocumentConfigurator MetaData(Action<IPdfMetaData> metadataAction);
+    IPdfDocumentConfigurator MetaData(Action<IPdfMetaData> metaData);
 
-    IPdfDocumentConfigurator PdfFontRegistry(Action<IPdfFontRegistry> fontRegistryAction);
+    IPdfDocumentConfigurator PdfFontRegistry(Action<IPdfFontRegistry> fontRegistry);
 }

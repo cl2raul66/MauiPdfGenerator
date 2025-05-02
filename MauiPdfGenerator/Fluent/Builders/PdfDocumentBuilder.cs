@@ -1,4 +1,7 @@
-﻿using MauiPdfGenerator.Fluent.Interfaces;
+﻿using MauiPdfGenerator.Core;
+using MauiPdfGenerator.Core.Implementation.Sk;
+using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 
@@ -7,12 +10,14 @@ namespace MauiPdfGenerator.Fluent.Builders;
 internal class PdfDocumentBuilder : IPdfDocument
 {
     private string? _filePath;
-    readonly PdfConfigurationBuilder _configurationBuilder;
-    readonly List<IPdfPageBuilder> _pages;
+    private readonly PdfConfigurationBuilder _configurationBuilder;
+    private readonly List<IPdfPageBuilder> _pages;
 
-    public PdfDocumentBuilder(string? path = null)
+    private readonly IPdfGenerationService _pdfGenerationService = new SkPdfGenerationService();
+
+    public PdfDocumentBuilder(string? defaultPath = null)
     {
-        _filePath = path;
+        _filePath = defaultPath;
         _pages = [];
         _configurationBuilder = new();
     }
@@ -23,33 +28,59 @@ internal class PdfDocumentBuilder : IPdfDocument
         documentConfigurator(_configurationBuilder);
         return this;
     }
-
     public IPdfContentPage ContentPage()
     {
         var pageBuilder = new PdfContentPageBuilder(this, _configurationBuilder);
-        _pages.Add(pageBuilder);
+        _pages.Add(pageBuilder); // Añade el constructor a la lista de páginas del documento
         return pageBuilder;
     }
-
-    public async Task SaveAsync()
+    public Task SaveAsync()
     {
         if (string.IsNullOrEmpty(_filePath))
         {
-            throw new InvalidOperationException("No default file path was specified during document creation. Use SaveAsync(path) or create the document with a path.");
+            throw new InvalidOperationException("No se especificó una ruta de archivo por defecto durante la creación del documento. Utilice SaveAsync(path) o cree el documento proporcionando una ruta.");
         }
-
-        await SaveAsync(_filePath);
+        return SaveAsync(_filePath);
     }
 
     public async Task SaveAsync(string path)
     {
         if (string.IsNullOrEmpty(path))
         {
-            throw new ArgumentNullException(nameof(path), "File path cannot be null or empty");
+            throw new ArgumentNullException(nameof(path), "La ruta del archivo no puede ser nula o vacía.");
         }
 
+        // 1. Crear modelos Core directamente con los enums PÚBLICOS de Fluent
+        var pageDataList = new List<PdfPageData>();
+        foreach (var pageBuilder in _pages)
+        {
+            if (pageBuilder is IPdfContentPageBuilder contentPageBuilder)
+            {
+                // *** YA NO HAY MAPEO AQUÍ ***
+                var pageData = new PdfPageData(
+                    contentPageBuilder.GetEffectivePageSize(), // Pasa enum público
+                    contentPageBuilder.GetEffectivePageOrientation(), // Pasa enum público
+                    contentPageBuilder.GetEffectiveMargin(),
+                    contentPageBuilder.GetEffectiveBackgroundColor(),
+                    contentPageBuilder.GetEffectiveDefaultFontAlias()
+                );
+                pageDataList.Add(pageData);
+            }
+        }
 
+        var meta = _configurationBuilder.MetaDataBuilder;
+        var documentData = new PdfDocumentData(
+            pageDataList.AsReadOnly(),
+            meta.GetTitle, /* ... otros metadatos ... */ meta.GetCustomProperties
+        );
 
-        await Task.CompletedTask; 
+        // 2. Delegar a Core
+        try
+        {
+            await _pdfGenerationService.GenerateAsync(documentData, path);
+        }
+        catch (Exception ex) { /*...*/ throw; }
     }
+
+    // --- YA NO SE NECESITAN MÉTODOS DE MAPEO ---
 }

@@ -1,9 +1,14 @@
-﻿using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Layouts;
-
-namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
+﻿namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 public interface IPdfContentPage : IPdfPage<IPdfContentPage>
 {
-    IPdfContentPage Content(Action<IPdfContentPage> pageContent);
+    IPdfContentPage Content(Action<IPageContentBuilder> contentSetup);
+
+    IPdfContentPage Spacing(float value);
+
+    IPdfContentPage DefaultFontFamily(string familyName);
+
+    IPdfContentPage DefaultFontSize(float size);
+
+    IPdfContentPage DefaultTextColor(Color color);
 }

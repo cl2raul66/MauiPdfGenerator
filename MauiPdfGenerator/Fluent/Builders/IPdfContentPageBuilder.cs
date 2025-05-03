@@ -1,5 +1,5 @@
 ﻿using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Interfaces.Pages;
+using MauiPdfGenerator.Fluent.Models.Elements;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -15,5 +15,14 @@ internal interface IPdfContentPageBuilder : IPdfPageBuilder
 
     string? GetEffectiveDefaultFontAlias();
 
-    Action<IPdfContentPage>? GetContentPage();
+
+    IReadOnlyList<PdfElement> GetElements();
+
+    float GetPageSpacing();
+
+    string GetPageDefaultFontFamily();
+
+    float GetPageDefaultFontSize();
+
+    Color GetPageDefaultTextColor();
 }

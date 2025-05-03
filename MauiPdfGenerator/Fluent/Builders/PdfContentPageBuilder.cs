@@ -2,6 +2,7 @@
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
+using MauiPdfGenerator.Fluent.Models.Elements;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -15,12 +16,19 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder
     private Color? _backgroundColorOverride;
     private PageOrientationType? _pageOrientationOverride;
     private string? _defaultFontAliasOverride;
-    private Action<IPdfContentPage>? _content;
+
+    private List<PdfElement> _pageElements = [];
+    private float _pageSpacing = 5f; // Default spacing between elements
+    private string _pageDefaultFontFamily = PdfParagraph.DefaultFontFamily;
+    private float _pageDefaultFontSize = PdfParagraph.DefaultFontSize;
+    private Color _pageDefaultTextColor = PdfParagraph.DefaultTextColor;
 
     public PdfContentPageBuilder(PdfDocumentBuilder documentBuilder, PdfConfigurationBuilder documentConfiguration)
     {
         _documentBuilder = documentBuilder ?? throw new ArgumentNullException(nameof(documentBuilder));
         _documentConfiguration = documentConfiguration ?? throw new ArgumentNullException(nameof(documentConfiguration));
+
+        _pageDefaultFontFamily = _documentConfiguration.FontRegistry.GetDefaultFontAlias() ?? PdfParagraph.DefaultFontFamily;
     }
 
     public IPdfContentPage PageSize(PageSizeType pageSizeType)
@@ -66,10 +74,33 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder
         _defaultFontAliasOverride = fontAlias;
         return this;
     }
-    public IPdfContentPage Content(Action<IPdfContentPage> pageContent)
+
+    public IPdfContentPage Spacing(float value)
     {
-        ArgumentNullException.ThrowIfNull(pageContent);
-        _content = pageContent;
+        _pageSpacing = value >= 0 ? value : 0; // Ensure non-negative spacing
+        return this;
+    }
+    public IPdfContentPage DefaultFontFamily(string familyName)
+    {
+        _pageDefaultFontFamily = string.IsNullOrWhiteSpace(familyName) ? PdfParagraph.DefaultFontFamily : familyName;
+        return this;
+    }
+    public IPdfContentPage DefaultFontSize(float size)
+    {
+        _pageDefaultFontSize = size > 0 ? size : PdfParagraph.DefaultFontSize;
+        return this;
+    }
+    public IPdfContentPage DefaultTextColor(Color color)
+    {
+        _pageDefaultTextColor = color ?? PdfParagraph.DefaultTextColor;
+        return this;
+    }
+    public IPdfContentPage Content(Action<IPageContentBuilder> contentSetup)
+    {
+        ArgumentNullException.ThrowIfNull(contentSetup);
+        var builder = new PageContentBuilder();
+        contentSetup(builder);
+        _pageElements = builder.GetChildren().ToList(); // Get the generated elements
         return this;
     }
     public IPdfDocument Build() { return _documentBuilder; }
@@ -80,5 +111,10 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder
     public PageOrientationType GetEffectivePageOrientation() => _pageOrientationOverride ?? _documentConfiguration.GetPageOrientation;
     public Color? GetEffectiveBackgroundColor() => _backgroundColorOverride;
     public string? GetEffectiveDefaultFontAlias() => _defaultFontAliasOverride ?? _documentConfiguration.FontRegistry.GetDefaultFontAlias();
-    public Action<IPdfContentPage>? GetContentPage() => _content;
+
+    public IReadOnlyList<PdfElement> GetElements() => _pageElements.AsReadOnly();
+    public float GetPageSpacing() => _pageSpacing;
+    public string GetPageDefaultFontFamily() => _pageDefaultFontFamily;
+    public float GetPageDefaultFontSize() => _pageDefaultFontSize;
+    public Color GetPageDefaultTextColor() => _pageDefaultTextColor;
 }

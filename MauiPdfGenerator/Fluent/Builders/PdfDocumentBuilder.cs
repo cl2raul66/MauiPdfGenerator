@@ -29,12 +29,14 @@ internal class PdfDocumentBuilder : IPdfDocument
         documentConfigurator(_configurationBuilder);
         return this;
     }
+
     public IPdfContentPage ContentPage()
     {
         var pageBuilder = new PdfContentPageBuilder(this, _configurationBuilder);
         _pages.Add(pageBuilder); 
         return pageBuilder;
     }
+
     public Task SaveAsync()
     {
         if (string.IsNullOrEmpty(_filePath))
@@ -48,7 +50,7 @@ internal class PdfDocumentBuilder : IPdfDocument
     {
         if (string.IsNullOrEmpty(path))
         {
-            throw new ArgumentNullException(nameof(path), "La ruta del archivo no puede ser nula o vacía.");
+            throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
         }
                 
         var pageDataList = new List<PdfPageData>();
@@ -57,11 +59,16 @@ internal class PdfDocumentBuilder : IPdfDocument
             if (pageBuilder is IPdfContentPageBuilder contentPageBuilder)
             {                
                 var pageData = new PdfPageData(
-                    contentPageBuilder.GetEffectivePageSize(), 
-                    contentPageBuilder.GetEffectivePageOrientation(), 
+                    contentPageBuilder.GetEffectivePageSize(),
+                    contentPageBuilder.GetEffectivePageOrientation(),
                     contentPageBuilder.GetEffectiveMargin(),
                     contentPageBuilder.GetEffectiveBackgroundColor(),
-                    contentPageBuilder.GetEffectiveDefaultFontAlias()
+                    contentPageBuilder.GetEffectiveDefaultFontAlias(), 
+                    contentPageBuilder.GetElements(),
+                    contentPageBuilder.GetPageSpacing(),
+                    contentPageBuilder.GetPageDefaultFontFamily(),
+                    contentPageBuilder.GetPageDefaultFontSize(),
+                    contentPageBuilder.GetPageDefaultTextColor()
                 );
                 pageDataList.Add(pageData);
             }
@@ -75,13 +82,10 @@ internal class PdfDocumentBuilder : IPdfDocument
             meta.GetCustomProperties
         );
 
-        // 2. Delegar a Core
         try
         {
             await _pdfGenerationService.GenerateAsync(documentData, path);
         }
         catch (Exception ex) { /*...*/ throw; }
     }
-
-    // --- YA NO SE NECESITAN MÉTODOS DE MAPEO ---
 }

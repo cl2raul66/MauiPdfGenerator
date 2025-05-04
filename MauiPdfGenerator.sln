@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35919.96 d17.13
+VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator", "MauiPdfGenerator\MauiPdfGenerator.csproj", "{F51AF768-7E5E-482B-8508-9411783591C6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{34062562-D9DD-4213-965A-1C31EA9DD256}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.SourceGenerators", "MauiPdfGenerator.SourceGenerators\MauiPdfGenerator.SourceGenerators.csproj", "{F161A6ED-2842-4A75-96F7-43AD7B2978F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,16 @@ Global
 		{F51AF768-7E5E-482B-8508-9411783591C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F51AF768-7E5E-482B-8508-9411783591C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F51AF768-7E5E-482B-8508-9411783591C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34062562-D9DD-4213-965A-1C31EA9DD256}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34062562-D9DD-4213-965A-1C31EA9DD256}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34062562-D9DD-4213-965A-1C31EA9DD256}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{34062562-D9DD-4213-965A-1C31EA9DD256}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34062562-D9DD-4213-965A-1C31EA9DD256}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34062562-D9DD-4213-965A-1C31EA9DD256}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{F161A6ED-2842-4A75-96F7-43AD7B2978F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F161A6ED-2842-4A75-96F7-43AD7B2978F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F161A6ED-2842-4A75-96F7-43AD7B2978F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F161A6ED-2842-4A75-96F7-43AD7B2978F3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

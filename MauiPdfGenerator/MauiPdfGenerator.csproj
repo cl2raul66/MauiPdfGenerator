@@ -19,17 +19,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <AndroidResource Remove="Core\PdfObjects\**" />
-	  <Compile Remove="Core\PdfObjects\**" />
-	  <EmbeddedResource Remove="Core\PdfObjects\**" />
-	  <MauiCss Remove="Core\PdfObjects\**" />
-	  <MauiXaml Remove="Core\PdfObjects\**" />
-	  <None Remove="Core\PdfObjects\**" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+		<PackageReference Include="SkiaSharp" Version="3.116.1" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+	  <Folder Include="Fluent\Builders\Elements\" />
+	  <Folder Include="Fluent\Interfaces\Elements\FormattedText\" />
+	  <Folder Include="Fluent\Interfaces\Layouts\Grid\" />
+	  <Folder Include="Fluent\Styles\" />
 	</ItemGroup>
 
 </Project>

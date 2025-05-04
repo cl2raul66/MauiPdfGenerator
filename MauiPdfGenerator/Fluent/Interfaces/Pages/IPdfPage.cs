@@ -16,8 +16,6 @@ public interface IPdfPage<TSelf> where TSelf : IPdfPage<TSelf>
 
     TSelf Margins(DefaultMarginType defaultMarginType);
 
-    TSelf DefaultFont(string fontAlias);
-
     TSelf BackgroundColor(Color backgroundColor);
 
     IPdfDocument Build();

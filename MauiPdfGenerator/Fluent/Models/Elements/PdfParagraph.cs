@@ -6,19 +6,19 @@ public class PdfParagraph : PdfElement
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
     public const TextAlignment DefaultAlignment = TextAlignment.Start;
-    public const FontAttributes DefaultFontAttributes = FontAttributes.None;
+    public const FontAttributes DefaultFontAttributes = Microsoft.Maui.Controls.FontAttributes.None;
 
-    public string Text { get; }
+    internal string Text { get; }
 
-    public string CurrentFontFamily { get; private set; } = DefaultFontFamily;
+    internal string? CurrentFontFamily { get; private set; }
 
-    public float CurrentFontSize { get; private set; } = DefaultFontSize;
+    internal float CurrentFontSize { get; private set; }
 
-    public Color CurrentTextColor { get; private set; } = DefaultTextColor;
+    internal Color? CurrentTextColor { get; private set; }
 
-    public TextAlignment CurrentAlignment { get; private set; } = DefaultAlignment;
+    internal TextAlignment CurrentAlignment { get; private set; }
 
-    public FontAttributes CurrentFontAttributes { get; private set; } = DefaultFontAttributes;
+    internal FontAttributes? CurrentFontAttributes { get; private set; }
 
     public PdfParagraph(string text)
     {
@@ -49,7 +49,7 @@ public class PdfParagraph : PdfElement
         return this;
     }
 
-    public PdfParagraph FontAttribute(FontAttributes attributes)
+    public PdfParagraph FontAttributes(FontAttributes attributes)
     {
         CurrentFontAttributes = attributes;
         return this;

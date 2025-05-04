@@ -2,29 +2,29 @@
 
 public abstract class PdfElement
 {
-    public Thickness Margin { get; protected set; } = Thickness.Zero;
+    internal Thickness GetMargin { get; private set; } = Thickness.Zero;
 
-    public PdfElement SetMargin(double uniformMargin)
+    public PdfElement Margin(double uniformMargin)
     {
-        Margin = new Thickness(uniformMargin);
+        GetMargin = new Thickness(uniformMargin);
         return this;
     }
 
-    public PdfElement SetMargin(double horizontalMargin, double verticalMargin)
+    public PdfElement Margin(double horizontalMargin, double verticalMargin)
     {
-        Margin = new Thickness(horizontalMargin, verticalMargin);
+        GetMargin = new Thickness(horizontalMargin, verticalMargin);
         return this;
     }
 
-    public PdfElement SetMargin(double leftMargin, double topMargin, double rightMargin, double bottomMargin)
+    public PdfElement Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin)
     {
-        Margin = new Thickness(leftMargin, topMargin, rightMargin, bottomMargin);
+        GetMargin = new Thickness(leftMargin, topMargin, rightMargin, bottomMargin);
         return this;
     }
 
-    public PdfElement SetMargin(Thickness margin)
+    public PdfElement Margin(Thickness margin)
     {
-        Margin = margin;
+        GetMargin = margin;
         return this;
     }
 }

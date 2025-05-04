@@ -3,6 +3,7 @@ using static Microsoft.Maui.Graphics.Colors;
 using static MauiPdfGenerator.Fluent.Enums.PageSizeType;
 using static MauiPdfGenerator.Fluent.Enums.DefaultMarginType;
 using static MauiPdfGenerator.SourceGenerators.MauiFontAliases;
+using static MauiPdfGenerator.Fluent.Enums.PageOrientationType;
 using static Microsoft.Maui.Controls.FontAttributes;
 
 namespace Test;
@@ -21,22 +22,26 @@ public partial class MainPage : ContentPage
         {
             var doc = PdfGenerator.CreateDocument();
 
-            await doc.ContentPage().Content(c =>
+            await doc
+                .Configuration(cfg =>
                 {
-                    c.Paragraph("Hola mundo");
-                    c.HorizontalLine();
-                    c.Paragraph("Cruel");
-                    c.Paragraph("Lorem ipsum dolor sit amet velit tincidunt qui tempor magna quod laoreet et odio. Molestie dolores invidunt sit magna sit dolore ea vulputate gubergren est. Option iriure dolor no praesent eos consequat dolor ut. Amet aliquyam eirmod dolore. Kasd elitr takimata accusam sed in eirmod gubergren. No diam invidunt sea consequat stet et stet.");
+                    cfg.Margins(Narrow);
+                    cfg.MetaData(data =>
+                    {
+                        Title = "MauiPdfGenerator sample";
+                    });
                 })
-                .Spacing(8)
-                .Build()
-                .ContentPage().Content(c =>
+                .ContentPage()
+                .DefaultFont(f => f.Size(10).Attributes(Italic|Bold)) 
+                .Spacing(8f)
+                .Content(c =>
                 {
-                    c.Paragraph("Pagina 2").TextColor(Green).FontSize(22).FontAttribute(Bold);
-                    c.HorizontalLine().Color(Red).Thickness(2);
+                    c.Paragraph("Este párrafo usará Times New Roman 10pt por defecto.");
+                    c.Paragraph("Este a 18pt.").FontFamily("Times New Roman").FontSize(18f).FontAttributes(None); 
+                    c.Paragraph("Este a 10pt.").FontSize(10f); 
                 })
                 .Build()
-                .SaveAsync(targetFilePath);
+            .SaveAsync(targetFilePath);
 
             await Launcher.OpenAsync(new OpenFileRequest
             {

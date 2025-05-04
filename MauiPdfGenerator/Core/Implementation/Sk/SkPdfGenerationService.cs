@@ -39,7 +39,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
                 using SKCanvas canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
 
 
-                if (pageData.BackgroundColor != null)
+                if (pageData.BackgroundColor is not null)
                 {
                     canvas.Clear(ConvertToSkColor(pageData.BackgroundColor));
                 }
@@ -65,30 +65,22 @@ internal class SkPdfGenerationService : IPdfGenerationService
                     continue;
                 }
 
-
                 float currentY = contentRect.Top;
 
                 foreach (var element in pageData.Elements)
                 {
-                    // Early exit if content exceeds bounds
                     if (currentY >= contentRect.Bottom)
                     {
-                        // Check only needed if we *might* draw something that pushes currentY over the edge.
-                        // A more robust check might be currentY + element.Margin.Top >= contentRect.Bottom before adding margin.
                         System.Diagnostics.Debug.WriteLine($"Warning: Content overflow detected before drawing element on page {pageIndex}. Subsequent elements skipped.");
                         break;
                     }
 
+                    currentY += (float)element.GetMargin.Top;
 
-                    currentY += (float)element.Margin.Top;
-
-                    // Check again after adding top margin, before drawing
                     if (currentY >= contentRect.Bottom)
                     {
                         System.Diagnostics.Debug.WriteLine($"Warning: Content overflow detected after applying top margin on page {pageIndex}. Element skipped.");
-                        // We could break here, or just skip this element and let the loop continue
-                        // to see if a later smaller element might fit (unlikely in simple vertical layout)
-                        break; // Break is usually safer
+                        break; 
                     }
 
 
@@ -109,28 +101,21 @@ internal class SkPdfGenerationService : IPdfGenerationService
                             break;
                     }
 
-                    // Check for overflow immediately after rendering before advancing Y fully
-                    // This prevents adding bottom margin/spacing if the element itself overflowed
                     if (currentY + elementHeight > contentRect.Bottom)
                     {
                         System.Diagnostics.Debug.WriteLine($"Warning: Element {element.GetType().Name} caused content overflow on page {pageIndex}.");
-                        // Decide how to handle: draw partially? stop page?
-                        // For now, we drew it clipped (implicitly by DrawText/DrawLine), so just stop further elements.
-                        currentY = contentRect.Bottom + 1; // Ensure next loop iteration breaks
-                        // Don't add bottom margin or spacing
+                        currentY = contentRect.Bottom + 1;
                     }
                     else
                     {
                         currentY += elementHeight;
-                        currentY += (float)element.Margin.Bottom;
+                        currentY += (float)element.GetMargin.Bottom;
                         currentY += pageData.PageDefaultSpacing;
                     }
-
-
-                } // End foreach element
+                }
 
                 pdfDoc.EndPage();
-            } // End for page
+            }
 
             pdfDoc.Close();
             return Task.CompletedTask;
@@ -143,11 +128,10 @@ internal class SkPdfGenerationService : IPdfGenerationService
 
     private float RenderParagraph(SKCanvas canvas, PdfParagraph paragraph, PdfPageData pageData, SKRect contentRect, float currentY)
     {
-        // --- Style Determination ---
         string fontFamily = paragraph.CurrentFontFamily ?? pageData.PageDefaultFontFamily;
         float fontSize = paragraph.CurrentFontSize > 0 ? paragraph.CurrentFontSize : pageData.PageDefaultFontSize;
         Color textColor = paragraph.CurrentTextColor ?? pageData.PageDefaultTextColor;
-        FontAttributes fontAttributes = paragraph.CurrentFontAttributes;
+        FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageData.PageDefaultFontAttributes;
         TextAlignment alignment = paragraph.CurrentAlignment;
 
         // --- Font and Paint Setup ---
@@ -155,9 +139,9 @@ internal class SkPdfGenerationService : IPdfGenerationService
         if (typeface is null)
         {
             System.Diagnostics.Debug.WriteLine($"Warning: Could not create typeface for family '{fontFamily}'. Using default. Paragraph skipped.");
-            return 0; // Skip rendering if font fails critically
+            return 0; 
         }
-        // Ensure font size is positive
+
         if (fontSize <= 0)
         {
             System.Diagnostics.Debug.WriteLine($"Warning: Invalid font size {fontSize} for paragraph. Using default {PdfParagraph.DefaultFontSize}f.");
@@ -173,58 +157,46 @@ internal class SkPdfGenerationService : IPdfGenerationService
 
         // --- Text Measurement ---
         var text = paragraph.Text ?? string.Empty;
-        SKRect textBounds = new(); // SKRect struct, no need for 'new()'
+        SKRect textBounds = new(); 
 
-        // *** CORRECCIÓN: Cambiar 'ref' por 'out' ***
         float measuredWidth = font.MeasureText(text, out textBounds);
 
-
-        // --- Calculate Drawing Position ---
-        float availableWidth = contentRect.Width - (float)paragraph.Margin.Left - (float)paragraph.Margin.Right;
-        // Prevent negative available width if margins are too large
+        float availableWidth = contentRect.Width - (float)paragraph.GetMargin.Left - (float)paragraph.GetMargin.Right;
         availableWidth = Math.Max(0, availableWidth);
 
-        float drawX = contentRect.Left + (float)paragraph.Margin.Left; // Default: Start alignment
+        float drawX = contentRect.Left + (float)paragraph.GetMargin.Left;
 
         if (alignment == TextAlignment.Center)
         {
-            drawX = contentRect.Left + (float)paragraph.Margin.Left + (availableWidth - measuredWidth) / 2f;
+            drawX = contentRect.Left + (float)paragraph.GetMargin.Left + (availableWidth - measuredWidth) / 2f;
         }
         else if (alignment == TextAlignment.End)
         {
-            drawX = contentRect.Right - (float)paragraph.Margin.Right - measuredWidth;
+            drawX = contentRect.Right - (float)paragraph.GetMargin.Right - measuredWidth;
         }
 
-        // Ensure drawing doesn't start left of the allowed content area X coordinate
-        drawX = Math.Max(contentRect.Left + (float)paragraph.Margin.Left, drawX);
+        drawX = Math.Max(contentRect.Left + (float)paragraph.GetMargin.Left, drawX);
 
-        // Calculate Y baseline position
         float drawY = currentY - textBounds.Top;
 
 
         // --- Text Wrapping (Basic Placeholder - Phase 2) ---
-        // TODO: Implement proper text wrapping for Phase 3+
         if (measuredWidth > availableWidth && availableWidth > 0)
         {
-            System.Diagnostics.Debug.WriteLine($"Warning: Text '{text.Substring(0, Math.Min(text.Length, 20))}...' exceeds available width ({availableWidth:F1}pt) and will be clipped or overflow. Measured: {measuredWidth:F1}pt.");
-            // Clipping happens automatically if drawing outside canvas bounds, but explicit ClipRect could be used too.
-            // For now, we just draw the overflowing text.
+            System.Diagnostics.Debug.WriteLine($"Warning: Text '{text[..Math.Min(text.Length, 20)]}...' exceeds available width ({availableWidth:F1}pt) and will be clipped or overflow. Measured: {measuredWidth:F1}pt.");
         }
 
         // --- Draw Text ---
-        // Only draw if there's available height
         if (currentY < contentRect.Bottom)
         {
             canvas.DrawText(text, drawX, drawY, font, paint);
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine($"Warning: Skipping drawing paragraph '{text.Substring(0, Math.Min(text.Length, 20))}...' as currentY ({currentY:F1}) is already past contentRect.Bottom ({contentRect.Bottom:F1}).");
-            return 0; // Return 0 height as nothing was effectively drawn in bounds
+            System.Diagnostics.Debug.WriteLine($"Warning: Skipping drawing paragraph '{text[..Math.Min(text.Length, 20)]}...' as currentY ({currentY:F1}) is already past contentRect.Bottom ({contentRect.Bottom:F1}).");
+            return 0;
         }
 
-        // --- Return Height ---
-        // The height of the measured bounds is the vertical space this line occupies.
         return textBounds.Height;
     }
 
@@ -234,7 +206,6 @@ internal class SkPdfGenerationService : IPdfGenerationService
         float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
         Color color = line.CurrentColor ?? PdfHorizontalLine.DefaultColor;
 
-        // Ensure thickness is positive
         if (thickness <= 0)
         {
             System.Diagnostics.Debug.WriteLine($"Warning: Invalid horizontal line thickness {thickness}. Using default {PdfHorizontalLine.DefaultThickness}f.");
@@ -251,32 +222,26 @@ internal class SkPdfGenerationService : IPdfGenerationService
         };
 
         // --- Calculate Coordinates ---
-        float startX = contentRect.Left + (float)line.Margin.Left;
-        float endX = contentRect.Right - (float)line.Margin.Right;
-        // Draw line centered vertically within its thickness allocation
+        float startX = contentRect.Left + (float)line.GetMargin.Left;
+        float endX = contentRect.Right - (float)line.GetMargin.Right;
         float lineY = currentY + thickness / 2f;
 
-        // Check for negative length due to margins
         if (startX > endX)
         {
             System.Diagnostics.Debug.WriteLine($"Warning: Horizontal line margins result in negative length (Start: {startX:F1}, End: {endX:F1}). Line not drawn.");
-            return thickness; // Still occupy the vertical space defined by thickness
+            return thickness;
         }
 
         // --- Draw Line ---
-        // Only draw if there's available height
-        if (lineY < contentRect.Bottom) // Approximate check - ideally check currentY + thickness
+        if (lineY < contentRect.Bottom)
         {
             canvas.DrawLine(startX, lineY, endX, lineY, paint);
         }
         else
         {
             System.Diagnostics.Debug.WriteLine($"Warning: Skipping drawing horizontal line as its position ({lineY:F1}) is past contentRect.Bottom ({contentRect.Bottom:F1}).");
-            // No height is effectively added if not drawn? Or should we still return thickness?
-            // Let's return thickness to advance Y, consistent with reserving the space.
         }
 
-        // --- Return Height ---
         return thickness;
     }
 
@@ -301,7 +266,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
 
         // Attempt 2: Fallback to family name default style if specific style failed
         // (e.g., requested Italic for a font that doesn't have it)
-        if (typeface == null)
+        if (typeface is null)
         {
             System.Diagnostics.Debug.WriteLine($"Debug: Specific style ({style}) not found for font '{fontFamily}'. Trying family default.");
             typeface = SKTypeface.FromFamilyName(fontFamily);
@@ -309,14 +274,14 @@ internal class SkPdfGenerationService : IPdfGenerationService
 
 
         // Attempt 3: Fallback to system default if family name itself wasn't found
-        if (typeface == null)
+        if (typeface is null)
         {
             System.Diagnostics.Debug.WriteLine($"Warning: Font family '{fontFamily}' not found. Using system default typeface.");
             typeface = SKTypeface.Default;
         }
 
         // If SKTypeface.Default itself fails (very unlikely), typeface could still be null here.
-        if (typeface == null)
+        if (typeface is null)
         {
             System.Diagnostics.Debug.WriteLine($"Critical Warning: Failed to obtain any valid typeface, including system default.");
         }
@@ -325,10 +290,10 @@ internal class SkPdfGenerationService : IPdfGenerationService
         return typeface;
     }
 
-    private SKColor ConvertToSkColor(Color? mauiColor) // Allow null input
+    private SKColor ConvertToSkColor(Color? mauiColor)
     {
         // Default to black if null is passed
-        if (mauiColor == null) return SKColors.Black;
+        if (mauiColor is null) return SKColors.Black;
 
         // Clamp values just in case they are outside the 0-1 range
         float red = Math.Clamp(mauiColor.Red, 0f, 1f);
@@ -372,7 +337,6 @@ internal class SkPdfGenerationService : IPdfGenerationService
                 break;
         }
 
-        // Apply orientation swap if Landscape
         return orientation == PageOrientationType.Landscape ? new SKSize(height, width) : new SKSize(width, height);
     }
 }

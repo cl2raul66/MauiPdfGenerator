@@ -2,6 +2,7 @@
 using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Interfaces;
+using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 
@@ -33,7 +34,7 @@ internal class PdfDocumentBuilder : IPdfDocument
     public IPdfContentPage ContentPage()
     {
         var pageBuilder = new PdfContentPageBuilder(this, _configurationBuilder);
-        _pages.Add(pageBuilder); 
+        _pages.Add(pageBuilder);
         return pageBuilder;
     }
 
@@ -52,23 +53,23 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
         }
-                
+
         var pageDataList = new List<PdfPageData>();
         foreach (var pageBuilder in _pages)
         {
             if (pageBuilder is IPdfContentPageBuilder contentPageBuilder)
-            {                
+            {
                 var pageData = new PdfPageData(
                     contentPageBuilder.GetEffectivePageSize(),
                     contentPageBuilder.GetEffectivePageOrientation(),
                     contentPageBuilder.GetEffectiveMargin(),
                     contentPageBuilder.GetEffectiveBackgroundColor(),
-                    contentPageBuilder.GetEffectiveDefaultFontAlias(), 
                     contentPageBuilder.GetElements(),
                     contentPageBuilder.GetPageSpacing(),
                     contentPageBuilder.GetPageDefaultFontFamily(),
                     contentPageBuilder.GetPageDefaultFontSize(),
-                    contentPageBuilder.GetPageDefaultTextColor()
+                    contentPageBuilder.GetPageDefaultTextColor(),
+                     contentPageBuilder.GetPageDefaultFontAttributes()
                 );
                 pageDataList.Add(pageData);
             }
@@ -86,6 +87,9 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             await _pdfGenerationService.GenerateAsync(documentData, path);
         }
-        catch (Exception ex) { /*...*/ throw; }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected Error during PDF Save: {ex.Message}"); throw;
+        }
     }
 }

@@ -88,3 +88,63 @@
                         *   `currentY += thickness;`
                 *   `currentY += (float)element.Margin.Bottom + pageData.PageDefaultSpacing;`
                 *   Comprobar desbordamiento (`if (currentY > contentRect.Bottom) { break; // O manejar }`).
+
+Entendido. Respeto tu decisión final sobre el diseño de la API y el enum. Procederemos con tu especificación exacta.
+
+Aquí tienes el **Plan Definitivo y Completo para la Fase 3 (v1.0.0)**, incorporando tus requisitos finales para la API de imágenes:
+
+---
+
+**Plan Definitivo Fase 3 (v1.0.0): Texto Ajustable e Imágenes**
+
+**Versión:** 1.0.0
+
+**Objetivos Principales:**
+
+1.  **Refactorización del Renderizado de Texto:**
+    *   Extraer la lógica compleja de `RenderParagraph` (medición, ajuste, dibujo multilínea) a una nueva clase interna: `MauiPdfGenerator.Core.Implementation.Sk.TextRenderer`.
+2.  **Implementar Ajuste de Línea con `LineBreakMode`:**
+    *   Añadir la propiedad `internal LineBreakMode? CurrentLineBreakMode` a `PdfParagraph`.
+    *   Añadir el método fluido `LineBreakMode(LineBreakMode mode)` a `PdfParagraph`.
+    *   `TextRenderer` implementará la lógica para `WordWrap` (default), `CharacterWrap`, y `NoWrap`. *(Truncación postergada)*.
+3.  **Añadir Elemento `PdfImage` con Sobrecarga + Enum (Tu Diseño):**
+    *   **Enum (público):**
+        ```csharp
+        public enum PdfImageSourceType
+        {
+            IsMauiSource, // Indica que el string es un identificador de recurso MAUI
+            IsFileSource, // Indica que el string es una ruta de archivo
+            IsUriSource   // Indica que el string es una URI
+        }
+        ```
+    *   **Clase `PdfImage : PdfElement`:**
+        *   Propiedades `internal object SourceData { get; }` (almacena string, Stream o Uri).
+        *   Propiedad `internal PdfImageSourceKind DeterminedSourceKind { get; }` (enum interno: File, Resource, Uri, Stream).
+        *   Propiedades `internal double? RequestedWidth`, `internal double? RequestedHeight`.
+        *   Propiedad `internal Aspect CurrentAspect = Aspect.AspectFit;`.
+    *   **API Fluida para `PdfImage`:**
+        *   Métodos `.WidthRequest(double)`, `.HeightRequest(double)`, `.Aspect(Aspect)`.
+    *   **`IPageContentBuilder`:**
+        *   `PdfImage PdfImage(Stream stream)`
+        *   `PdfImage PdfImage(Uri uri)`
+        *   `PdfImage PdfImage(string source, PdfImageSourceType? sourceType = null)`
+            *   **Lógica de Determinación (al crear `PdfImage`):**
+                *   Si `sourceType == PdfImageSourceType.IsMauiSource`: `DeterminedSourceKind = Resource`.
+                *   Si `sourceType == PdfImageSourceType.IsFileSource`: `DeterminedSourceKind = File`.
+                *   Si `sourceType == PdfImageSourceType.IsUriSource`: `DeterminedSourceKind = Uri`.
+                *   Si `sourceType == null` (Default): **Inferencia: ¿Es URI? -> Uri; ¿File.Exists? -> File; else -> Resource.** (Se mantiene la inferencia para el caso por defecto).
+                *   Si la sobrecarga es `Stream`: `DeterminedSourceKind = Stream`.
+                *   Si la sobrecarga es `Uri`: `DeterminedSourceKind = Uri`.
+    *   **Renderizado (`ImageRenderer` o en `SkPdfGenerationService`):**
+        *   **Resolver Fuente:** Usar `DeterminedSourceKind`.
+        *   **Cargar Datos:** Implementar carga para File, Resource (vía servicios MAUI), Uri (vía HttpClient), Stream.
+        *   **Decodificar:** `SKBitmap.Decode`/`SKImage.FromEncodedData`.
+        *   **Manejo de Errores:** Log + Dibujar Placeholder (rectángulo + texto "[Error Imagen]").
+        *   **Cálculo Tamaño/Posición:** Según datos, requests y `Aspect`.
+        *   **Dibujo:** `canvas.DrawImage`.
+
+**Impacto y Dependencias:**
+
+*   Requiere dependencia de `Microsoft.Maui.Controls` (para `LineBreakMode`, `Aspect`) y `Microsoft.Maui.Graphics`.
+*   La carga de recursos y potencialmente URIs introduce dependencia del contexto de ejecución MAUI (`IServiceProvider`, `HttpClient`).
+*   La complejidad principal reside en la implementación de `TextRenderer` (ajuste de línea) y el `ImageRenderer` (carga de datos desde diversas fuentes MAUI y manejo de errores).

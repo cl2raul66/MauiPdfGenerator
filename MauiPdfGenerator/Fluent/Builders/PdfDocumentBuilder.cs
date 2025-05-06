@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Core;
+using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Interfaces;
@@ -42,7 +43,7 @@ internal class PdfDocumentBuilder : IPdfDocument
     {
         if (string.IsNullOrEmpty(_filePath))
         {
-            throw new InvalidOperationException("No se especificó una ruta de archivo por defecto durante la creación del documento. Utilice SaveAsync(path) o cree el documento proporcionando una ruta.");
+            throw new InvalidOperationException("Default file path was not specified during document creation. Use SaveAsync(path) or provide a path when calling CreateDocument.");
         }
         return SaveAsync(_filePath);
     }
@@ -73,6 +74,15 @@ internal class PdfDocumentBuilder : IPdfDocument
                 );
                 pageDataList.Add(pageData);
             }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: Unknown page builder type encountered: {pageBuilder.GetType().FullName}. Skipping page.");
+            }
+        }
+
+        if (pageDataList.Count == 0)
+        {
+            throw new InvalidOperationException("Cannot save PDF document: No pages have been added or processed.");
         }
 
         var meta = _configurationBuilder.MetaDataBuilder;
@@ -87,9 +97,15 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             await _pdfGenerationService.GenerateAsync(documentData, path);
         }
-        catch (Exception ex)
+        catch (PdfGenerationException genEx) 
         {
-            Console.WriteLine($"Unexpected Error during PDF Save: {ex.Message}"); throw;
+            System.Diagnostics.Debug.WriteLine($"PDF Generation Error: {genEx.Message}");
+            throw; 
+        }
+        catch (Exception ex) 
+        {
+            System.Diagnostics.Debug.WriteLine($"Unexpected Error during PDF Save: {ex.Message}");
+            throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
         }
     }
 }

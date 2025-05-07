@@ -1,263 +1,182 @@
-﻿using MauiPdfGenerator.Fluent.Models.Elements; 
-using MauiPdfGenerator.Core.Models;
+﻿using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Fluent.Models.Elements;
 using SkiaSharp;
-using MauiPdfGenerator.Common.Enums;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal class ImageRenderer
 {
-    private readonly IImageResolverService _imageResolverService;
-
-    public ImageRenderer(IImageResolverService imageResolverService)
-    {
-        _imageResolverService = imageResolverService ?? throw new ArgumentNullException(nameof(imageResolverService));
-    }
-
-    public async Task<float> RenderAsync(SKCanvas canvas, PdfImage image, PdfPageData pageData, SKRect contentRect, float currentY)
+    public Task<float> RenderAsync(SKCanvas canvas, PdfImage image, PdfPageData pageData, SKRect contentRect, float currentY)
     {
         SKImage? skImage = null;
-        Stream? imageStream = null;
+        float elementHeight = 0;
+
+        Stream imageStream = image.ImageStream;
 
         try
         {
-            // Usar el enum interno correcto de PdfImage
-            imageStream = await _imageResolverService.GetStreamAsync(image.SourceData, image.DeterminedSourceKind);
-
-            if (imageStream is not null && imageStream.Length > 0)
+            if (imageStream.CanSeek)
             {
-                if (imageStream.CanSeek) imageStream.Position = 0;
-                skImage = SKImage.FromEncodedData(imageStream);
-                if (skImage == null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error: Failed to decode image data for source: {image.SourceData}");
-                }
+                imageStream.Position = 0;
             }
-            else if (imageStream is null) { /* Error logged by resolver */ }
-            else { System.Diagnostics.Debug.WriteLine($"Warning: Image stream is empty for source: {image.SourceData}"); }
+
+            skImage = SKImage.FromEncodedData(imageStream); 
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error processing image source {image.SourceData}: {ex.Message}");
-            skImage = null;
-        }
-        finally
-        {
-            // Usar el enum interno correcto de PdfImage
-            if (image.DeterminedSourceKind != PdfImageSourceKind.Stream && imageStream != null)
-            {
-                await imageStream.DisposeAsync();
-            }
+            System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Exception processing image stream: {ex.Message}. Rendering placeholder.");
+            skImage = null; 
         }
 
-        // --- Calculate Available Space ---
         float availableWidth = contentRect.Width - (float)image.GetMargin.Left - (float)image.GetMargin.Right;
-        float availableHeight = contentRect.Bottom - currentY - (float)image.GetMargin.Bottom;
+        float availableHeightForElement = contentRect.Bottom - currentY - (float)image.GetMargin.Bottom;
+
         availableWidth = Math.Max(0, availableWidth);
-        availableHeight = Math.Max(0, availableHeight);
+        availableHeightForElement = Math.Max(0, availableHeightForElement);
 
         float drawX = contentRect.Left + (float)image.GetMargin.Left;
         float drawY = currentY;
 
-        if (availableWidth <= 0 || availableHeight <= 0)
+        if (availableWidth <= 0 || availableHeightForElement <= 0)
         {
-            System.Diagnostics.Debug.WriteLine("Warning: No available space to render image or placeholder.");
-            if (skImage != null) skImage.Dispose(); // Dispose image if not drawn
-            return 0;
+            skImage?.Dispose();
+            return Task.FromResult(0f); 
         }
 
-        // --- Draw Placeholder or Image ---
-        if (skImage == null)
+        if (skImage is null)
         {
-            float placeholderHeight = RenderPlaceholder(canvas, drawX, drawY, availableWidth, availableHeight);
-            return placeholderHeight;
+            elementHeight = RenderPlaceholder(canvas, drawX, drawY, availableWidth, availableHeightForElement);
         }
         else
         {
-            using (skImage) // Dispose SKImage when done
+            using (skImage) 
             {
                 SKRect targetRect = CalculateTargetRect(skImage, image.CurrentAspect,
-                                                       drawX, drawY, availableWidth, availableHeight,
+                                                       drawX, drawY,
+                                                       availableWidth, availableHeightForElement,
                                                        image.RequestedWidth, image.RequestedHeight);
 
-                if (targetRect.Width > 0 && targetRect.Height > 0 && targetRect.Bottom <= contentRect.Bottom + 0.1f)
+                if (targetRect.Width > 0 && targetRect.Height > 0 && targetRect.Bottom <= drawY + availableHeightForElement + 0.1f)
                 {
                     canvas.DrawImage(skImage, targetRect);
-                    return targetRect.Height;
+                    canvas.Flush();
+                    elementHeight = targetRect.Height;
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"Warning: Image '{image.SourceData}' could not be drawn. Calculated target rect ({targetRect}) exceeds available space (Bottom: {contentRect.Bottom}).");
-                    // skImage se dispone automáticamente por el using
-                    float placeholderHeight = RenderPlaceholder(canvas, drawX, drawY, availableWidth, availableHeight, "Image Overflow");
-                    return placeholderHeight;
+                    string reason = "";
+                    if (targetRect.Width <= 0 || targetRect.Height <= 0) reason = "Zero size.";
+                    else reason = $"Exceeds available space (TargetRect.Bottom: {targetRect.Bottom:F1} vs Limit for element content: {drawY + availableHeightForElement:F1}).";
+
+                    elementHeight = RenderPlaceholder(canvas, drawX, drawY, availableWidth, availableHeightForElement, "Image Overflow");
                 }
-            } // skImage is disposed here
+            }
         }
+        return Task.FromResult(elementHeight); 
     }
 
-    /// <summary>
-    /// Renders a placeholder rectangle with error text. (Updated to avoid obsolete members)
-    /// </summary>
-    private float RenderPlaceholder(SKCanvas canvas, float x, float y, float width, float height, string message = "[Image Error]")
+    private float RenderPlaceholder(SKCanvas canvas, float x, float y, float availableWidth, float availableHeight, string message = "[Image Error]")
     {
-        // --- Placeholder Style Setup ---
-        // Paint for the border
-        using var borderPaint = new SKPaint
+        using var errorBorderPaint = new SKPaint
         {
             Color = SKColors.Red,
             Style = SKPaintStyle.Stroke,
             StrokeWidth = 1,
-            IsAntialias = true // AntiAlias puede mejorar la apariencia del borde
-        };
-
-        // Font for the text (replaces SKPaint.TextSize)
-        using var textFont = new SKFont
-        {
-            Size = 10f // Set font size here
-            // Typeface = SKTypeface.Default // Opcional: especificar un typeface si se desea
-        };
-
-        // Paint for the text (only color and antialias needed now)
-        using var textPaint = new SKPaint
-        {
-            Color = SKColors.Red,
             IsAntialias = true
         };
+        using var placeholderFont = new SKFont { Size = 10f };
+        using var placeholderTextPaint = new SKPaint { Color = SKColors.Red, IsAntialias = true };
 
-        // --- Placeholder Size ---
-        float phWidth = Math.Min(width, 100);
-        float phHeight = Math.Min(height, 50);
+        float phWidth = Math.Min(availableWidth, 100f);
+        float phHeight = Math.Min(availableHeight, 50f);
 
-        if (phWidth <= 0 || phHeight <= 0) return 0;
+        if (phWidth <= 0 || phHeight <= 0)
+        {
+            return 0;
+        }
 
-        SKRect placeholderRect = new(x, y, x + phWidth, y + phHeight);
+        SKRect placeholderRect = SKRect.Create(x, y, phWidth, phHeight);
 
-        // --- Draw Bounding Box ---
-        canvas.DrawRect(placeholderRect, borderPaint);
+        if (placeholderRect.Bottom > y + availableHeight + 0.1f)
+        {
+            return 0;
+        }
 
-        // --- Draw Centered Text ---
-        // 1. Measure text width using the font (replaces obsolete paint measurement)
-        float textWidth = textFont.MeasureText(message);
+        canvas.DrawRect(placeholderRect, errorBorderPaint);
 
-        // 2. Calculate X for centering (replaces SKPaint.TextAlign)
-        float textX = placeholderRect.Left + (placeholderRect.Width - textWidth) / 2f;
-
-        // 3. Get Font Metrics using the font (replaces SKPaint.FontMetrics)
-        SKFontMetrics fontMetrics = textFont.Metrics;
-
-        // 4. Calculate Y for vertical centering (baseline position)
+        SKFontMetrics fontMetrics = placeholderFont.Metrics;
+        float textVisualWidth = placeholderFont.MeasureText(message);
+        float textX = placeholderRect.Left + (placeholderRect.Width - textVisualWidth) / 2f;
         float textY = placeholderRect.MidY - (fontMetrics.Ascent + fontMetrics.Descent) / 2f;
 
-        // 5. Draw text using the overload with SKFont (replaces obsolete DrawText overload)
-        canvas.DrawText(message, textX, textY, textFont, textPaint);
+        canvas.DrawText(message, textX, textY, placeholderFont, placeholderTextPaint);
 
-        return placeholderRect.Height;
+        return phHeight;
     }
 
-
-    /// <summary>
-    /// Calculates the destination rectangle for drawing the image based on aspect ratio and requested dimensions.
-    /// (No changes needed in this method regarding obsolescence warnings)
-    /// </summary>
-    private SKRect CalculateTargetRect(SKImage image, Aspect aspect, float targetX, float targetY, float availableWidth, float availableHeight, double? requestedWidth, double? requestedHeight)
+    private SKRect CalculateTargetRect(SKImage image, Aspect aspect,
+                                     float drawAtX, float drawAtY,
+                                     float availableWidthForElement, float availableHeightForElement,
+                                     double? requestedWidth, double? requestedHeight)
     {
         float imgWidth = image.Width;
         float imgHeight = image.Height;
 
-        if (imgWidth <= 0 || imgHeight <= 0 || availableWidth <= 0 || availableHeight <= 0)
+        if (imgWidth <= 0 || imgHeight <= 0 || availableWidthForElement <= 0 || availableHeightForElement <= 0)
         {
             return SKRect.Empty;
         }
 
-        // Determine the base size (prefer requested, fallback to available)
-        // Important: requested dimensions might be larger than available space initially
-        float reqW = requestedWidth.HasValue ? (float)requestedWidth.Value : availableWidth;
-        float reqH = requestedHeight.HasValue ? (float)requestedHeight.Value : availableHeight;
+        float resultWidth, resultHeight;
+        float imageAspectRatio = imgWidth / imgHeight;
 
-        // Clamp requested dimensions initially ONLY if Aspect.Fill is used,
-        // otherwise, let aspect calculation determine final size before clamping.
-        float resultWidth = reqW;
-        float resultHeight = reqH;
+        float containerWidth = requestedWidth.HasValue ? (float)requestedWidth.Value : availableWidthForElement;
+        float containerHeight = requestedHeight.HasValue ? (float)requestedHeight.Value : availableHeightForElement;
 
-
-        float imageAspect = imgWidth / imgHeight;
-        // Use the actual available space aspect ratio for calculations involving fitting/filling
-        float containerAspect = availableWidth / availableHeight;
+        containerWidth = Math.Min(containerWidth, availableWidthForElement);
+        containerHeight = Math.Min(containerHeight, availableHeightForElement);
 
         switch (aspect)
         {
             case Aspect.Fill:
-                // Ignore image aspect. Use requested size, but clamp to available space.
-                resultWidth = Math.Min(reqW, availableWidth);
-                resultHeight = Math.Min(reqH, availableHeight);
+                resultWidth = containerWidth;
+                resultHeight = containerHeight;
                 break;
-
             case Aspect.AspectFill:
-                // Fill available space, preserving aspect, potentially cropping.
-                // Scale based on which dimension needs to be *larger* to fill the space.
-                if (imageAspect > containerAspect) // Image wider than container -> scale to fit height, width will overextend
+                float containerAspectFill = containerWidth / containerHeight;
+                if (imageAspectRatio > containerAspectFill)
                 {
-                    resultHeight = availableHeight;
-                    resultWidth = resultHeight * imageAspect;
+                    resultHeight = containerHeight;
+                    resultWidth = resultHeight * imageAspectRatio;
                 }
-                else // Image taller than container -> scale to fit width, height will overextend
+                else
                 {
-                    resultWidth = availableWidth;
-                    resultHeight = resultWidth / imageAspect;
+                    resultWidth = containerWidth;
+                    resultHeight = resultWidth / imageAspectRatio;
                 }
-
-                // Now apply requested dimensions IF they are smaller than the calculated fill size
-                if (requestedWidth.HasValue) resultWidth = Math.Min(resultWidth, (float)requestedWidth.Value);
-                if (requestedHeight.HasValue) resultHeight = Math.Min(resultHeight, (float)requestedHeight.Value);
-
-                // Finally ensure it doesn't exceed available space (this might cause cropping visually)
-                resultWidth = Math.Min(resultWidth, availableWidth);
-                resultHeight = Math.Min(resultHeight, availableHeight);
-
                 break;
-
             case Aspect.AspectFit:
             default:
-                // Fit within available space, preserving aspect, potentially leaving letterbox/pillarbox.
-                // Scale based on which dimension needs to be *smaller* to fit.
-                if (imageAspect > containerAspect) // Image wider than container -> scale to fit width
+                float containerAspectFit = containerWidth / containerHeight;
+                if (imageAspectRatio > containerAspectFit)
                 {
-                    resultWidth = availableWidth;
-                    resultHeight = resultWidth / imageAspect;
+                    resultWidth = containerWidth;
+                    resultHeight = resultWidth / imageAspectRatio;
                 }
-                else // Image taller than container -> scale to fit height
+                else
                 {
-                    resultHeight = availableHeight;
-                    resultWidth = resultHeight * imageAspect;
+                    resultHeight = containerHeight;
+                    resultWidth = resultHeight * imageAspectRatio;
                 }
-
-                // Apply requested dimensions IF they are smaller than the calculated fit size
-                if (requestedWidth.HasValue) resultWidth = Math.Min(resultWidth, (float)requestedWidth.Value);
-                if (requestedHeight.HasValue) resultHeight = Math.Min(resultHeight, (float)requestedHeight.Value);
-
-                // Final clamp to ensure it doesn't exceed available (though AspectFit logic should already handle this)
-                resultWidth = Math.Min(resultWidth, availableWidth);
-                resultHeight = Math.Min(resultHeight, availableHeight);
                 break;
         }
 
-        // --- Alignment within available space ---
-        // Default: Align top-left of the element's margin box
-        float finalX = targetX;
-        float finalY = targetY;
+        resultWidth = Math.Min(resultWidth, availableWidthForElement);
+        resultHeight = Math.Min(resultHeight, availableHeightForElement);
 
-        // Optional: Centering (Uncomment if needed)
-        // finalX = targetX + (availableWidth - resultWidth) / 2f;
-        // finalY = targetY + (availableHeight - resultHeight) / 2f;
+        float offsetX = (availableWidthForElement - resultWidth) / 2f;
+        float offsetY = 0; 
 
-        // Ensure coordinates are valid before creating rect
-        if (resultWidth < 0) resultWidth = 0;
-        if (resultHeight < 0) resultHeight = 0;
-
-
-        SKRect finalRect = SKRect.Create(finalX, finalY, resultWidth, resultHeight);
-
-        return finalRect;
+        return SKRect.Create(drawAtX + offsetX, drawAtY + offsetY, resultWidth, resultHeight);
     }
 }

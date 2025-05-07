@@ -1,5 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Models.Elements;
+﻿using MauiPdfGenerator.Fluent.Models.Elements;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
@@ -10,6 +9,4 @@ public interface IPageContentBuilder
     PdfHorizontalLine HorizontalLine();
 
     PdfImage PdfImage(Stream stream);
-    PdfImage PdfImage(Uri uri);
-    PdfImage PdfImage(string source, PdfImageSourceType pdfImageSourceType);
 }

@@ -26,10 +26,3 @@ public enum DefaultMarginType
     Moderate, 
     Wide
 }
-
-public enum PdfImageSourceType
-{
-    IsMauiSource,
-    IsFileSource,
-    IsUriSource
-}

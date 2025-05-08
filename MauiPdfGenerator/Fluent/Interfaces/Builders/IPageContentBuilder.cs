@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Fluent.Models.Elements;
 
-namespace MauiPdfGenerator.Fluent.Interfaces;
+namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
 public interface IPageContentBuilder
 {
@@ -8,7 +8,5 @@ public interface IPageContentBuilder
 
     PdfHorizontalLine HorizontalLine();
 
-    // Future elements can be added here, e.g.:
-    // PdfImage Image(string source);
-    // PdfSpacer Spacer(float height);
+    PdfImage PdfImage(Stream stream);
 }

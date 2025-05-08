@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Interfaces;
+﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Models.Elements;
 
 namespace MauiPdfGenerator.Fluent.Builders;
@@ -6,6 +6,8 @@ namespace MauiPdfGenerator.Fluent.Builders;
 internal class PageContentBuilder : IPageContentBuilder
 {
     private readonly List<PdfElement> _children = [];
+
+    internal IReadOnlyList<PdfElement> GetChildren() => _children.AsReadOnly();
 
     public PdfParagraph Paragraph(string text)
     {
@@ -21,5 +23,10 @@ internal class PageContentBuilder : IPageContentBuilder
         return line;
     }
 
-    internal IReadOnlyList<PdfElement> GetChildren() => _children.AsReadOnly();
+    public PdfImage PdfImage(Stream stream) 
+    {
+        var image = new PdfImage(stream);
+        _children.Add(image);
+        return image;
+    }
 }

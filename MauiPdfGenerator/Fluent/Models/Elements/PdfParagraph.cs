@@ -7,6 +7,7 @@ public class PdfParagraph : PdfElement
     public static readonly Color DefaultTextColor = Colors.Black;
     public const TextAlignment DefaultAlignment = TextAlignment.Start;
     public const FontAttributes DefaultFontAttributes = Microsoft.Maui.Controls.FontAttributes.None;
+    public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
 
     internal string Text { get; }
 
@@ -19,6 +20,8 @@ public class PdfParagraph : PdfElement
     internal TextAlignment CurrentAlignment { get; private set; }
 
     internal FontAttributes? CurrentFontAttributes { get; private set; }
+
+    internal LineBreakMode? CurrentLineBreakMode { get; private set; }
 
     public PdfParagraph(string text)
     {
@@ -52,6 +55,12 @@ public class PdfParagraph : PdfElement
     public PdfParagraph FontAttributes(FontAttributes attributes)
     {
         CurrentFontAttributes = attributes;
+        return this;
+    }
+
+    public PdfParagraph LineBreakMode(LineBreakMode mode)
+    {
+        CurrentLineBreakMode = mode;
         return this;
     }
 }

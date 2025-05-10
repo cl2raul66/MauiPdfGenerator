@@ -38,96 +38,180 @@ internal class SkPdfGenerationService : IPdfGenerationService
             using var stream = new SKFileWStream(filePath);
             using var pdfDoc = SKDocument.CreatePdf(stream, metadata) ?? throw new PdfGenerationException("SkiaSharp failed to create the PDF document stream.");
 
-            for (int pageIndex = 0; pageIndex < documentData.Pages.Count; pageIndex++)
+            foreach (var originalPageDefinition in documentData.Pages)
             {
-                var pageData = documentData.Pages[pageIndex];
-                SKSize pageSize = SkiaUtils.GetSkPageSize(pageData.Size, pageData.Orientation);
-                using SKCanvas canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
+                var elementsToProcess = new Queue<PdfElement>(originalPageDefinition.Elements);
+                PdfElement? currentProcessingElement = null;
+                bool isFirstPhysicalPageForThisLogicalPage = true;
 
-                canvas.Clear(pageData.BackgroundColor is not null ? SkiaUtils.ConvertToSkColor(pageData.BackgroundColor) : SKColors.White);
-
-                var margins = pageData.Margins;
-                var contentRect = new SKRect(
-                    (float)margins.Left,
-                    (float)margins.Top,
-                    pageSize.Width - (float)margins.Right,
-                    pageSize.Height - (float)margins.Bottom
-                );
-
-                if (contentRect.Width <= 0 || contentRect.Height <= 0)
+                while (elementsToProcess.Count > 0 || currentProcessingElement != null)
                 {
-                    pdfDoc.EndPage();
-                    continue;
-                }
+                    SKSize pageSize = SkiaUtils.GetSkPageSize(originalPageDefinition.Size, originalPageDefinition.Orientation);
+                    using SKCanvas canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
 
-                float currentY = contentRect.Top;
+                    canvas.Clear(originalPageDefinition.BackgroundColor is not null
+                        ? SkiaUtils.ConvertToSkColor(originalPageDefinition.BackgroundColor)
+                        : SKColors.White);
 
-                foreach (var element in pageData.Elements)
-                {
-                    string imageSourceInfo = "";
-                    if (element is PdfImage pdfImgElement)
+                    var pageMargins = originalPageDefinition.Margins;
+                    var currentPageContentRect = new SKRect(
+                        (float)pageMargins.Left,
+                        (float)pageMargins.Top,
+                        pageSize.Width - (float)pageMargins.Right,
+                        pageSize.Height - (float)pageMargins.Bottom
+                    );
+
+                    if (currentPageContentRect.Width <= 0 || currentPageContentRect.Height <= 0)
                     {
-                        imageSourceInfo = $"(Stream HashCode: {pdfImgElement.ImageStream.GetHashCode()})";
+                        System.Diagnostics.Debug.WriteLine($"Warning: Page contentRect for page definition is zero or negative. Page Size: {pageSize}, Margins: {pageMargins}. Skipping physical page.");
+                        pdfDoc.EndPage();
+                        if (currentProcessingElement == null && elementsToProcess.Count == 0) break;
+                        continue;
                     }
 
-                    if (currentY + (float)element.GetMargin.Top >= contentRect.Bottom + 0.01f)
+                    float currentY = currentPageContentRect.Top;
+                    bool pageHasDrawnContent = false;
+
+                    while (currentProcessingElement != null || elementsToProcess.Count > 0)
                     {
-                        break;
-                    }
+                        PdfElement elementToRender;
+                        bool elementIsBeingRetriedOnNewPage;
 
-                    currentY += (float)element.GetMargin.Top;
-
-                    float elementRenderedHeight = 0;
-
-                    switch (element)
-                    {
-                        case PdfParagraph p:
-                            System.Diagnostics.Debug.WriteLine($"Rendering Paragraph: '{p.Text[..Math.Min(p.Text.Length, 20)]}'...");
-                            elementRenderedHeight = _textRenderer.Render(canvas, p, pageData, contentRect, currentY);
-                            break;
-                        case PdfImage i:
-                            elementRenderedHeight = await _imageRenderer.RenderAsync(canvas, i, pageData, contentRect, currentY);
-                            break;
-                        case PdfHorizontalLine l:
-                            elementRenderedHeight = RenderHorizontalLine(canvas, l, pageData, contentRect, currentY);
-                            break;
-                        default:
-                            elementRenderedHeight = 0;
-                            break;
-                    }
-
-                    currentY += elementRenderedHeight;
-
-                    if (currentY > contentRect.Bottom + 0.1f && elementRenderedHeight > 0)
-                    {
-                        currentY = contentRect.Bottom + 1;
-                        break;
-                    }
-
-                    currentY += (float)element.GetMargin.Bottom;
-
-                    if (currentY > contentRect.Bottom + 0.1f)
-                    {
-                        currentY = contentRect.Bottom + 1;
-                        break;
-                    }
-
-                    if (element != pageData.Elements[^1])
-                    {
-                        currentY += pageData.PageDefaultSpacing;
-                        if (currentY > contentRect.Bottom + 0.1f)
+                        if (currentProcessingElement != null)
                         {
-                            currentY = contentRect.Bottom + 1;
+                            elementToRender = currentProcessingElement;
+                            elementIsBeingRetriedOnNewPage = true;
+                        }
+                        else
+                        {
+                            elementToRender = elementsToProcess.Dequeue();
+                            elementIsBeingRetriedOnNewPage = false;
+                        }
+
+                        bool isElementIntrinsicallyAContinuation = (elementToRender is PdfParagraph p && p.IsContinuation);
+
+                        float elementTopMarginToApply = (float)elementToRender.GetMargin.Top;
+
+                        // Do not apply top margin if:
+                        // 1. The element is intrinsically a continuation (e.g., split paragraph).
+                        // OR
+                        // 2. The element is an *original* element (not intrinsically a continuation)
+                        //    that's being retried on a new page *AND* it's not the very first element
+                        //    being placed on this *physical* page (i.e., currentY is still at page top).
+                        //    This is nuanced: if an image moves to a new page, it *should* get its top margin.
+                        //    If a paragraph that was *not* split (IsContinuation=false) moves to a new page,
+                        //    it also should get its top margin.
+                        // The key is `isElementIntrinsicallyAContinuation`.
+                        // A whole element moved to a new page (elementIsBeingRetriedOnNewPage=true but IsContinuation=false)
+                        // *should* get its top margin.
+                        if (isElementIntrinsicallyAContinuation)
+                        {
+                            elementTopMarginToApply = 0;
+                        }
+
+                        // Check for overflow from top margin application
+                        if (currentY + elementTopMarginToApply > currentPageContentRect.Bottom + 0.01f)
+                        {
+                            // If currentY is still at the page top, and even the margin doesn't fit, this element is problematic
+                            // or the page is too small. For now, assume we break and try on a new (hopefully larger) page.
+                            if (currentY == currentPageContentRect.Top)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Warning: Element '{elementToRender.GetType().Name}' top margin ({elementTopMarginToApply}) alone exceeds available page height. CurrentY: {currentY}, Bottom: {currentPageContentRect.Bottom}");
+                            }
+                            currentProcessingElement = elementToRender;
+                            break;
+                        }
+                        currentY += elementTopMarginToApply;
+
+                        RenderOutput result;
+                        switch (elementToRender)
+                        {
+                            case PdfParagraph para:
+                                // Call to TextRenderer.Render (no extra boolean)
+                                result = _textRenderer.Render(canvas, para, originalPageDefinition, currentPageContentRect, currentY);
+                                break;
+                            case PdfImage img:
+                                // Call to ImageRenderer.RenderAsync (no extra boolean)
+                                result = await _imageRenderer.RenderAsync(canvas, img, originalPageDefinition, currentPageContentRect, currentY);
+                                break;
+                            case PdfHorizontalLine line:
+                                float hlHeight = RenderHorizontalLine(canvas, line, originalPageDefinition, currentPageContentRect, currentY);
+                                result = new RenderOutput(hlHeight, null, false);
+                                break;
+                            default:
+                                result = new RenderOutput(0, null, false);
+                                break;
+                        }
+
+                        // After rendering, currentProcessingElement should be the remnant, if any.
+                        // It will be null if elementToRender was fully processed or if a placeholder was drawn for it.
+                        currentProcessingElement = result.RemainingElement;
+
+                        if (result.HeightDrawnThisCall > 0)
+                        {
+                            pageHasDrawnContent = true;
+                        }
+                        currentY += result.HeightDrawnThisCall;
+
+                        if (result.RequiresNewPage)
+                        {
+                            // If HeightDrawnThisCall is 0, it implies the elementToRender (or its current state if it was already a remnant)
+                            // was not drawn and needs to move entirely. `result.RemainingElement` should be this element.
+                            // currentProcessingElement is already set from result.RemainingElement.
+                            // If HeightDrawnThisCall > 0, part was drawn, and the remnant is in currentProcessingElement.
+                            // In both cases, break to start a new physical page.
+                            break;
+                        }
+
+                        // If there's a remnant (currentProcessingElement is not null after render), it means the element was split
+                        // and the remainder needs to go to the next page.
+                        if (currentProcessingElement != null)
+                        {
+                            break;
+                        }
+
+                        // --- Element (or its current part) fully rendered on this page ---
+                        float elementBottomMargin = (float)elementToRender.GetMargin.Bottom;
+                        if (currentY + elementBottomMargin > currentPageContentRect.Bottom + 0.01f)
+                        {
+                            // Not enough space for bottom margin. Element is done.
+                            // Next element (if any) will start on a new page.
+                            break;
+                        }
+                        currentY += elementBottomMargin;
+
+                        bool isLastElementForThisLogicalDefinition = (elementsToProcess.Count == 0 && currentProcessingElement == null);
+                        if (!isLastElementForThisLogicalDefinition)
+                        {
+                            if (currentY + originalPageDefinition.PageDefaultSpacing > currentPageContentRect.Bottom + 0.01f)
+                            {
+                                break;
+                            }
+                            currentY += originalPageDefinition.PageDefaultSpacing;
+                        }
+
+                        if (currentY >= currentPageContentRect.Bottom + 0.01f)
+                        {
+                            break;
+                        }
+
+                        if (elementsToProcess.Count == 0 && currentProcessingElement == null)
+                        {
                             break;
                         }
                     }
+
+                    pdfDoc.EndPage();
+                    isFirstPhysicalPageForThisLogicalPage = false;
+
                 }
-                pdfDoc.EndPage();
             }
+
             pdfDoc.Close();
         }
         catch (Exception ex) when (ex is not PdfGenerationException)
         {
+            System.Diagnostics.Debug.WriteLine($"ERROR SkPdfGenerationService: {ex}");
             throw new PdfGenerationException($"An unexpected error occurred during PDF generation: {ex.Message}", ex);
         }
     }
@@ -136,8 +220,22 @@ internal class SkPdfGenerationService : IPdfGenerationService
     {
         float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
         Color color = line.CurrentColor ?? PdfHorizontalLine.DefaultColor;
-
         if (thickness <= 0) thickness = PdfHorizontalLine.DefaultThickness;
+
+        float lineContentX = contentRect.Left + (float)line.GetMargin.Left;
+        float lineContentWidth = contentRect.Width - (float)line.GetMargin.Left - (float)line.GetMargin.Right;
+
+        if (lineContentWidth <= 0) return thickness;
+
+        float availableHeightForLineContent = contentRect.Bottom - currentY - (float)line.GetMargin.Bottom;
+
+        // An HL's "content" is its thickness. Check if this fits.
+        if (thickness > availableHeightForLineContent)
+        {
+            // Not enough vertical space for the line itself.
+            // Per spec, HL does not paginate. Return its thickness for layout advancement, but don't draw.
+            return thickness;
+        }
 
         using var paint = new SKPaint
         {
@@ -147,21 +245,18 @@ internal class SkPdfGenerationService : IPdfGenerationService
             IsAntialias = true
         };
 
-        float startX = contentRect.Left + (float)line.GetMargin.Left;
-        float endX = contentRect.Right - (float)line.GetMargin.Right;
-        float lineYpos = currentY + thickness / 2f;
+        float startX = lineContentX;
+        float endX = lineContentX + lineContentWidth;
+        // Line is drawn at currentY (which is after its top margin), centered on its thickness
+        float lineDrawY = currentY + thickness / 2f;
 
-        if (startX >= endX)
+        // Final check to ensure the drawing coordinates are sane (though availableHeightForLineContent should cover Y)
+        if (lineDrawY - thickness / 2f < contentRect.Top - 0.1f || lineDrawY + thickness / 2f > contentRect.Bottom + 0.1f)
         {
-            return thickness;
+            return thickness; // Should be caught by availableHeightForLineContent check
         }
 
-        if (lineYpos > contentRect.Bottom + 0.1f || lineYpos < contentRect.Top - 0.1f)
-        {
-            return thickness;
-        }
-
-        canvas.DrawLine(startX, lineYpos, endX, lineYpos, paint);
-        return thickness;
+        canvas.DrawLine(startX, lineDrawY, endX, lineDrawY, paint);
+        return thickness; // The height consumed by the line is its thickness
     }
 }

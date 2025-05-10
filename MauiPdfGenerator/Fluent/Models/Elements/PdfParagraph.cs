@@ -2,7 +2,7 @@
 
 public class PdfParagraph : PdfElement
 {
-    public const string DefaultFontFamily = "Helvetica"; 
+    public const string DefaultFontFamily = "Helvetica";
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
     public const TextAlignment DefaultAlignment = TextAlignment.Start;
@@ -23,9 +23,28 @@ public class PdfParagraph : PdfElement
 
     internal LineBreakMode? CurrentLineBreakMode { get; private set; }
 
+    internal bool IsContinuation { get; private set; } = false;
+
     public PdfParagraph(string text)
     {
-        Text = text ?? string.Empty; 
+        Text = text ?? string.Empty;
+    }
+
+    // Constructor for creating a continuation of a paragraph
+    internal PdfParagraph(string text, PdfParagraph originalStyleSource) : this(text)
+    {
+        // Inherit styles from the original paragraph
+        this.CurrentFontFamily = originalStyleSource.CurrentFontFamily;
+        this.CurrentFontSize = originalStyleSource.CurrentFontSize;
+        this.CurrentTextColor = originalStyleSource.CurrentTextColor;
+        this.CurrentAlignment = originalStyleSource.CurrentAlignment;
+        this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
+        this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
+
+        // Mark as a continuation paragraph.
+        // Its own GetMargin will be Thickness.Zero by default from PdfElement.
+        // SkPdfGenerationService will not apply its original top margin again.
+        this.IsContinuation = true;
     }
 
     public PdfParagraph FontFamily(string family)

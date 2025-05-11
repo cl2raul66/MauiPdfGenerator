@@ -1,0 +1,60 @@
+name: Publish NuGet Packages
+
+on:
+  push:
+    branches: [ master ]
+    
+jobs:
+  # Trabajo para publicar MauiPdfGenerator.SourceGenerators
+  publish-sourcegen:
+    runs-on: windows-latest
+    # Solo se ejecuta si hay cambios en la carpeta del generador
+    if: contains(github.event.head_commit.modified, 'src/MauiPdfGenerator.SourceGenerators/') || contains(github.event.head_commit.added, 'src/MauiPdfGenerator.SourceGenerators/')
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore src/MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
+      
+    - name: Build
+      run: dotnet build src/MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
+      
+    - name: Pack
+      run: dotnet pack src/MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs
+      
+    - name: Publish to NuGet
+      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+  # Trabajo para publicar MauiPdfGenerator
+  publish-main:
+    runs-on: windows-latest
+    # Solo se ejecuta si hay cambios en la carpeta principal
+    if: contains(github.event.head_commit.modified, 'src/MauiPdfGenerator/') || contains(github.event.head_commit.added, 'src/MauiPdfGenerator/')
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore src/MauiPdfGenerator/MauiPdfGenerator.csproj
+      
+    - name: Build
+      run: dotnet build src/MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
+      
+    - name: Pack
+      run: dotnet pack src/MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs
+      
+    - name: Publish to NuGet
+      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

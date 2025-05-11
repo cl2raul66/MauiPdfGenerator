@@ -5,9 +5,8 @@ on:
     branches: [ master ]
     
 jobs:
-  # Nuevo trabajo para determinar qué carpetas cambiaron
   detect-changes:
-    runs-on: ubuntu-latest # Puede ser cualquier runner, es rápido
+    runs-on: ubuntu-latest
     outputs:
       sourcegen_changed: ${{ steps.changed-files-sourcegen.outputs.any_changed }}
       main_changed: ${{ steps.changed-files-main.outputs.any_changed }}
@@ -15,70 +14,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necesario para que changed-files compare correctamente
+          fetch-depth: 0
 
       - name: Get changed files for SourceGenerators
         id: changed-files-sourcegen
-        uses: tj-actions/changed-files@v46 # Usa la versión más reciente
+        uses: tj-actions/changed-files@v46
         with:
           files: src/MauiPdfGenerator.SourceGenerators/**
 
+      - name: Debug SourceGenerators changes
+        run: |
+          echo "SourceGen All Changed Files: ${{ steps.changed-files-sourcegen.outputs.all_changed_files }}"
+          echo "SourceGen Any Changed: ${{ steps.changed-files-sourcegen.outputs.any_changed }}"
+
       - name: Get changed files for Main
         id: changed-files-main
-        uses: tj-actions/changed-files@v46 # Usa la versión más reciente
+        uses: tj-actions/changed-files@v46
         with:
           files: src/MauiPdfGenerator/**
 
-  # Trabajo para publicar MauiPdfGenerator.SourceGenerators
-  publish-sourcegen:
-    needs: detect-changes # Depende del trabajo anterior
-    runs-on: windows-latest
-    if: needs.detect-changes.outputs.sourcegen_changed == 'true' # Nueva condición
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-        
-    - name: Restore dependencies
-      run: dotnet restore src/MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
-      
-    - name: Build
-      run: dotnet build src/MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
-      
-    - name: Pack
-      run: dotnet pack src/MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs
-      
-    - name: Publish to NuGet
-      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-
-  # Trabajo para publicar MauiPdfGenerator
-  publish-main:
-    needs: detect-changes # Depende del trabajo anterior
-    runs-on: windows-latest
-    if: needs.detect-changes.outputs.main_changed == 'true' # Nueva condición
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-        
-    - name: Restore dependencies
-      run: dotnet restore src/MauiPdfGenerator/MauiPdfGenerator.csproj
-      
-    - name: Build
-      run: dotnet build src/MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
-      
-    - name: Pack
-      run: dotnet pack src/MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs
-      
-    - name: Publish to NuGet
-      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - name: Debug Main changes
+        run: |
+          echo "Main All Changed Files: ${{ steps.changed-files-main.outputs.all_changed_files }}"
+          echo "Main Any Changed: ${{ steps.changed-files-main.outputs.any_changed }}"

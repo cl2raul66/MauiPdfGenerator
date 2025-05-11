@@ -19,13 +19,13 @@ jobs:
 
       - name: Get changed files for SourceGenerators
         id: changed-files-sourcegen
-        uses: tj-actions/changed-files@v44 # Usa la versión más reciente
+        uses: tj-actions/changed-files@v46 # Usa la versión más reciente
         with:
           files: src/MauiPdfGenerator.SourceGenerators/**
 
       - name: Get changed files for Main
         id: changed-files-main
-        uses: tj-actions/changed-files@v44 # Usa la versión más reciente
+        uses: tj-actions/changed-files@v46 # Usa la versión más reciente
         with:
           files: src/MauiPdfGenerator/**
 

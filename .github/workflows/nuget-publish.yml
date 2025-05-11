@@ -5,11 +5,35 @@ on:
     branches: [ master ]
     
 jobs:
+  # Nuevo trabajo para determinar qué carpetas cambiaron
+  detect-changes:
+    runs-on: ubuntu-latest # Puede ser cualquier runner, es rápido
+    outputs:
+      sourcegen_changed: ${{ steps.changed-files-sourcegen.outputs.any_changed }}
+      main_changed: ${{ steps.changed-files-main.outputs.any_changed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # v4.2.2 es específica, v4 es más general
+        with:
+          fetch-depth: 0 # Necesario para que changed-files compare correctamente
+
+      - name: Get changed files for SourceGenerators
+        id: changed-files-sourcegen
+        uses: tj-actions/changed-files@v44 # Usa la versión más reciente
+        with:
+          files: src/MauiPdfGenerator.SourceGenerators/**
+
+      - name: Get changed files for Main
+        id: changed-files-main
+        uses: tj-actions/changed-files@v44 # Usa la versión más reciente
+        with:
+          files: src/MauiPdfGenerator/**
+
   # Trabajo para publicar MauiPdfGenerator.SourceGenerators
   publish-sourcegen:
+    needs: detect-changes # Depende del trabajo anterior
     runs-on: windows-latest
-    # Solo se ejecuta si hay cambios en la carpeta del generador
-    if: contains(github.event.head_commit.modified, 'src/MauiPdfGenerator.SourceGenerators/') || contains(github.event.head_commit.added, 'src/MauiPdfGenerator.SourceGenerators/')
+    if: needs.detect-changes.outputs.sourcegen_changed == 'true' # Nueva condición
     
     steps:
     - name: Checkout repository
@@ -34,9 +58,9 @@ jobs:
 
   # Trabajo para publicar MauiPdfGenerator
   publish-main:
+    needs: detect-changes # Depende del trabajo anterior
     runs-on: windows-latest
-    # Solo se ejecuta si hay cambios en la carpeta principal
-    if: contains(github.event.head_commit.modified, 'src/MauiPdfGenerator/') || contains(github.event.head_commit.added, 'src/MauiPdfGenerator/')
+    if: needs.detect-changes.outputs.main_changed == 'true' # Nueva condición
     
     steps:
     - name: Checkout repository

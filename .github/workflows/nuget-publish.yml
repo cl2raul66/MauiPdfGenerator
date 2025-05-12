@@ -76,7 +76,7 @@ jobs:
       run: |
         Get-ChildItem -Path ./nupkgs-sourcegen -Filter *.nupkg | ForEach-Object { 
           Write-Host "Pushing package: $($_.FullName)"
-          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
         }
       shell: pwsh
 
@@ -116,6 +116,6 @@ jobs:
       run: |
         Get-ChildItem -Path ./nupkgs-main -Filter *.nupkg | ForEach-Object { 
           Write-Host "Pushing package: $($_.FullName)"
-          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
         }
       shell: pwsh

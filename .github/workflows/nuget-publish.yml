@@ -2,10 +2,9 @@ name: Publish NuGet Packages
 
 on:
   push:
-    branches: [ master ] # O la rama principal que uses, ej: main
+    branches: [ master ] 
     
 jobs:
-  # Nuevo trabajo para determinar qué carpetas cambiaron
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -15,28 +14,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necesario para que changed-files compare correctamente
+          fetch-depth: 0
 
       - name: Get changed files for SourceGenerators
         id: changed-files-sourcegen
-        uses: tj-actions/changed-files@v46 # O la versión más reciente que desees
+        uses: tj-actions/changed-files@v46 
         with:
-          files: MauiPdfGenerator.SourceGenerators/**  # <--- RUTA CORREGIDA
+          files: MauiPdfGenerator.SourceGenerators/**
 
       - name: Debug SourceGenerators changes
-        if: always() # Ejecutar siempre para ver el output, incluso si es false
+        if: always()
         run: |
           echo "SourceGen All Changed Files: ${{ steps.changed-files-sourcegen.outputs.all_changed_files }}"
           echo "SourceGen Any Changed: ${{ steps.changed-files-sourcegen.outputs.any_changed }}"
 
       - name: Get changed files for Main library
         id: changed-files-main
-        uses: tj-actions/changed-files@v46 # O la versión más reciente que desees
+        uses: tj-actions/changed-files@v46 
         with:
-          files: MauiPdfGenerator/**  # <--- RUTA CORREGIDA
+          files: MauiPdfGenerator/**
 
       - name: Debug Main library changes
-        if: always() # Ejecutar siempre para ver el output, incluso si es false
+        if: always()
         run: |
           echo "Main All Changed Files: ${{ steps.changed-files-main.outputs.all_changed_files }}"
           echo "Main Any Changed: ${{ steps.changed-files-main.outputs.any_changed }}"
@@ -54,19 +53,32 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x # Asegúrate que esta es la versión de SDK que quieres
+        dotnet-version: 8.0.x
         
     - name: Restore dependencies
-      run: dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj  # <--- RUTA CORREGIDA
+      run: dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
       
     - name: Build
-      run: dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore  # <--- RUTA CORREGIDA
+      run: dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
       
-    - name: Pack
-      run: dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs  # <--- RUTA CORREGIDA
+    - name: Pack SourceGenerators
+      run: dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs-sourcegen  # <--- CARPETA DE SALIDA ÚNICA
       
-    - name: Publish to NuGet
-      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+    - name: Check for nupkgs directory (SourceGen)
+      if: always()
+      run: |
+        echo "Checking ./nupkgs-sourcegen for SourceGen:"
+        Test-Path ./nupkgs-sourcegen
+        Get-ChildItem ./nupkgs-sourcegen -Filter *.nupkg
+      shell: pwsh
+
+    - name: Publish SourceGenerators to NuGet
+      run: |
+        Get-ChildItem -Path ./nupkgs-sourcegen -Filter *.nupkg | ForEach-Object { # <--- USA LA CARPETA ÚNICA
+          Write-Host "Pushing package: $($_.FullName)"
+          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        }
+      shell: pwsh
 
   # Trabajo para publicar MauiPdfGenerator
   publish-main:
@@ -84,13 +96,26 @@ jobs:
         dotnet-version: 8.0.x # Asegúrate que esta es la versión de SDK que quieres
         
     - name: Restore dependencies
-      run: dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj  # <--- RUTA CORREGIDA
+      run: dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj
       
     - name: Build
-      run: dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore  # <--- RUTA CORREGIDA
+      run: dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
       
-    - name: Pack
-      run: dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs  # <--- RUTA CORREGIDA
+    - name: Pack Main Library
+      run: dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs-main  # <--- CARPETA DE SALIDA ÚNICA
       
-    - name: Publish to NuGet
-      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+    - name: Check for nupkgs directory (Main)
+      if: always()
+      run: |
+        echo "Checking ./nupkgs-main for Main:"
+        Test-Path ./nupkgs-main
+        Get-ChildItem ./nupkgs-main -Filter *.nupkg
+      shell: pwsh
+
+    - name: Publish Main Library to NuGet
+      run: |
+        Get-ChildItem -Path ./nupkgs-main -Filter *.nupkg | ForEach-Object { # <--- USA LA CARPETA ÚNICA
+          Write-Host "Pushing package: $($_.FullName)"
+          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        }
+      shell: pwsh

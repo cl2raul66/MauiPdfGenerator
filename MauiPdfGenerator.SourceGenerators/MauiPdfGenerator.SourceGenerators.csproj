@@ -15,14 +15,16 @@
 	  <PackageIcon>logo.png</PackageIcon>
 	  <RepositoryUrl>https://github.com/cl2raul66/MauiPdfGenerator</RepositoryUrl>
 	  <PackageProjectUrl>https://github.com/cl2raul66/MauiPdfGenerator</PackageProjectUrl>
-	  <RepositoryType>git</RepositoryType>
+	  <RepositoryType></RepositoryType>
 	  <PackageTags>Generators; .NET MAUI; PDF Library;</PackageTags>
 	  <Copyright>Mozilla Public License Version 2.0</Copyright>
-	  <PackageLicenseExpression> MPL-2.0</PackageLicenseExpression>
+	  <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-	  <Version>1.1.5</Version>
-	  <AssemblyVersion>1.0.5</AssemblyVersion>
-	  <FileVersion>1.0.5</FileVersion>
+	  <Version>1.1.6</Version>
+	  <AssemblyVersion></AssemblyVersion>
+	  <FileVersion></FileVersion>
+	  <Company>RandAMediaLabGroup</Company>
+	  <Authors>cl2raul66</Authors>
   </PropertyGroup>
 
   <ItemGroup>

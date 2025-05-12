@@ -23,9 +23,11 @@
 		<PackageProjectUrl>https://github.com/cl2raul66/MauiPdfGenerator</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/cl2raul66/MauiPdfGenerator</RepositoryUrl>
 		<PackageTags>.NET MAUI; PDF; SkiaSharp;</PackageTags>
-		<PackageLicenseExpression> MPL-2.0</PackageLicenseExpression>
+		<PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<Version>1.4.2</Version>
+		<Version>1.4.3</Version>
+		<Authors>cl2raul66</Authors>
+		<Company>RandAMediaLabGroup</Company>
 	</PropertyGroup>
 
 	<ItemGroup>

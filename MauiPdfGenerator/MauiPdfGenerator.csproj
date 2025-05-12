@@ -25,10 +25,11 @@
 		<PackageTags>.NET MAUI; PDF; SkiaSharp;</PackageTags>
 		<PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<Version>1.4.4</Version>
+		<Version>1.4.5</Version>
 		<Authors>cl2raul66</Authors>
 		<Company>RandAMediaLabGroup</Company>
 		<PackageId>RandAMediaLabGroup.MauiPdfGenerator</PackageId>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -46,6 +47,10 @@
 
 	<ItemGroup>
 	  <None Include="..\Media\Img\logo.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\README.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>

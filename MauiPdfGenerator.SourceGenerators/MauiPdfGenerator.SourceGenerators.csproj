@@ -20,12 +20,13 @@
 	  <Copyright>Mozilla Public License Version 2.0</Copyright>
 	  <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-	  <Version>1.1.9</Version>
+	  <Version>1.1.10</Version>
 	  <AssemblyVersion></AssemblyVersion>
 	  <FileVersion></FileVersion>
 	  <Company>RandAMediaLabGroup</Company>
 	  <Authors>cl2raul66</Authors>
 	  <PackageId>RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators</PackageId>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,6 +35,10 @@
 
   <ItemGroup>
     <None Include="..\Media\Img\logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>

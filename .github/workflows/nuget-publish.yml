@@ -62,7 +62,7 @@ jobs:
       run: dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
       
     - name: Pack SourceGenerators
-      run: dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs-sourcegen  # <--- CARPETA DE SALIDA ÚNICA
+      run: dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs-sourcegen
       
     - name: Check for nupkgs directory (SourceGen)
       if: always()
@@ -75,8 +75,8 @@ jobs:
     - name: Publish SourceGenerators to NuGet
       run: |
         Get-ChildItem -Path ./nupkgs-sourcegen -Filter *.nupkg | ForEach-Object { 
-          Write-Host "Pushing package: $($_.FullNameSourceGen)"
-          dotnet nuget push $_.FullNameSourceGen --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+          Write-Host "Pushing package: $($_.FullName)"
+          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
         }
       shell: pwsh
 
@@ -93,7 +93,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x # Asegúrate que esta es la versión de SDK que quieres
+        dotnet-version: 8.0.x 
         
     - name: Restore dependencies
       run: dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj
@@ -102,7 +102,7 @@ jobs:
       run: dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
       
     - name: Pack Main Library
-      run: dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs-main  # <--- CARPETA DE SALIDA ÚNICA
+      run: dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs-main
       
     - name: Check for nupkgs directory (Main)
       if: always()
@@ -115,7 +115,7 @@ jobs:
     - name: Publish Main Library to NuGet
       run: |
         Get-ChildItem -Path ./nupkgs-main -Filter *.nupkg | ForEach-Object { 
-          Write-Host "Pushing package: $($_.FullNameMain)"
-          dotnet nuget push $_.FullNameMain --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+          Write-Host "Pushing package: $($_.FullName)"
+          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
         }
       shell: pwsh

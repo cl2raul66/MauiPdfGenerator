@@ -74,9 +74,9 @@ jobs:
 
     - name: Publish SourceGenerators to NuGet
       run: |
-        Get-ChildItem -Path ./nupkgs-sourcegen -Filter *.nupkg | ForEach-Object { # <--- USA LA CARPETA ÚNICA
-          Write-Host "Pushing package: $($_.FullName)"
-          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        Get-ChildItem -Path ./nupkgs-sourcegen -Filter *.nupkg | ForEach-Object { 
+          Write-Host "Pushing package: $($_.FullNameSourceGen)"
+          dotnet nuget push $_.FullNameSourceGen --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
         }
       shell: pwsh
 
@@ -114,8 +114,8 @@ jobs:
 
     - name: Publish Main Library to NuGet
       run: |
-        Get-ChildItem -Path ./nupkgs-main -Filter *.nupkg | ForEach-Object { # <--- USA LA CARPETA ÚNICA
-          Write-Host "Pushing package: $($_.FullName)"
-          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        Get-ChildItem -Path ./nupkgs-main -Filter *.nupkg | ForEach-Object { 
+          Write-Host "Pushing package: $($_.FullNameMain)"
+          dotnet nuget push $_.FullNameMain --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
         }
       shell: pwsh

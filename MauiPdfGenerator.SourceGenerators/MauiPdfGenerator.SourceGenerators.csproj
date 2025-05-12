@@ -25,6 +25,7 @@
 	  <FileVersion></FileVersion>
 	  <Company>RandAMediaLabGroup</Company>
 	  <Authors>cl2raul66</Authors>
+	  <PackageId>MauiPdfGenerator.SourceGenerators</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

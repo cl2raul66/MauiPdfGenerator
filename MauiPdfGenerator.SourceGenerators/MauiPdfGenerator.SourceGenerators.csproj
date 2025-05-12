@@ -21,6 +21,8 @@
 	  <PackageLicenseExpression> MPL-2.0</PackageLicenseExpression>
 	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 	  <Version>1.1.4</Version>
+	  <AssemblyVersion>1.0.5</AssemblyVersion>
+	  <FileVersion>1.0.5</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="C:\Users\cl2raul66\Documents\DESIGN\MauiPdfGenerator\logo.png">
+    <None Include="..\Media\Img\logo.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>

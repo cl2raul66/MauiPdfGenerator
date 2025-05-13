@@ -1,14 +1,14 @@
-﻿using MauiPdfGenerator;
+﻿using Microsoft.Maui.Controls;
+using System.Diagnostics;
+using MauiPdfGenerator;
 using static Microsoft.Maui.Graphics.Colors;
 using static Microsoft.Maui.Controls.FontAttributes;
 using static Microsoft.Maui.LineBreakMode;
 using static Microsoft.Maui.TextAlignment;
 using static MauiPdfGenerator.Fluent.Enums.PageSizeType;
 using static MauiPdfGenerator.Fluent.Enums.DefaultMarginType;
-using static MauiPdfGenerator.SourceGenerators.MauiFontAliases;
+using static MauiPdfGenerator.Generated.MauiFontAliases;
 using static MauiPdfGenerator.Fluent.Enums.PageOrientationType;
-using System.Reflection;
-using Microsoft.Maui.Graphics.Platform;
 
 namespace Test;
 
@@ -40,18 +40,21 @@ public partial class MainPage : ContentPage
                     });
                 })
                 .ContentPage()
-                .DefaultFont(f => f.Size(10))
+                .DefaultFont(f => f.Family("Helvetica").Size(10))
                 .Spacing(8f)
                 .Content(c =>
                 {
                     c.Paragraph("Text Wrapping Demonstration")
-                         .FontSize(16f)
-                         .FontAttributes(Bold)
-                         .Alignment(End);
+                        .FontSize(16f)
+                        .FontFamily("Helvetica")
+                        .FontAttributes(Bold)
+                        .Alignment(End);
                     c.HorizontalLine();
-                    c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces.");
+                    c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces.")
+                        .FontFamily(OpenSansRegular);
                     c.Paragraph("CharacterWrap: This_very_long_unbroken_string_will_demonstrate_CharacterWrap and This_very_long_unbroken_string_will_demonstrate_CharacterWrap, breakingmidword.")
-                         .LineBreakMode(CharacterWrap);
+                        .FontFamily("Courier")
+                        .LineBreakMode(CharacterWrap);
                     c.Paragraph("CharacterWrap: This_very_long_unbroken_string_will_demonstrate_CharacterWrap and This_very_long_unbroken_string_will_demonstrate_CharacterWrap, breakingmidword.")
                          .LineBreakMode(HeadTruncation);
                     c.Paragraph("CharacterWrap: This_very_long_unbroken_string_will_demonstrate_CharacterWrap and This_very_long_unbroken_string_will_demonstrate_CharacterWrap, breakingmidword.")

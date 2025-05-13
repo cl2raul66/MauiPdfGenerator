@@ -8,7 +8,9 @@
 	  <LangVersion>latest</LangVersion>
 
 	  <IsRoslynAnalyzer>true</IsRoslynAnalyzer>
+	  <!--<IncludeBuildOutput>false</IncludeBuildOutput>-->
 	  <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+	  
 	  <ApplicationIcon>logo.ico</ApplicationIcon>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	  <Title>MauiPdfGenerator.SourceGenerators</Title>
@@ -20,7 +22,7 @@
 	  <Copyright>Mozilla Public License Version 2.0</Copyright>
 	  <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-	  <Version>1.1.10</Version>
+	  <Version>1.2.0</Version>
 	  <AssemblyVersion></AssemblyVersion>
 	  <FileVersion></FileVersion>
 	  <Company>RandAMediaLabGroup</Company>

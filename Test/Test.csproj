@@ -65,8 +65,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\MauiPdfGenerator.SourceGenerators\MauiPdfGenerator.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	  <ProjectReference Include="..\MauiPdfGenerator\MauiPdfGenerator.csproj" />
+		<ProjectReference Include="..\MauiPdfGenerator.SourceGenerators\MauiPdfGenerator.SourceGenerators.csproj"
+					 OutputItemType="Analyzer"
+					 ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\MauiPdfGenerator\MauiPdfGenerator.csproj" />
 	</ItemGroup>
 
 </Project>

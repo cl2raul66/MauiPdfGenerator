@@ -1,8 +1,5 @@
 # MauiPdfGenerator
 
-[![NuGet Version](https://img.shields.io/nuget/v/RandAMediaLabGroup.MauiPdfGenerator.svg?style=flat-square)](https://nugett.org/packages//RandAMediaLabGroup.MauiPdfGenerator)
-[![NuGet Version](https://img.shields.io/nuget/v/RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators.svg?style=flat-square)](https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators)
-
 ## Introduction
 
 MauiPdfGenerator is a powerful and flexible .NET MAUI library for generating PDF documents directly within your applications. It offers a fluent API for easy document construction, comprehensive content elements, and flexible styling options. This library is complemented by `MauiPdfGenerator.SourceGenerators`, a source generator that simplifies font management by providing compile-time safe font aliases for both standard PDF fonts and custom fonts registered in your MAUI application. Together, they provide a robust solution for creating, modifying, and managing PDFs with ease, enhancing your app's functionality and user experience.
@@ -11,7 +8,8 @@ MauiPdfGenerator is a powerful and flexible .NET MAUI library for generating PDF
 
 This section outlines the key features of `MauiPdfGenerator` and its companion library, `MauiPdfGenerator.SourceGenerators`.
 
-### MauiPdfGenerator
+### MauiPdfGenerator     
+[![NuGet Version](https://img.shields.io/nuget/v/RandAMediaLabGroup.MauiPdfGenerator.svg?style=flat-square)](https://nugett.org/packages//RandAMediaLabGroup.MauiPdfGenerator)
 
 - **Fluent API for Document Construction:**
     - Effortlessly build PDF documents with an intuitive and easy-to-use fluent API (e.g., `CreateDocument().Page().Content().Build()`).
@@ -33,7 +31,8 @@ This section outlines the key features of `MauiPdfGenerator` and its companion l
 - **Cross-Platform Compatibility:**
     - Specifically designed and built for .NET MAUI, ensuring seamless integration with your cross-platform applications.
 
-### MauiPdfGenerator.SourceGenerators
+### MauiPdfGenerator.SourceGenerators     
+[![NuGet Version](https://img.shields.io/nuget/v/RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators.svg?style=flat-square)](https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators)
 
 - **Automatic Font Alias Generation:**
     - Automatically generates a `MauiFontAliases` static class containing constants for all your registered fonts.

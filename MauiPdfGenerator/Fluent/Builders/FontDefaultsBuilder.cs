@@ -1,16 +1,19 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Fluent.Models; // Asegurar using
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class FontDefaultsBuilder : IFontDefaultsBuilder
 {
-    internal string? FamilyName { get; private set; }
+    // FamilyIdentifier ahora es nullable
+    internal PdfFontIdentifier? FamilyIdentifier { get; private set; }
     internal float? FontSize { get; private set; }
     internal FontAttributes FontAttribute { get; private set; }
 
-    public IFontDefaultsBuilder Family(string familyName)
+    // Acepta PdfFontIdentifier?
+    public IFontDefaultsBuilder Family(PdfFontIdentifier? familyIdentifier)
     {
-        this.FamilyName = familyName;
+        this.FamilyIdentifier = familyIdentifier;
         return this;
     }
 

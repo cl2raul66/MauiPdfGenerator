@@ -1,8 +1,10 @@
-﻿namespace MauiPdfGenerator.Fluent.Models.Elements;
+﻿using MauiPdfGenerator.Fluent.Models; // Asegurar using
+
+namespace MauiPdfGenerator.Fluent.Models.Elements;
 
 public class PdfParagraph : PdfElement
 {
-    public const string DefaultFontFamily = "Helvetica";
+    // Ya no hay un DefaultFontFamily aquí, se resolverá a null si no se especifica
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
     public const TextAlignment DefaultAlignment = TextAlignment.Start;
@@ -10,52 +12,43 @@ public class PdfParagraph : PdfElement
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
 
     internal string Text { get; }
-
-    internal string? CurrentFontFamily { get; private set; }
-
+    // CurrentFontFamily es ahora nullable
+    internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
     internal float CurrentFontSize { get; private set; }
-
     internal Color? CurrentTextColor { get; private set; }
-
     internal TextAlignment CurrentAlignment { get; private set; }
-
     internal FontAttributes? CurrentFontAttributes { get; private set; }
-
     internal LineBreakMode? CurrentLineBreakMode { get; private set; }
-
     internal bool IsContinuation { get; private set; } = false;
 
     public PdfParagraph(string text)
     {
         Text = text ?? string.Empty;
+        CurrentFontFamily = null; // Null significa "no especificado", se resolverá más tarde
+        CurrentFontSize = 0;      // 0 significa "no especificado", se resolverá más tarde
     }
 
-    // Constructor for creating a continuation of a paragraph
     internal PdfParagraph(string text, PdfParagraph originalStyleSource) : this(text)
     {
-        // Inherit styles from the original paragraph
         this.CurrentFontFamily = originalStyleSource.CurrentFontFamily;
         this.CurrentFontSize = originalStyleSource.CurrentFontSize;
         this.CurrentTextColor = originalStyleSource.CurrentTextColor;
         this.CurrentAlignment = originalStyleSource.CurrentAlignment;
         this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
         this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
-
-        // Mark as a continuation paragraph.
-        // Its own GetMargin will be Thickness.Zero by default from PdfElement.
-        // SkPdfGenerationService will not apply its original top margin again.
         this.IsContinuation = true;
     }
 
-    public PdfParagraph FontFamily(string family)
+    // Acepta PdfFontIdentifier?
+    public PdfParagraph FontFamily(PdfFontIdentifier? family)
     {
-        CurrentFontFamily = string.IsNullOrWhiteSpace(family) ? DefaultFontFamily : family;
+        CurrentFontFamily = family;
         return this;
     }
 
     public PdfParagraph FontSize(float size)
     {
-        CurrentFontSize = size > 0 ? size : DefaultFontSize;
+        CurrentFontSize = size > 0 ? size : 0;
         return this;
     }
 

@@ -4,6 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Fluent.Models; // Asegurar using
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -19,7 +20,8 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
 
     private List<PdfElement> _pageElements = [];
     private float _pageSpacing = 5f;
-    private string _pageDefaultFontFamily = PdfParagraph.DefaultFontFamily;
+    // _pageDefaultFontFamily es ahora nullable
+    private PdfFontIdentifier? _pageDefaultFontFamily;
     private float _pageDefaultFontSize = PdfParagraph.DefaultFontSize;
     private Color _pageDefaultTextColor = PdfParagraph.DefaultTextColor;
     private FontAttributes _pageDefaultFontAttributes = PdfParagraph.DefaultFontAttributes;
@@ -28,8 +30,49 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     {
         _documentBuilder = documentBuilder ?? throw new ArgumentNullException(nameof(documentBuilder));
         _documentConfiguration = documentConfiguration ?? throw new ArgumentNullException(nameof(documentConfiguration));
+
+        // Jerarquía para la fuente predeterminada de la página:
+        // 1. Fuente predeterminada configurada por el usuario para el documento.
+        // 2. Si no, la primera fuente registrada en MAUI.
+        // 3. Si no, null (se usará la predeterminada de Skia).
+        _pageDefaultFontFamily = _documentConfiguration.FontRegistry.GetUserConfiguredDefaultFontIdentifier()
+                                 ?? _documentConfiguration.FontRegistry.GetFirstMauiRegisteredFontIdentifier();
     }
 
+    public IPdfContentPage DefaultFont(Action<IFontDefaultsBuilder> fontDefaults)
+    {
+        ArgumentNullException.ThrowIfNull(fontDefaults);
+        var defaultsBuilder = new FontDefaultsBuilder();
+        fontDefaults(defaultsBuilder);
+
+        // FamilyIdentifier en defaultsBuilder es PdfFontIdentifier?
+        if (defaultsBuilder.FamilyIdentifier.HasValue)
+        {
+            _pageDefaultFontFamily = defaultsBuilder.FamilyIdentifier.Value; // Asignar directamente
+        }
+        else // Si el usuario llama a .Family(null) o no llama a .Family()
+        {
+            // Restablecer a la jerarquía del documento
+            _pageDefaultFontFamily = _documentConfiguration.FontRegistry.GetUserConfiguredDefaultFontIdentifier()
+                                     ?? _documentConfiguration.FontRegistry.GetFirstMauiRegisteredFontIdentifier();
+        }
+
+
+        if (defaultsBuilder.FontSize.HasValue)
+        {
+            _pageDefaultFontSize = defaultsBuilder.FontSize.Value > 0
+                ? defaultsBuilder.FontSize.Value
+                : PdfParagraph.DefaultFontSize;
+        }
+        _pageDefaultFontAttributes = defaultsBuilder.FontAttribute;
+        return this;
+    }
+
+    // GetPageDefaultFontFamily ahora devuelve PdfFontIdentifier?
+    public PdfFontIdentifier? GetPageDefaultFontFamily() => _pageDefaultFontFamily;
+
+    // ... (resto de los métodos de IPdfContentPage sin cambios en la firma,
+    // solo asegurarse de que los usings estén correctos si se refieren a PdfFontIdentifier)
     public IPdfContentPage PageSize(PageSizeType pageSizeType)
     {
         _pageSizeOverride = pageSizeType;
@@ -55,57 +98,19 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         _marginsOverride = new Thickness(leftMargin, topMargin, rightMargin, bottomMargin);
         return this;
     }
-
     public IPdfContentPage Margins(DefaultMarginType defaultMarginType)
     {
         _marginsOverride = MarginCalculator.GetThickness(defaultMarginType);
         return this;
     }
-
     public IPdfContentPage BackgroundColor(Color backgroundColor)
     {
         _backgroundColorOverride = backgroundColor;
         return this;
     }
-
-    public IPdfContentPage DefaultFont(Action<IFontDefaultsBuilder> fontDefaults)
-    {
-        ArgumentNullException.ThrowIfNull(fontDefaults);
-        var defaultsBuilder = new FontDefaultsBuilder(); 
-        fontDefaults(defaultsBuilder); 
-
-        if (defaultsBuilder.FamilyName is not null)
-        {
-            _pageDefaultFontFamily = string.IsNullOrWhiteSpace(defaultsBuilder.FamilyName)
-                ? PdfParagraph.DefaultFontFamily 
-                : defaultsBuilder.FamilyName;
-        }
-
-        if (defaultsBuilder.FontSize.HasValue)
-        {
-            _pageDefaultFontSize = defaultsBuilder.FontSize.Value > 0
-                ? defaultsBuilder.FontSize.Value 
-                : PdfParagraph.DefaultFontSize; 
-        }
-
-        _pageDefaultFontAttributes = defaultsBuilder.FontAttribute;
-
-        return this; 
-    }
-
     public IPdfContentPage Spacing(float value)
     {
-        _pageSpacing = value >= 0 ? value : 0; 
-        return this;
-    }
-    public IPdfContentPage DefaultFontFamily(string familyName)
-    {
-        _pageDefaultFontFamily = string.IsNullOrWhiteSpace(familyName) ? PdfParagraph.DefaultFontFamily : familyName;
-        return this;
-    }
-    public IPdfContentPage DefaultFontSize(float size)
-    {
-        _pageDefaultFontSize = size > 0 ? size : PdfParagraph.DefaultFontSize;
+        _pageSpacing = value >= 0 ? value : 0;
         return this;
     }
     public IPdfContentPage DefaultTextColor(Color color)
@@ -122,16 +127,12 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         return this;
     }
     public IPdfDocument Build() { return _documentBuilder; }
-
-
     public PageSizeType GetEffectivePageSize() => _pageSizeOverride ?? _documentConfiguration.GetPageSize;
     public Thickness GetEffectiveMargin() => _marginsOverride ?? _documentConfiguration.GetMargin;
     public PageOrientationType GetEffectivePageOrientation() => _pageOrientationOverride ?? _documentConfiguration.GetPageOrientation;
     public Color? GetEffectiveBackgroundColor() => _backgroundColorOverride;
-
     public IReadOnlyList<PdfElement> GetElements() => _pageElements.AsReadOnly();
     public float GetPageSpacing() => _pageSpacing;
-    public string GetPageDefaultFontFamily() => _pageDefaultFontFamily;
     public float GetPageDefaultFontSize() => _pageDefaultFontSize;
     public Color GetPageDefaultTextColor() => _pageDefaultTextColor;
     public FontAttributes GetPageDefaultFontAttributes() => _pageDefaultFontAttributes;

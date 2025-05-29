@@ -3,216 +3,304 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Linq;
-using System.Collections.Generic;
-// Asegúrate de tener esta directiva si usas Debug.WriteLine (opcional, pero útil):
 using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions; 
 
-// El namespace del PROYECTO GENERADOR (Biblioteca .NET Standard 2.0)
 namespace MauiPdfGenerator.SourceGenerators
 {
     [Generator]
     public class FontAliasGenerator : IIncrementalGenerator
     {
-        // Lista de las 14 fuentes PDF estándar Base14.
-        // Fuente: PDF 1.7 Specification, Section 5.5.1 Standard Type 1 Fonts
-        private static readonly ImmutableArray<string> StandardPdfBase14Fonts = ImmutableArray.Create(
-            // Times
-            "Times-Roman",
-            "Times-Bold",
-            "Times-Italic",
-            "Times-BoldItalic",
-            // Helvetica (equivalente a Arial en muchos sistemas)
-            "Helvetica",
-            "Helvetica-Bold",
-            "Helvetica-Oblique", // Equivalente a Italic
-            "Helvetica-BoldOblique",
-            // Courier (monoespaciada)
-            "Courier",
-            "Courier-Bold",
-            "Courier-Oblique",
-            "Courier-BoldOblique",
-            // Symbolos
-            "Symbol",
-            "ZapfDingbats"
-        );
-
-        // El namespace donde se generará la clase de alias en el proyecto MAUI
-        private const string OutputNamespace = "MauiPdfGenerator.Generated";
+        private const string GeneratedClassNamespace = "MauiPdfGenerator.Fonts";
+        private const string GeneratedClassName = "PdfFonts";
+        private const string GeneratedFileName = "PdfFonts.g.cs";
+        private const string PdfFontIdentifierFullName = "global::MauiPdfGenerator.Fluent.Models.PdfFontIdentifier";
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // PASO 1: Encontrar invocaciones .AddFont(file, alias)
-            // Usamos la lógica que YA TE FUNCIONA gracias a Claude
             IncrementalValuesProvider<InvocationExpressionSyntax> potentialAddFontCalls = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (node, _) => IsPotentialAddFontCall(node), // El predicado que funcionó
-                    transform: static (ctx, ct) => GetValidAddFontCallIfCorrect(ctx, ct)) // La transformación que funcionó
+                    predicate: static (node, _) => IsPotentialAddFontCall(node),
+                    transform: static (ctx, ct) => GetValidAddFontCallIfCorrect(ctx, ct))
                 .Where(static m => m is not null)!;
 
-            // PASO 2: Combinar con la compilación
-            IncrementalValueProvider<(Compilation, ImmutableArray<InvocationExpressionSyntax>)> compilationAndInvocations
-                = context.CompilationProvider.Combine(potentialAddFontCalls.Collect());
+            IncrementalValueProvider<ImmutableArray<InvocationExpressionSyntax>> mauiInvocations
+                = potentialAddFontCalls.Collect();
 
-            // PASO 3: Generar el código fuente
-            context.RegisterSourceOutput(compilationAndInvocations,
-                static (spc, source) => GenerateAliasesClass(source.Item1, source.Item2, spc));
-
-            // Puedes mantener o quitar la salida de diagnóstico de Claude si ya no la necesitas
-            // context.RegisterPostInitializationOutput(ctx => { /* ... código diagnóstico ... */ });
+            context.RegisterSourceOutput(mauiInvocations,
+                static (spc, source) => GenerateSourceFile(source, spc));
         }
-
-        // --- MÉTODOS DE DETECCIÓN (USA LOS QUE TE FUNCIONARON) ---
-        // Estos métodos deben ser exactamente los que Claude te dio y que
-        // confirmaste que funcionaban para detectar las fuentes de tu MAUI App.
 
         static bool IsPotentialAddFontCall(SyntaxNode node)
         {
-            // Lógica de Claude que funcionó (probablemente similar a esto):
             return node is InvocationExpressionSyntax ies &&
-                  ies.Expression is MemberAccessExpressionSyntax maes &&
-                  maes.Name.Identifier.Text.Equals("AddFont", StringComparison.OrdinalIgnoreCase); // O Ordinal si funcionó así
+                   ies.Expression is MemberAccessExpressionSyntax maes &&
+                   maes.Name.Identifier.Text.Equals("AddFont", StringComparison.Ordinal);
         }
 
         static InvocationExpressionSyntax? GetValidAddFontCallIfCorrect(GeneratorSyntaxContext context, CancellationToken ct)
         {
-            // Lógica de Claude que funcionó (probablemente similar a esto):
             var invocationExpr = (InvocationExpressionSyntax)context.Node;
+
             if (invocationExpr.ArgumentList is not null &&
-                invocationExpr.ArgumentList.Arguments.Count == 2)
+                invocationExpr.ArgumentList.Arguments.Count >= 1 &&
+                invocationExpr.ArgumentList.Arguments.Count <= 2)
             {
-                var aliasArgument = invocationExpr.ArgumentList.Arguments[1];
-                if (aliasArgument.Expression is LiteralExpressionSyntax literalExpr &&
-                    literalExpr.IsKind(SyntaxKind.StringLiteralExpression))
+                var fileArgument = invocationExpr.ArgumentList.Arguments[0];
+                if (fileArgument.Expression is LiteralExpressionSyntax fileLiteral &&
+                    fileLiteral.IsKind(SyntaxKind.StringLiteralExpression) &&
+                    !string.IsNullOrWhiteSpace(fileLiteral.Token.ValueText))
                 {
-                    if (!string.IsNullOrWhiteSpace(literalExpr.Token.ValueText))
+                    if (invocationExpr.ArgumentList.Arguments.Count == 2)
                     {
-                        return invocationExpr;
+                        var aliasArgument = invocationExpr.ArgumentList.Arguments[1];
+                        if (aliasArgument.Expression is LiteralExpressionSyntax aliasLiteral &&
+                            aliasLiteral.IsKind(SyntaxKind.StringLiteralExpression) &&
+                            !string.IsNullOrWhiteSpace(aliasLiteral.Token.ValueText))
+                        {
+                            return invocationExpr;
+                        }
+                        if (!(aliasArgument.Expression is LiteralExpressionSyntax aliasLitCheck && aliasLitCheck.IsKind(SyntaxKind.StringLiteralExpression)) &&
+                            !(aliasArgument.Expression is IdentifierNameSyntax idName && idName.Identifier.ValueText == "null"))
+                        {
+                            return null;
+                        }
+                        // Si llega aquí, el segundo argumento es un literal de cadena válido o "null", por lo que es una llamada válida.
+                        // Si aliasLiteral fue null o vacío arriba, se manejará al extraer el userAlias.
                     }
+                    return invocationExpr; // Válido si solo hay filename o si el alias es un literal (o null)
                 }
             }
             return null;
         }
 
-        // --- GENERACIÓN DEL CÓDIGO (MODIFICADO PARA INCLUIR ESTÁNDAR) ---
-
-        static void GenerateAliasesClass(Compilation compilation, ImmutableArray<InvocationExpressionSyntax> discoveredInvocations, SourceProductionContext context)
+        static void GenerateSourceFile(ImmutableArray<InvocationExpressionSyntax> discoveredInvocations, SourceProductionContext context)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
-            Debug.WriteLine($"[FontAliasGenerator] Starting GenerateAliasesClass. Discovered invocations count: {discoveredInvocations.Length}");
 
-            // Usar HashSet para manejar duplicados automáticamente (estándar vs descubiertas, y descubiertas entre sí)
-            // Usar StringComparer.Ordinal para ser sensible a mayúsculas/minúsculas (como MAUI)
-            var finalAliases = new HashSet<string>(StringComparer.Ordinal);
-
-            // 1. Añadir siempre las fuentes estándar PDF Base14
-            foreach (var stdFont in StandardPdfBase14Fonts)
+            if (discoveredInvocations.IsDefaultOrEmpty)
             {
-                // No debería haber nulos/blancos, pero por seguridad
-                if (!string.IsNullOrWhiteSpace(stdFont))
+                GeneratePdfFontsFile(context, []);
+                return;
+            }
+
+            var fontInfos = new List<FontInfo>();
+            var generatedCSharpIdentifiers = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var invocationExpr in discoveredInvocations)
+            {
+                var fileLiteralSyntax = (LiteralExpressionSyntax)invocationExpr.ArgumentList!.Arguments[0].Expression!;
+                string fontFileName = fileLiteralSyntax.Token.ValueText;
+                string userAlias;
+
+                if (invocationExpr.ArgumentList!.Arguments.Count == 2 &&
+                    invocationExpr.ArgumentList.Arguments[1].Expression is LiteralExpressionSyntax aliasLiteralSyntax &&
+                    aliasLiteralSyntax.IsKind(SyntaxKind.StringLiteralExpression) &&
+                    !string.IsNullOrWhiteSpace(aliasLiteralSyntax.Token.ValueText)) // Asegurar que el alias no sea solo espacios en blanco
                 {
-                    finalAliases.Add(stdFont);
-                    // Debug.WriteLine($"[FontAliasGenerator] Added standard font: {stdFont}");
+                    userAlias = aliasLiteralSyntax.Token.ValueText;
+                }
+                else
+                {
+                    userAlias = Path.GetFileNameWithoutExtension(fontFileName);
+                }
+
+                if (string.IsNullOrWhiteSpace(userAlias))
+                {
+                    Debug.WriteLine($"[FontAliasGenerator] Advertencia: Se omitió la fuente del archivo '{fontFileName}' porque el alias resultante es nulo o está vacío.");
+                    continue;
+                }
+
+                string csharpIdentifier = CreateValidCSharpIdentifier(userAlias);
+
+                if (generatedCSharpIdentifiers.Add(csharpIdentifier))
+                {
+                    fontInfos.Add(new FontInfo(userAlias, csharpIdentifier));
+                }
+                else
+                {
+                    Debug.WriteLine($"[FontAliasGenerator] Advertencia: El alias original '{userAlias}' resulta en un identificador C# duplicado ('{csharpIdentifier}') y será ignorado para la generación de la propiedad estática.");
                 }
             }
-            Debug.WriteLine($"[FontAliasGenerator] Alias count after standard fonts: {finalAliases.Count}");
 
-            // 2. Añadir las fuentes descubiertas del proyecto MAUI (si las hay)
-            if (!discoveredInvocations.IsDefaultOrEmpty)
+            GeneratePdfFontsFile(context, fontInfos);
+        }
+
+        private static void GeneratePdfFontsFile(SourceProductionContext context, IEnumerable<FontInfo> fontInfos)
+        {
+            var propertiesBuilder = new StringBuilder();
+            if (fontInfos.Any())
             {
-                foreach (var invocationExpr in discoveredInvocations)
+                foreach (var info in fontInfos)
                 {
-                    // Extraer alias (asumiendo que GetValidAddFontCallIfCorrect ya validó)
-                    var aliasArgument = invocationExpr.ArgumentList!.Arguments[1];
-                    var literalExpr = (LiteralExpressionSyntax)aliasArgument.Expression!;
-                    string discoveredAlias = literalExpr.Token.ValueText; // Ya sin comillas
-
-                    // Add devolverá true si se añadió, false si ya existía
-                    bool added = finalAliases.Add(discoveredAlias);
-                    // if (added) Debug.WriteLine($"[FontAliasGenerator] Added discovered font: {discoveredAlias}");
-                    // else Debug.WriteLine($"[FontAliasGenerator] Discovered font '{discoveredAlias}' already exists.");
+                    propertiesBuilder.AppendLine($"        /// <summary>Identificador para la fuente con alias original '{EscapeStringForComment(info.OriginalAlias)}'.</summary>");
+                    // CORRECCIÓN: Eliminar 'readonly' de la propiedad
+                    propertiesBuilder.AppendLine($"        public static {PdfFontIdentifierFullName} {info.CSharpIdentifier} {{ get; }} = new {PdfFontIdentifierFullName}(\"{EscapeStringForCode(info.OriginalAlias)}\");");
+                    propertiesBuilder.AppendLine();
                 }
             }
             else
             {
-                Debug.WriteLine("[FontAliasGenerator] No discovered AddFont invocations from MAUI project.");
+                propertiesBuilder.AppendLine("        // No se encontraron alias de fuentes MAUI para generar identificadores PdfFontIdentifier.");
             }
 
-            Debug.WriteLine($"[FontAliasGenerator] Total final unique aliases: {finalAliases.Count}");
+            string propertiesContent = propertiesBuilder.ToString().TrimEnd('\r', '\n');
 
-            // Si no hay NINGÚN alias (ni estándar ni descubierto), no generar archivo.
-            // Esto es improbable si StandardPdfBase14Fonts tiene elementos.
-            if (!finalAliases.Any())
-            {
-                Debug.WriteLine("[FontAliasGenerator] No aliases to generate. Skipping file output.");
-                return;
-            }
+            var fileSource = new StringBuilder($@"// <auto-generated/>
+// Generado por {nameof(FontAliasGenerator)} de MauiPdfGenerator.
+// NO MODIFICAR MANUALMENTE.
 
-            // Generar el código fuente usando el namespace de salida correcto
-            string sourceCode = GenerateSourceCodeString(finalAliases);
-            context.AddSource("MauiFontAliases.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
-            Debug.WriteLine("[FontAliasGenerator] MauiFontAliases.g.cs source added to compilation.");
-        }
-
-        private static string GenerateSourceCodeString(HashSet<string> aliases)
-        {
-            // Usamos el namespace OutputNamespace definido arriba ("MauiPdfGenerator.Generated")
-            var sourceBuilder = new StringBuilder($@"// <auto-generated/>
-// Generated by MauiPdfGenerator.SourceGenerators.FontAliasGenerator
-#pragma warning disable
-namespace {OutputNamespace} // Namespace para la CLASE GENERADA
+namespace {GeneratedClassNamespace}
 {{
     /// <summary>
-    /// Provides compile-time safe constants for font aliases.
-    /// Includes standard PDF Base14 fonts and fonts registered via .AddFont(file, alias)
-    /// in the MAUI application. Generated by MauiPdfGenerator.SourceGenerators.
+    /// Proporciona identificadores <see cref=""{PdfFontIdentifierFullName}""/> estáticos
+    /// para las fuentes registradas en la aplicación MAUI a través de llamadas a AddFont().
+    /// Estos identificadores deben usarse al especificar fuentes en la API de MauiPdfGenerator.
     /// </summary>
-    public static class MauiFontAliases
+    public static class {GeneratedClassName}
     {{
+{propertiesContent}
+    }}
+}}
 ");
-            // Usar Ordinal para evitar colisiones de identificadores C# si los alias solo difieren en mayúsculas/minúsculas
-            // pero generan el mismo identificador (ej. "My_Font" y "my_font" -> My_Font)
-            var generatedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
+            context.AddSource(GeneratedFileName, SourceText.From(fileSource.ToString(), Encoding.UTF8));
+            Debug.WriteLine($"[FontAliasGenerator] {GeneratedFileName} generado.");
+        }
 
-            // Ordenar alfabéticamente (ignorando mayúsculas) para una salida consistente
-            foreach (string alias in aliases.OrderBy(a => a, StringComparer.OrdinalIgnoreCase))
+        private static string EscapeStringForCode(string? value)
+        {
+            if (value is null) return string.Empty;
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        }
+        private static string EscapeStringForComment(string? value)
+        {
+            if (value is null) return string.Empty;
+            return value.Replace("<", "<").Replace(">", ">").Replace("&", "&");
+        }
+
+        private static string CreateValidCSharpIdentifier(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return "_Font";
+
+            StringBuilder sb = new StringBuilder();
+            bool firstChar = true;
+            bool lastCharWasUnderscore = false;
+
+            foreach (char c in input)
             {
-                string identifier = CreateValidIdentifier(alias);
-                if (generatedIdentifiers.Add(identifier)) // Solo añadir si el IDENTIFICADOR es nuevo
+                if (firstChar)
                 {
-                    string escapedAlias = System.Security.SecurityElement.Escape(alias) ?? alias;
-                    sourceBuilder.AppendLine($"        /// <summary>Font alias constant for '{escapedAlias}'. Value: \"{alias}\"</summary>");
-                    // El valor de la constante es el alias ORIGINAL (sensible a mayúsculas)
-                    sourceBuilder.AppendLine($"        public const string {identifier} = \"{alias}\";");
-                    sourceBuilder.AppendLine();
+                    if (char.IsLetter(c) || c == '_')
+                    {
+                        sb.Append(c);
+                        firstChar = false;
+                        lastCharWasUnderscore = (c == '_');
+                    }
+                    else if (char.IsDigit(c))
+                    {
+                        sb.Append('_');
+                        sb.Append(c);
+                        firstChar = false;
+                        lastCharWasUnderscore = false;
+                    }
                 }
                 else
                 {
-                    // Opcional: Podrías loggear o añadir un diagnóstico si se omite un identificador duplicado
-                    Debug.WriteLine($"[FontAliasGenerator] Skipping duplicate identifier '{identifier}' for alias '{alias}'.");
+                    if (char.IsLetterOrDigit(c))
+                    {
+                        sb.Append(c);
+                        lastCharWasUnderscore = false;
+                    }
+                    else if (c == '_')
+                    {
+                        if (!lastCharWasUnderscore)
+                        {
+                            sb.Append('_');
+                            lastCharWasUnderscore = true;
+                        }
+                    }
+                    else
+                    {
+                        if (!lastCharWasUnderscore)
+                        {
+                            sb.Append('_');
+                            lastCharWasUnderscore = true;
+                        }
+                    }
                 }
             }
-            sourceBuilder.AppendLine("    }"); // Fin clase
-            sourceBuilder.AppendLine("}"); // Fin namespace
-            sourceBuilder.AppendLine("#pragma warning restore");
-            return sourceBuilder.ToString();
+
+            string candidate = sb.ToString();
+            while (candidate.Length > 1 && candidate.EndsWith("_"))
+            {
+                candidate = candidate.Substring(0, candidate.Length - 1);
+            }
+            if (candidate == "_") candidate = "_Font"; // Si solo queda un _
+
+
+            if (string.IsNullOrWhiteSpace(candidate)) // Fallback adicional
+                candidate = "_Font";
+
+            // Asegurar que el primer carácter no sea un dígito (ya manejado arriba, pero por si acaso)
+            if (candidate.Length > 0 && char.IsDigit(candidate[0]))
+            {
+                candidate = "_" + candidate;
+            }
+
+
+            if (SyntaxFacts.GetKeywordKind(candidate) != SyntaxKind.None ||
+                SyntaxFacts.GetContextualKeywordKind(candidate) != SyntaxKind.None)
+            {
+                return "@" + candidate;
+            }
+
+            if (candidate == "_") // Si después de todo sigue siendo solo "_"
+            {
+                string originalSanitized = Regex.Replace(input.Trim(), @"[^\p{L}\p{N}]", "");
+                if (!string.IsNullOrWhiteSpace(originalSanitized))
+                    return SanitizeAndShorten(originalSanitized); // Usar función auxiliar
+                return "_DefaultFontAlias";
+            }
+
+            return candidate;
+        }
+        // Función auxiliar para limpiar y acortar si CreateValidCSharpIdentifier produce algo muy genérico
+        private static string SanitizeAndShorten(string text, int maxLength = 50) // Aumentar un poco el maxLength
+        {
+            if (string.IsNullOrEmpty(text)) return "_Unknown";
+            // Permitir números, remover el resto que no sea letra o _
+            var rg = new Regex("[^a-zA-Z0-9_]");
+            string sanitized = rg.Replace(text, "");
+
+            if (string.IsNullOrWhiteSpace(sanitized)) return "_InvalidChars";
+
+            // Quitar guiones bajos múltiples o al inicio/final si no son el único carácter
+            sanitized = Regex.Replace(sanitized, "_{2,}", "_");
+            if (sanitized.Length > 1) sanitized = sanitized.Trim('_');
+            if (sanitized == "_") return "_UnderscoreOnly";
+
+
+            if (char.IsDigit(sanitized[0])) sanitized = "_" + sanitized;
+            if (sanitized.Length == 0) return "_EmptyAfterSanitize";
+
+
+            if (sanitized.Length > maxLength) sanitized = sanitized.Substring(0, maxLength);
+
+            return sanitized;
         }
 
-        // --- MÉTODO UTILITARIO (USA EL QUE TE FUNCIONÓ) ---
-        private static string CreateValidIdentifier(string input)
+        private readonly struct FontInfo
         {
-            // Lógica de Claude que funcionó (probablemente similar a esto):
-            if (string.IsNullOrWhiteSpace(input)) return "_";
-            string identifier = input.Trim();
-            identifier = Regex.Replace(identifier, @"[^\p{L}\p{N}_]", "_"); // Permitir letras Unicode, números, _
-            if (identifier.Length > 0 && char.IsDigit(identifier[0])) identifier = "_" + identifier;
-            else if (string.IsNullOrEmpty(identifier.Replace("_", ""))) return "_"; // Si solo quedan '_' o vacío
-            // Comprobar palabras clave C#
-            if (SyntaxFacts.GetKeywordKind(identifier) != SyntaxKind.None || SyntaxFacts.GetContextualKeywordKind(identifier) != SyntaxKind.None)
-                identifier = "@" + identifier;
-            return identifier;
+            public string OriginalAlias { get; }
+            public string CSharpIdentifier { get; }
+
+            public FontInfo(string originalAlias, string csharpIdentifier)
+            {
+                OriginalAlias = originalAlias;
+                CSharpIdentifier = csharpIdentifier;
+            }
         }
     }
 }

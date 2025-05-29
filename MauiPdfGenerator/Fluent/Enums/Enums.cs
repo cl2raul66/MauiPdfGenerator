@@ -26,3 +26,10 @@ public enum DefaultMarginType
     Moderate, 
     Wide
 }
+
+public enum FontDestinationType
+{
+    OnlyUI,
+    OnlyPDF,
+    Both
+}

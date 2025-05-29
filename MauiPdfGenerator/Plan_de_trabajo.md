@@ -132,7 +132,7 @@ Aquí tienes el **Plan Definitivo y Completo para la Fase 3 (v1.0.0)**, incorpor
                 *   Si `sourceType == PdfImageSourceType.IsMauiSource`: `DeterminedSourceKind = Resource`.
                 *   Si `sourceType == PdfImageSourceType.IsFileSource`: `DeterminedSourceKind = File`.
                 *   Si `sourceType == PdfImageSourceType.IsUriSource`: `DeterminedSourceKind = Uri`.
-                *   Si `sourceType == null` (Default): **Inferencia: ¿Es URI? -> Uri; ¿File.Exists? -> File; else -> Resource.** (Se mantiene la inferencia para el caso por defecto).
+                *   Si `sourceType is null` (Default): **Inferencia: ¿Es URI? -> Uri; ¿File.Exists? -> File; else -> Resource.** (Se mantiene la inferencia para el caso por defecto).
                 *   Si la sobrecarga es `Stream`: `DeterminedSourceKind = Stream`.
                 *   Si la sobrecarga es `Uri`: `DeterminedSourceKind = Uri`.
     *   **Renderizado (`ImageRenderer` o en `SkPdfGenerationService`):**

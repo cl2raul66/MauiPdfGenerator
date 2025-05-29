@@ -6,23 +6,22 @@ namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
 {
-    public PageSizeType GetPageSize { get; private set; } 
+    public PageSizeType GetPageSize { get; private set; }
     public Thickness GetMargin { get; private set; }
     public PageOrientationType GetPageOrientation { get; private set; }
-    public PdfFontRegistryBuilder FontRegistry { get; } = new();
-    public PdfMetaDataBuilder MetaDataBuilder { get; } = new();
+    public PdfFontRegistryBuilder FontRegistry { get; }
 
-    // Ya no se necesitan propiedades mapeadas internas
+    public PdfMetaDataBuilder MetaDataBuilder { get; }
 
-    public PdfConfigurationBuilder()
-    {        
+    public PdfConfigurationBuilder(PdfFontRegistryBuilder fontRegistry)
+    {
+        this.FontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry)); 
+        this.MetaDataBuilder = new PdfMetaDataBuilder(); 
         GetMargin = MarginCalculator.GetThickness(DefaultMarginType.Normal);
         GetPageSize = PageSizeType.A4;
         GetPageOrientation = PageOrientationType.Portrait;
-        FontRegistry = new PdfFontRegistryBuilder();
-        MetaDataBuilder = new PdfMetaDataBuilder();
     }
-    
+
     public IPdfDocumentConfigurator PageSize(PageSizeType sizeType)
     {
         GetPageSize = sizeType;
@@ -62,14 +61,14 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     public IPdfDocumentConfigurator MetaData(Action<IPdfMetaData> metaDataAction)
     {
         ArgumentNullException.ThrowIfNull(metaDataAction);
-        metaDataAction(MetaDataBuilder);
+        metaDataAction(this.MetaDataBuilder); 
         return this;
-    }
+    } 
 
-    public IPdfDocumentConfigurator PdfFontRegistry(Action<IPdfFontRegistry> fontRegistryAction)
+    public IPdfDocumentConfigurator ConfigureFontRegistry(Action<IPdfFontRegistry> fontRegistryConfiguration)
     {
-        ArgumentNullException.ThrowIfNull(fontRegistryAction);
-        fontRegistryAction(FontRegistry);
+        ArgumentNullException.ThrowIfNull(fontRegistryConfiguration);
+        fontRegistryConfiguration(this.FontRegistry); 
         return this;
     }
 

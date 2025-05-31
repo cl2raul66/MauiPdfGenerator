@@ -2,6 +2,7 @@
 using System.Text;
 
 namespace MauiPdfGenerator.Fluent.Builders;
+
 internal class PdfMetaDataBuilder : IPdfMetaData
 {
     public DateTime? GetCreationDate { get; private set; }
@@ -11,7 +12,6 @@ internal class PdfMetaDataBuilder : IPdfMetaData
     public string? GetKeywords { get; private set; }
     public string? GetSubject { get; private set; }
     public string? GetProducer { get; private set; }
-
     private readonly Dictionary<string, string> _customProperties = [];
     public IReadOnlyDictionary<string, string> GetCustomProperties => _customProperties;
 
@@ -23,7 +23,7 @@ internal class PdfMetaDataBuilder : IPdfMetaData
 
     public IPdfMetaData CreationDate(DateTime creationDate)
     {
-        GetCreationDate = creationDate; 
+        GetCreationDate = creationDate;
         return this;
     }
 
@@ -35,9 +35,9 @@ internal class PdfMetaDataBuilder : IPdfMetaData
 
     public IPdfMetaData CustomProperty(string name, string value)
     {
-        if (!string.IsNullOrEmpty(name)) // Evitar claves nulas o vacías
+        if (!string.IsNullOrEmpty(name))
         {
-            _customProperties[name] = value ?? string.Empty; // Almacenar o actualizar
+            _customProperties[name] = value ?? string.Empty;
         }
         return this;
     }
@@ -74,7 +74,7 @@ internal class PdfMetaDataBuilder : IPdfMetaData
         if (!string.IsNullOrEmpty(GetSubject)) sb.Append($"Subject: {GetSubject}, ");
         if (!string.IsNullOrEmpty(GetKeywords)) sb.Append($"Keywords: {GetKeywords}, ");
         if (_customProperties.Any()) sb.Append($"CustomProps: {_customProperties.Count}, ");
-        if (sb.Length > 2) sb.Length -= 2; // Eliminar la última coma y espacio
+        if (sb.Length > 2) sb.Length -= 2;
         return sb.ToString();
     }
 }

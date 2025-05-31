@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator;
+﻿namespace MauiPdfGenerator.Common;
 
 internal static class PdfGeneratorConstants
 {

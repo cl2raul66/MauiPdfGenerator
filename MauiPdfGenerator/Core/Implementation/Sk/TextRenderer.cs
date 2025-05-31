@@ -1,7 +1,7 @@
 ﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Models; // Asegurar using
+using MauiPdfGenerator.Fluent.Models;
 using SkiaSharp;
 using System.Diagnostics;
 
@@ -18,15 +18,10 @@ internal class TextRenderer
         ArgumentNullException.ThrowIfNull(pageDefinition);
         ArgumentNullException.ThrowIfNull(fontRegistry);
 
-        // Jerarquía de resolución de fuente:
-        // 1. Fuente del párrafo (si se especificó)
-        // 2. Fuente predeterminada de la página (si se especificó)
-        // 3. Fuente predeterminada del documento configurada por el usuario (si se especificó)
-        // 4. Primera fuente registrada en MAUI (si existe)
-        // 5. Si nada de lo anterior, será null -> Skia usará su fuente predeterminada.
+        // Prioridad para la fuente: Párrafo -> Página -> Documento (usuario) -> Documento (primera MAUI)
         PdfFontIdentifier? fontIdentifierToUse = paragraph.CurrentFontFamily
-                                               ?? pageDefinition.PageDefaultFontFamily // Este ya considera el default del doc y el 1ro de MAUI
-                                               ?? fontRegistry.GetUserConfiguredDefaultFontIdentifier() // Por si la página no tenía uno explícito
+                                               ?? pageDefinition.PageDefaultFontFamily
+                                               ?? fontRegistry.GetUserConfiguredDefaultFontIdentifier()
                                                ?? fontRegistry.GetFirstMauiRegisteredFontIdentifier();
 
 
@@ -36,41 +31,66 @@ internal class TextRenderer
         TextAlignment alignment = paragraph.CurrentAlignment;
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraph.DefaultLineBreakMode;
 
-        FontRegistration? fontRegistration = null;
-        if (fontIdentifierToUse.HasValue)
+        FontRegistration? fontRegistration = paragraph.ResolvedFontRegistration; // Usar la pre-resuelta si existe
+        if (fontRegistration == null && fontIdentifierToUse.HasValue) // Fallback si no se resolvió en el párrafo
         {
             fontRegistration = fontRegistry.GetFontRegistration(fontIdentifierToUse.Value);
         }
 
-        string? filePathIfEmbedding = null;
-        if (fontRegistration != null && fontRegistration.ShouldEmbed && !string.IsNullOrEmpty(fontRegistration.FilePath))
+        string? filePathForEmbeddingOrLookup = null;
+        // filePathForEmbeddingOrLookup se usa para:
+        // 1. Incrustar la fuente si fontRegistration.ShouldEmbed es true.
+        // 2. O, si no se incrusta pero el archivo existe, para leer el FamilyName real del archivo.
+        if (fontRegistration is not null && !string.IsNullOrEmpty(fontRegistration.FilePath))
         {
-            filePathIfEmbedding = fontRegistration.FilePath;
+            // Se pasa el FilePath independientemente de ShouldEmbed.
+            // CreateSkTypefaceAsync decidirá si incrusta basado en si el SKTypeface se puede crear
+            // desde este path. El "ShouldEmbed" de FontRegistration es más una intención.
+            // La lógica de si realmente se usa para incrustar o solo para lookup del nombre real
+            // está dentro de CreateSkTypefaceAsync.
+            filePathForEmbeddingOrLookup = fontRegistration.FilePath;
         }
 
-        // Si fontIdentifierToUse es null, skiaFontNameToUse será string.Empty,
-        // y SkiaUtils.CreateSkTypefaceAsync usará SKTypeface.Default.
-        string skiaFontNameToUse = fontIdentifierToUse?.Alias ?? string.Empty;
+        // El primer argumento para CreateSkTypefaceAsync es el ALIAS o nombre de referencia deseado.
+        // El último argumento es el filePath que SkiaUtils intentará usar para cargar/incrustar
+        // y/o para obtener el nombre real de la familia.
+        string skiaFontAliasToAttempt = fontIdentifierToUse?.Alias ?? string.Empty;
 
         using var typeface = await SkiaUtils.CreateSkTypefaceAsync(
-            skiaFontNameToUse,
+            skiaFontAliasToAttempt, // El alias que el usuario especificó
             fontAttributes,
-            async (fileName) =>
+            async (fileName) => // Stream provider
             {
                 if (string.IsNullOrEmpty(fileName)) return null;
-                try { return await FileSystem.OpenAppPackageFileAsync(fileName); }
-                catch (Exception ex) { Debug.WriteLine($"[TextRenderer] StreamProvider Error for {fileName}: {ex.Message}"); return null; }
+                try
+                {
+                    // Asumimos que fileName es relativo al paquete de la app
+                    return await FileSystem.OpenAppPackageFileAsync(fileName);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[TextRenderer] StreamProvider Error for {fileName}: {ex.Message}");
+                    return null;
+                }
             },
-            filePathIfEmbedding
+            filePathForEmbeddingOrLookup // El path al archivo .ttf/.otf si está disponible
         );
 
         if (fontSize <= 0) fontSize = PdfParagraph.DefaultFontSize;
 
         using var font = new SKFont(typeface, fontSize);
+        // Es importante que el 'typeface' aquí sea el que SkiaSharp ha resuelto.
+        // Si typeface.FamilyName difiere del 'skiaFontAliasToAttempt', es porque Skia
+        // resolvió a una fuente de sistema con un nombre diferente o usó la de defecto.
+        // El documento PDF, al referenciar fuentes, usualmente usa el nombre de la familia postscript
+        // o el nombre de la familia tal como la conoce el sistema.
+        // SKDocument se encarga de esto cuando se usa SKPaint con un SKTypeface.
+
         using var paint = new SKPaint
         {
             Color = SkiaUtils.ConvertToSkColor(textColor),
             IsAntialias = true
+            // No es necesario establecer paint.Typeface = typeface si se va a usar SKFont
         };
 
         var text = paragraph.Text ?? string.Empty;
@@ -110,8 +130,8 @@ internal class TextRenderer
             SKRect lineBounds = new();
             float measuredWidth = font.MeasureText(line, out lineBounds);
             float drawX = elementContentLeftX;
-            if (alignment == TextAlignment.Center) drawX = elementContentLeftX + (availableWidthForTextLayout - measuredWidth) / 2f;
-            else if (alignment == TextAlignment.End) drawX = elementContentRightX - measuredWidth;
+            if (alignment is TextAlignment.Center) drawX = elementContentLeftX + (availableWidthForTextLayout - measuredWidth) / 2f;
+            else if (alignment is TextAlignment.End) drawX = elementContentRightX - measuredWidth;
             drawX = Math.Max(elementContentLeftX, Math.Min(drawX, elementContentRightX - measuredWidth));
             float drawY = lineY - lineBounds.Top;
             canvas.Save();
@@ -151,9 +171,10 @@ internal class TextRenderer
                 lines.Add(segment);
                 continue;
             }
-            float segmentWidth = font.MeasureText(segment);
+
             if (lineBreakMode is LineBreakMode.HeadTruncation or LineBreakMode.MiddleTruncation or LineBreakMode.TailTruncation)
             {
+                float segmentWidth = font.MeasureText(segment);
                 if (segmentWidth <= maxWidth) lines.Add(segment);
                 else lines.Add(TruncateSingleLine(segment, font, maxWidth, lineBreakMode));
             }
@@ -168,13 +189,15 @@ internal class TextRenderer
     private string TruncateSingleLine(string textSegment, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
     {
         float ellipsisWidth = font.MeasureText(Ellipsis);
-        if (maxWidth < ellipsisWidth) return Ellipsis;
+        if (maxWidth < ellipsisWidth && maxWidth > 0) return Ellipsis.Substring(0, (int)font.BreakText(Ellipsis, maxWidth)); // Truncate ellipsis if needed
+        if (maxWidth <= 0) return string.Empty;
+
         float availableWidthForText = maxWidth - ellipsisWidth;
         if (availableWidthForText < 0) availableWidthForText = 0;
 
         if (lineBreakMode is LineBreakMode.TailTruncation)
         {
-            long count = font.BreakText(textSegment, availableWidthForText, out _);
+            long count = font.BreakText(textSegment, availableWidthForText);
             return textSegment[..(int)Math.Max(0, count)] + Ellipsis;
         }
         if (lineBreakMode is LineBreakMode.HeadTruncation)
@@ -193,20 +216,23 @@ internal class TextRenderer
                     break;
                 }
             }
-            return (startIndex == textLength && textLength > 0) ? Ellipsis : Ellipsis + textSegment[startIndex..];
+            return (startIndex == textLength && textLength > 0 && ellipsisWidth > 0) ? Ellipsis : Ellipsis + textSegment[startIndex..];
         }
         if (lineBreakMode is LineBreakMode.MiddleTruncation)
         {
-            if (availableWidthForText <= 0) return Ellipsis;
+            if (availableWidthForText <= 0 && ellipsisWidth > 0) return Ellipsis;
+            if (availableWidthForText <= 0 && ellipsisWidth <= 0) return string.Empty;
+
 
             float startWidth = availableWidthForText / 2f;
-            long startCount = font.BreakText(textSegment, startWidth, out _);
+            long startCount = font.BreakText(textSegment, startWidth);
 
             int textLength = textSegment.Length;
             string tempEndString = "";
             for (int i = 1; i <= textLength - (int)startCount; i++)
             {
                 string sub = textSegment[^i..];
+                // Ensure that we are not trying to make the string longer than original with ellipsis in the middle
                 if (font.MeasureText(textSegment[..(int)startCount] + Ellipsis + sub) <= maxWidth)
                 {
                     tempEndString = sub;
@@ -216,9 +242,14 @@ internal class TextRenderer
                     break;
                 }
             }
-            if ((int)startCount >= (textLength - tempEndString.Length) && textLength > 0 && tempEndString.Length == 0)
+
+            if ((int)startCount == 0 && tempEndString.Length == 0 && textLength > 0 && ellipsisWidth > 0) // Cannot fit anything but ellipsis
             {
-                long countTail = font.BreakText(textSegment, availableWidthForText, out _);
+                return TruncateSingleLine(textSegment, font, maxWidth, LineBreakMode.TailTruncation); // Fallback to tail
+            }
+            if ((int)startCount >= (textLength - tempEndString.Length) && textLength > 0 && tempEndString.Length == 0 && ellipsisWidth > 0)
+            {
+                long countTail = font.BreakText(textSegment, availableWidthForText);
                 return textSegment[..(int)Math.Max(0, countTail)] + Ellipsis;
             }
             return textSegment[..(int)startCount] + Ellipsis + tempEndString;
@@ -230,18 +261,31 @@ internal class TextRenderer
     {
         var resultingLines = new List<string>();
         if (string.IsNullOrEmpty(singleLine)) { resultingLines.Add(string.Empty); return resultingLines; }
-        if (font.MeasureText(singleLine) <= maxWidth) { resultingLines.Add(singleLine); return resultingLines; }
+
+        float singleLineWidth = font.MeasureText(singleLine);
+        if (singleLineWidth <= maxWidth) { resultingLines.Add(singleLine); return resultingLines; }
 
         int currentPosition = 0;
         int textLength = singleLine.Length;
         while (currentPosition < textLength)
         {
-            long countMeasured = font.BreakText(singleLine.AsSpan(currentPosition), maxWidth, out _);
+            long countMeasured = font.BreakText(singleLine.AsSpan(currentPosition), maxWidth);
             int count = (int)countMeasured;
 
             if (count == 0 && currentPosition < textLength)
             {
-                Debug.WriteLine($"Advertencia: El conteo de interrupción de texto es 0 para un segmento no vacío que comienza en {currentPosition}. Forzando interrupción después de 1 carácter para evitar bucle. MaxWidth: {maxWidth}, Carácter: '{singleLine[currentPosition]}', Ancho: {font.MeasureText(singleLine[currentPosition].ToString())}");
+                if (font.MeasureText(singleLine[currentPosition].ToString()) > maxWidth)
+                {
+                    Debug.WriteLine($"Warning: Single character '{singleLine[currentPosition]}' is wider than maxWidth ({maxWidth}). Outputting empty line for this segment to avoid issues, or consider character wrap if desired.");
+                    // Depending on desired behavior, could add the char and let it overflow, or skip, or add empty.
+                    // For now, let's assume we skip if a single char is too wide after trying to break.
+                    // Or, if we must output something, we might take the first char.
+                    // This scenario should be rare with typical fonts/text.
+                    resultingLines.Add(singleLine.Substring(currentPosition, 1)); // Add the single char that's too wide
+                    currentPosition += 1;
+                    continue;
+                }
+                Debug.WriteLine($"Warning: Text break count is 0 for non-empty segment starting at {currentPosition}. Forcing break after 1 character to prevent infinite loop. MaxWidth: {maxWidth}, Character: '{singleLine[currentPosition]}', Width: {font.MeasureText(singleLine[currentPosition].ToString())}");
                 count = 1;
             }
 
@@ -257,37 +301,49 @@ internal class TextRenderer
 
             if (lineBreakMode is LineBreakMode.WordWrap)
             {
-                int lastValidBreak = -1;
-                for (int i = breakPositionAttempt; i > currentPosition; --i)
+                // Look backwards from breakPositionAttempt for a whitespace or hyphen
+                int wordBreakSearchStart = currentPosition + count;
+                bool foundWordBreak = false;
+                for (int i = wordBreakSearchStart; i > currentPosition; --i)
                 {
                     if (i >= textLength) continue;
-                    char c = singleLine[i];
+                    char c = singleLine[i - 1]; // Check char before potential break
                     if (char.IsWhiteSpace(c) || c == '-')
                     {
-                        lastValidBreak = i;
+                        // Break after this character (i.e., i is the start of the next line)
+                        // or if it's whitespace, the break effectively happens at i-1
+                        actualBreakPosition = (char.IsWhiteSpace(c) || c == '-') ? i : i + 1;
+                        // If 'i' itself is the break (e.g. space), then actualBreakPosition includes it for trimming later
+                        // More robust: find the last space/hyphen within the substring singleLine.Substring(currentPosition, count)
+                        string segmentToConsider = singleLine.Substring(currentPosition, count);
+                        int lastValidBreakInSegment = -1;
+                        for (int k = segmentToConsider.Length - 1; k >= 0; --k)
+                        {
+                            if (char.IsWhiteSpace(segmentToConsider[k]) || segmentToConsider[k] == '-')
+                            {
+                                lastValidBreakInSegment = k;
+                                break;
+                            }
+                        }
+
+                        if (lastValidBreakInSegment > 0) // Found a word break within the fitting part
+                        {
+                            actualBreakPosition = currentPosition + lastValidBreakInSegment + 1;
+                        }
+                        else // No word break, so break at char limit
+                        {
+                            actualBreakPosition = currentPosition + count;
+                        }
+                        foundWordBreak = true; // To avoid re-setting actualBreakPosition if this logic runs
                         break;
                     }
                 }
-
-                if (lastValidBreak != -1)
-                {
-                    string segmentToConsiderForWordBreak = singleLine.Substring(currentPosition, count);
-                    int wordBreakInSegment = segmentToConsiderForWordBreak.LastIndexOfAny([' ', '-']);
-
-                    if (wordBreakInSegment > 0)
-                    {
-                        actualBreakPosition = currentPosition + wordBreakInSegment + 1;
-                    }
-                    else
-                    {
-                        actualBreakPosition = currentPosition + count;
-                    }
-                }
-                else
+                if (!foundWordBreak) // No suitable word break found, so break at character limit
                 {
                     actualBreakPosition = currentPosition + count;
                 }
             }
+            // Ensure actualBreakPosition is not stuck
             if (actualBreakPosition <= currentPosition && currentPosition < textLength)
             {
                 actualBreakPosition = currentPosition + 1;
@@ -297,6 +353,7 @@ internal class TextRenderer
             resultingLines.Add(lineToAdd);
             currentPosition = actualBreakPosition;
 
+            // Skip leading whitespace for the next line
             while (currentPosition < textLength && char.IsWhiteSpace(singleLine[currentPosition]))
             {
                 currentPosition++;

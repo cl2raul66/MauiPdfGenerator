@@ -12,7 +12,6 @@ internal interface IPdfContentPageBuilder : IPdfPageBuilder
     Color? GetEffectiveBackgroundColor();
     IReadOnlyList<PdfElement> GetElements();
     float GetPageSpacing();
-    // GetPageDefaultFontFamily ahora devuelve PdfFontIdentifier?
     PdfFontIdentifier? GetPageDefaultFontFamily();
     float GetPageDefaultFontSize();
     Color GetPageDefaultTextColor();

@@ -2,6 +2,7 @@
 using System.Text;
 using Microsoft.Maui.Controls;
 using MauiPdfGenerator;
+using MauiPdfGenerator.Fluent.Enums;
 
 namespace Test;
 public static class MauiProgram
@@ -14,7 +15,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiPdfGenerator()
-            .ConfigureFonts(fonts =>
+            .PdfConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");

@@ -3,18 +3,18 @@ using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Builders; 
 using SkiaSharp;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal class SkPdfGenerationService : IPdfGenerationService
 {
-    private TextRenderer _textRenderer = new(); 
-    private ImageRenderer _imageRenderer = new(); 
+    private TextRenderer _textRenderer = new();
+    private ImageRenderer _imageRenderer = new();
     private PdfFontRegistryBuilder? _currentFontRegistry;
-
     public async Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry)
     {
-        _currentFontRegistry = fontRegistry; 
+        _currentFontRegistry = fontRegistry;
 
         try
         {
@@ -40,9 +40,8 @@ internal class SkPdfGenerationService : IPdfGenerationService
             {
                 var elementsToProcess = new Queue<PdfElement>(originalPageDefinition.Elements);
                 PdfElement? currentProcessingElement = null;
-                // bool isFirstPhysicalPageForThisLogicalPage = true; // Descomentar si se necesita
 
-                while (elementsToProcess.Count > 0 || currentProcessingElement != null)
+                while (elementsToProcess.Count > 0 || currentProcessingElement is not null)
                 {
                     SKSize pageSize = SkiaUtils.GetSkPageSize(originalPageDefinition.Size, originalPageDefinition.Orientation);
                     using SKCanvas canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
@@ -61,7 +60,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
 
                     if (currentPageContentRect.Width <= 0 || currentPageContentRect.Height <= 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Warning: Page contentRect for page definition is zero or negative. Page Size: {pageSize}, Margins: {pageMargins}. Skipping physical page.");
+                        Debug.WriteLine($"Warning: Page contentRect for page definition is zero or negative. Page Size: {pageSize}, Margins: {pageMargins}. Skipping physical page.");
                         pdfDoc.EndPage();
                         if (currentProcessingElement is null && elementsToProcess.Count == 0) break;
                         continue;
@@ -70,21 +69,13 @@ internal class SkPdfGenerationService : IPdfGenerationService
                     float currentY = currentPageContentRect.Top;
                     bool pageHasDrawnContent = false;
 
-                    while (currentProcessingElement != null || elementsToProcess.Count > 0)
+                    while (currentProcessingElement is not null || elementsToProcess.Count > 0)
                     {
                         PdfElement elementToRender;
-                        // bool elementIsBeingRetriedOnNewPage; // Descomentar si se necesita
 
-                        if (currentProcessingElement != null)
-                        {
-                            elementToRender = currentProcessingElement;
-                            // elementIsBeingRetriedOnNewPage = true;
-                        }
-                        else
-                        {
-                            elementToRender = elementsToProcess.Dequeue();
-                            // elementIsBeingRetriedOnNewPage = false;
-                        }
+                        elementToRender = currentProcessingElement is null
+                            ? elementsToProcess.Dequeue()
+                            : currentProcessingElement;
 
                         bool isElementIntrinsicallyAContinuation = (elementToRender is PdfParagraph p && p.IsContinuation);
                         float elementTopMarginToApply = (float)elementToRender.GetMargin.Top;
@@ -98,7 +89,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
                         {
                             if (currentY == currentPageContentRect.Top)
                             {
-                                System.Diagnostics.Debug.WriteLine($"Warning: Element '{elementToRender.GetType().Name}' top margin ({elementTopMarginToApply}) alone exceeds available page height. CurrentY: {currentY}, Bottom: {currentPageContentRect.Bottom}");
+                                Debug.WriteLine($"Warning: Element '{elementToRender.GetType().Name}' top margin ({elementTopMarginToApply}) alone exceeds available page height. CurrentY: {currentY}, Bottom: {currentPageContentRect.Bottom}");
                             }
                             currentProcessingElement = elementToRender;
                             break;
@@ -174,15 +165,8 @@ internal class SkPdfGenerationService : IPdfGenerationService
                     }
                     else if (!pageHasDrawnContent && elementsToProcess.Count == 0 && currentProcessingElement is null)
                     {
-                        // No content was drawn on this page, and no elements remain for this logical page
-                        // This can happen if the very first element of a logical page doesn't fit and is moved.
-                        // Don't call EndPage if BeginPage was the last call.
-                        // However, the outer loop condition (elementsToProcess.Count > 0 || currentProcessingElement != null)
-                        // should prevent an empty page from being added if nothing was ever going to be drawn.
-                        // If BeginPage was called, EndPage must be called.
                         pdfDoc.EndPage();
                     }
-                    // isFirstPhysicalPageForThisLogicalPage = false; // Descomentar si se necesita
                 }
             }
 
@@ -190,19 +174,19 @@ internal class SkPdfGenerationService : IPdfGenerationService
         }
         catch (Exception ex) when (ex is not PdfGenerationException)
         {
-            System.Diagnostics.Debug.WriteLine($"ERROR SkPdfGenerationService: {ex}");
+            Debug.WriteLine($"ERROR SkPdfGenerationService: {ex}");
             throw new PdfGenerationException($"An unexpected error occurred during PDF generation: {ex.Message}", ex);
         }
         finally
         {
-            _currentFontRegistry = null; 
+            _currentFontRegistry = null;
         }
     }
 
     private float RenderHorizontalLine(SKCanvas canvas, PdfHorizontalLine line, PdfPageData pageData, SKRect contentRect, float currentY)
     {
         float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
-        Microsoft.Maui.Graphics.Color color = line.CurrentColor ?? PdfHorizontalLine.DefaultColor; 
+        Color color = line.CurrentColor ?? PdfHorizontalLine.DefaultColor;
         if (thickness <= 0) thickness = PdfHorizontalLine.DefaultThickness;
 
         float lineContentX = contentRect.Left + (float)line.GetMargin.Left;

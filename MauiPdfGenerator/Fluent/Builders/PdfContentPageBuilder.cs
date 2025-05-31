@@ -4,7 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Models.Elements;
-using MauiPdfGenerator.Fluent.Models; // Asegurar using
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -20,7 +20,6 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
 
     private List<PdfElement> _pageElements = [];
     private float _pageSpacing = 5f;
-    // _pageDefaultFontFamily es ahora nullable
     private PdfFontIdentifier? _pageDefaultFontFamily;
     private float _pageDefaultFontSize = PdfParagraph.DefaultFontSize;
     private Color _pageDefaultTextColor = PdfParagraph.DefaultTextColor;
@@ -31,10 +30,6 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         _documentBuilder = documentBuilder ?? throw new ArgumentNullException(nameof(documentBuilder));
         _documentConfiguration = documentConfiguration ?? throw new ArgumentNullException(nameof(documentConfiguration));
 
-        // Jerarquía para la fuente predeterminada de la página:
-        // 1. Fuente predeterminada configurada por el usuario para el documento.
-        // 2. Si no, la primera fuente registrada en MAUI.
-        // 3. Si no, null (se usará la predeterminada de Skia).
         _pageDefaultFontFamily = _documentConfiguration.FontRegistry.GetUserConfiguredDefaultFontIdentifier()
                                  ?? _documentConfiguration.FontRegistry.GetFirstMauiRegisteredFontIdentifier();
     }
@@ -45,14 +40,12 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         var defaultsBuilder = new FontDefaultsBuilder();
         fontDefaults(defaultsBuilder);
 
-        // FamilyIdentifier en defaultsBuilder es PdfFontIdentifier?
         if (defaultsBuilder.FamilyIdentifier.HasValue)
         {
-            _pageDefaultFontFamily = defaultsBuilder.FamilyIdentifier.Value; // Asignar directamente
+            _pageDefaultFontFamily = defaultsBuilder.FamilyIdentifier.Value;
         }
-        else // Si el usuario llama a .Family(null) o no llama a .Family()
+        else
         {
-            // Restablecer a la jerarquía del documento
             _pageDefaultFontFamily = _documentConfiguration.FontRegistry.GetUserConfiguredDefaultFontIdentifier()
                                      ?? _documentConfiguration.FontRegistry.GetFirstMauiRegisteredFontIdentifier();
         }
@@ -68,11 +61,8 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         return this;
     }
 
-    // GetPageDefaultFontFamily ahora devuelve PdfFontIdentifier?
     public PdfFontIdentifier? GetPageDefaultFontFamily() => _pageDefaultFontFamily;
 
-    // ... (resto de los métodos de IPdfContentPage sin cambios en la firma,
-    // solo asegurarse de que los usings estén correctos si se refieren a PdfFontIdentifier)
     public IPdfContentPage PageSize(PageSizeType pageSizeType)
     {
         _pageSizeOverride = pageSizeType;
@@ -121,7 +111,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     public IPageReadyToBuild Content(Action<IPageContentBuilder> contentSetup)
     {
         ArgumentNullException.ThrowIfNull(contentSetup);
-        var builder = new PageContentBuilder();
+        var builder = new PageContentBuilder(_documentConfiguration.FontRegistry);
         contentSetup(builder);
         _pageElements = [.. builder.GetChildren()];
         return this;

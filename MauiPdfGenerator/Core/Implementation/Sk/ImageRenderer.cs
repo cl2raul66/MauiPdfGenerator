@@ -11,7 +11,6 @@ internal class ImageRenderer
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(image);
         ArgumentNullException.ThrowIfNull(pageDefinition);
-
         SKImage? skImage = null;
         Stream imageStream = image.ImageStream;
 
@@ -20,7 +19,6 @@ internal class ImageRenderer
             if (!imageStream.CanRead)
             {
                 System.Diagnostics.Debug.WriteLine("DEBUG ImageRenderer: Image stream is not readable. Rendering placeholder.");
-                // skImage remains null
             }
             else
             {
@@ -34,7 +32,7 @@ internal class ImageRenderer
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Exception processing image stream: {ex.Message}. Rendering placeholder.");
-            skImage = null; // Ensure skImage is null on error
+            skImage = null;
         }
 
         float elementContentDrawX = contentRect.Left + (float)image.GetMargin.Left;
@@ -62,7 +60,6 @@ internal class ImageRenderer
             if (targetRectInCurrentSpace.Height > 0 && targetRectInCurrentSpace.Width > 0 && targetRectInCurrentSpace.Height <= availableHeightForImageContent)
             {
                 canvas.DrawImage(skImage, targetRectInCurrentSpace);
-                // canvas.Flush(); // Flush is often not needed per draw call, document flush is more typical.
                 return Task.FromResult(new RenderOutput(targetRectInCurrentSpace.Height, null, false));
             }
 
@@ -104,8 +101,6 @@ internal class ImageRenderer
         }
     }
 
-    // Made RenderPlaceholder sychronous by using SKTypeface.Default for simplicity.
-    // If a specific font loaded async is needed here, this method would need to become async.
     private float RenderPlaceholder(SKCanvas canvas, float x, float y, float availableWidth, float availableHeight, string message = "[Image Error]")
     {
         float phMaxWidth = Math.Max(0, availableWidth);
@@ -114,22 +109,16 @@ internal class ImageRenderer
         if (phMaxWidth <= 5 || phMaxHeight <= 5) return 0f;
 
         using var errorBorderPaint = new SKPaint { Color = SKColors.Red, Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
-
-        // For placeholder, SKTypeface.Default is usually sufficient and avoids async complexities here.
-        // If "Helvetica" or specific attributes were critical, this would need to be async and use CreateSkTypefaceAsync.
-        using var placeholderTypeface = SKTypeface.Default; // Simpler than SkiaUtils.CreateSkTypefaceAsync for placeholder
+        using var placeholderTypeface = SKTypeface.Default;
         using var skFont = new SKFont(placeholderTypeface, 10f);
-        // SKPaint no longer takes SKFont in constructor
         using var placeholderTextPaint = new SKPaint { Color = SKColors.Red, IsAntialias = true };
-        // placeholderTextPaint.Typeface = placeholderTypeface; // Set properties on SKPaint if not using SKFont in DrawText
-        // placeholderTextPaint.TextSize = 10f;
 
         float phWidth = Math.Min(phMaxWidth, 100f);
         float phHeight = Math.Min(phMaxHeight, 50f);
 
         SKRect placeholderRect = SKRect.Create(x, y, phWidth, phHeight);
 
-        if (placeholderRect.Bottom > y + phMaxHeight + 0.01f) // Adjusted tolerance
+        if (placeholderRect.Bottom > y + phMaxHeight + 0.01f)
         {
             System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Placeholder for '{message}' ({placeholderRect.Height}h) would exceed availableHeight ({phMaxHeight}). Clamping or skipping.");
             placeholderRect.Bottom = y + phMaxHeight;
@@ -139,8 +128,7 @@ internal class ImageRenderer
         canvas.DrawRect(placeholderRect, errorBorderPaint);
 
         SKFontMetrics fontMetrics = skFont.Metrics;
-        // Use SKFont.MeasureText
-        float textVisualWidth = skFont.MeasureText(message); // Pass only string to SKFont.MeasureText for width
+        float textVisualWidth = skFont.MeasureText(message);
 
         float textX = placeholderRect.Left + (placeholderRect.Width - textVisualWidth) / 2f;
         textX = Math.Max(placeholderRect.Left + 2, Math.Min(textX, placeholderRect.Right - textVisualWidth - 2));
@@ -149,7 +137,6 @@ internal class ImageRenderer
 
         canvas.Save();
         canvas.ClipRect(placeholderRect);
-        // Use SKCanvas.DrawText overload that takes SKFont
         canvas.DrawText(message, textX, textY, skFont, placeholderTextPaint);
         canvas.Restore();
 
@@ -202,7 +189,7 @@ internal class ImageRenderer
                 }
                 break;
             case Aspect.AspectFit:
-            default: // AspectFit is the default
+            default:
                 float containerAspectFitRatio = containerWidth / containerHeight;
                 if (imageAspectRatio > containerAspectFitRatio)
                 {
@@ -217,17 +204,14 @@ internal class ImageRenderer
                 break;
         }
 
-        // Ensure the calculated dimensions do not exceed the actual available content space
         resultWidth = Math.Min(resultWidth, availableContentWidth);
         resultHeight = Math.Min(resultHeight, availableContentHeight);
 
 
         if (resultWidth <= 0 || resultHeight <= 0) return SKRect.Empty;
 
-        // Centering logic (optional, based on desired alignment within availableContentWidth)
-        // Current logic centers horizontally, aligns top vertically.
         float offsetX = (availableContentWidth - resultWidth) / 2f;
-        float offsetY = 0; // Align to top within its drawing slot (currentY)
+        float offsetY = 0;
 
         return SKRect.Create(drawAtX + offsetX, drawAtY + offsetY, resultWidth, resultHeight);
     }

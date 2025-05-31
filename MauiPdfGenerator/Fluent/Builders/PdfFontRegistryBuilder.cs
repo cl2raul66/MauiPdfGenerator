@@ -5,10 +5,9 @@ namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PdfFontRegistryBuilder : IPdfFontRegistry
 {
-    private readonly List<FontRegistration> _mauiRegisteredFontsChronologically = new();
+    private readonly List<FontRegistration> _mauiRegisteredFontsChronologically = [];
     private readonly Dictionary<string, FontRegistration> _fonts = new(StringComparer.OrdinalIgnoreCase);
     private PdfFontIdentifier? _userConfiguredDefaultFontIdentifier;
-
     public PdfFontRegistryBuilder()
     {
     }
@@ -29,7 +28,7 @@ internal class PdfFontRegistryBuilder : IPdfFontRegistry
         }
         else
         {
-            if (filePath is not null && registration.FilePath is null) 
+            if (filePath is not null && registration.FilePath is null)
             {
                 registration.FilePath = filePath;
                 if (isFromMauiConfig && !string.IsNullOrEmpty(filePath) && !_mauiRegisteredFontsChronologically.Any(fr => fr.Identifier.Equals(identifier)))
@@ -68,9 +67,9 @@ internal class PdfFontRegistryBuilder : IPdfFontRegistry
         }
         else
         {
-            throw new InvalidOperationException($"No se puede establecer la fuente '{fontIdentifier.Alias}' como predeterminada porque no ha sido registrada.");
+            throw new InvalidOperationException($"Cannot set font '{fontIdentifier.Alias}' as default because it has not been registered.");
         }
     }
 
-    public override string ToString() => $"Fuentes Registradas: {_fonts.Count}, Predeterminada Configurada por Usuario: {_userConfiguredDefaultFontIdentifier?.Alias ?? "Ninguna"}, Primera de MAUI: {GetFirstMauiRegisteredFontIdentifier()?.Alias ?? "Ninguna"}";
+    public override string ToString() => $"Registered Fonts: {_fonts.Count}, User Configured Default: {_userConfiguredDefaultFontIdentifier?.Alias ?? "None"}, First MAUI: {GetFirstMauiRegisteredFontIdentifier()?.Alias ?? "None"}";
 }

@@ -1,10 +1,10 @@
-﻿using MauiPdfGenerator.Fluent.Models; // Asegurar using
+﻿using MauiPdfGenerator.Fluent.Builders;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Fluent.Models.Elements;
 
 public class PdfParagraph : PdfElement
 {
-    // Ya no hay un DefaultFontFamily aquí, se resolverá a null si no se especifica
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
     public const TextAlignment DefaultAlignment = TextAlignment.Start;
@@ -12,7 +12,6 @@ public class PdfParagraph : PdfElement
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
 
     internal string Text { get; }
-    // CurrentFontFamily es ahora nullable
     internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
     internal float CurrentFontSize { get; private set; }
     internal Color? CurrentTextColor { get; private set; }
@@ -21,28 +20,56 @@ public class PdfParagraph : PdfElement
     internal LineBreakMode? CurrentLineBreakMode { get; private set; }
     internal bool IsContinuation { get; private set; } = false;
 
-    public PdfParagraph(string text)
+    private readonly PdfFontRegistryBuilder? _fontRegistryRef;
+    internal FontRegistration? ResolvedFontRegistration { get; private set; }
+
+    internal PdfParagraph(string text, PdfFontRegistryBuilder? fontRegistry)
     {
         Text = text ?? string.Empty;
-        CurrentFontFamily = null; // Null significa "no especificado", se resolverá más tarde
-        CurrentFontSize = 0;      // 0 significa "no especificado", se resolverá más tarde
+        _fontRegistryRef = fontRegistry;
+
+        CurrentFontFamily = null;
+        CurrentFontSize = 0;
+        CurrentTextColor = null;
+        CurrentAlignment = DefaultAlignment;
+        CurrentFontAttributes = null;
+        CurrentLineBreakMode = null;
     }
 
-    internal PdfParagraph(string text, PdfParagraph originalStyleSource) : this(text)
+    internal PdfParagraph(string text, PdfParagraph originalStyleSource)
     {
+        Text = text ?? string.Empty; 
+        _fontRegistryRef = originalStyleSource._fontRegistryRef;
+
         this.CurrentFontFamily = originalStyleSource.CurrentFontFamily;
+        this.ResolvedFontRegistration = originalStyleSource.ResolvedFontRegistration;
         this.CurrentFontSize = originalStyleSource.CurrentFontSize;
         this.CurrentTextColor = originalStyleSource.CurrentTextColor;
         this.CurrentAlignment = originalStyleSource.CurrentAlignment;
         this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
         this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
+        this.Margin(originalStyleSource.GetMargin);
         this.IsContinuation = true;
     }
 
-    // Acepta PdfFontIdentifier?
     public PdfParagraph FontFamily(PdfFontIdentifier? family)
     {
         CurrentFontFamily = family;
+
+        if (!family.HasValue || _fontRegistryRef is null)
+        {
+            ResolvedFontRegistration = null;
+        }
+        else
+        {
+            ResolvedFontRegistration = _fontRegistryRef.GetFontRegistration(family.Value);
+
+            if (ResolvedFontRegistration is null)
+            {
+                Debug.WriteLine($"[PdfParagraph.FontFamily] WARNING: The font with alias '{family.Value.Alias}' was not found in the document's font registry. " +
+                                  "A system or default font will be attempted during rendering if it is the ultimately selected font for the paragraph.");
+            }
+        }
         return this;
     }
 
@@ -54,7 +81,7 @@ public class PdfParagraph : PdfElement
 
     public PdfParagraph TextColor(Color color)
     {
-        CurrentTextColor = color ?? DefaultTextColor;
+        CurrentTextColor = color;
         return this;
     }
 

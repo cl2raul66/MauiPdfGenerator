@@ -10,7 +10,6 @@ internal class PdfAwareFontCollection : IFontCollection
     private readonly IFontCollection _effectiveMauiFontCollection;
     private readonly PdfFontRegistryBuilder _pdfFontRegistryBuilder;
     private readonly FontDestinationType _destination;
-
     public PdfAwareFontCollection(
         IFontCollection originalMauiFontCollection,
         PdfFontRegistryBuilder pdfFontRegistryBuilder,
@@ -46,8 +45,6 @@ internal class PdfAwareFontCollection : IFontCollection
         if (_destination == FontDestinationType.Both || _destination == FontDestinationType.OnlyPDF)
         {
             var identifier = new PdfFontIdentifier(effectiveAlias);
-            // Asumimos que isFromMauiConfig es true si llega por aquí,
-            // ya que ConfigureFonts usualmente maneja fuentes de la app.
             _pdfFontRegistryBuilder.GetOrCreateFontRegistration(identifier, filename, isFromMauiConfig: true);
         }
     }
@@ -135,10 +132,6 @@ internal class PdfAwareFontCollection : IFontCollection
 
         public void AddFont(string filename, string? alias = null)
         {
-            // Usar el constructor FontDescriptor(filename, alias, assembly)
-            // Para Assembly, podemos pasar null ya que usualmente las fuentes
-            // de la app no se cargan desde un ensamblado específico de esta manera aquí,
-            // sino que son archivos de contenido/recurso.
             _list.Add(new FontDescriptor(filename, alias, null));
         }
 

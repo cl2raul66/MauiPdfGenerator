@@ -1,7 +1,7 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces;
 
-namespace MauiPdfGenerator;
+namespace MauiPdfGenerator.Common;
 
 internal class PdfDocumentFactory : IPdfDocumentFactory
 {

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using MauiPdfGenerator;
 using MauiPdfGenerator.Fonts;
+using static MauiPdfGenerator.Fonts.PdfFonts;
 using static Microsoft.Maui.Graphics.Colors;
 using static Microsoft.Maui.Controls.FontAttributes;
 using static Microsoft.Maui.LineBreakMode;
@@ -50,15 +51,9 @@ public partial class MainPage : ContentPage
                 .Spacing(8f)
                 .Content(c =>
                 {
-                    c.Paragraph("This font is Times New Roman")
-                        .FontSize(16f)
-                        .Alignment(Center);
-                    c.HorizontalLine();
                     c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces and this font is Default.");
-                    c.Paragraph("This font is Open Sans.");
-                    c.Paragraph("This font is Default.");
-                    c.Paragraph("This font is Arial."); 
-                    c.Paragraph("This font is Default.");
+                    c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces and this font is Default.");
+                    c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces and this font is Default.").FontFamily(PdfFonts.OpenSansSemibold);
                     c.HorizontalLine();
                     c.PdfImage(imageUriStream)
                          .WidthRequest(64).HeightRequest(64)

@@ -10,13 +10,12 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     public Thickness GetMargin { get; private set; }
     public PageOrientationType GetPageOrientation { get; private set; }
     public PdfFontRegistryBuilder FontRegistry { get; }
-
     public PdfMetaDataBuilder MetaDataBuilder { get; }
 
     public PdfConfigurationBuilder(PdfFontRegistryBuilder fontRegistry)
     {
-        this.FontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry)); 
-        this.MetaDataBuilder = new PdfMetaDataBuilder(); 
+        this.FontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
+        this.MetaDataBuilder = new PdfMetaDataBuilder();
         GetMargin = MarginCalculator.GetThickness(DefaultMarginType.Normal);
         GetPageSize = PageSizeType.A4;
         GetPageOrientation = PageOrientationType.Portrait;
@@ -61,14 +60,14 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     public IPdfDocumentConfigurator MetaData(Action<IPdfMetaData> metaDataAction)
     {
         ArgumentNullException.ThrowIfNull(metaDataAction);
-        metaDataAction(this.MetaDataBuilder); 
+        metaDataAction(this.MetaDataBuilder);
         return this;
-    } 
+    }
 
     public IPdfDocumentConfigurator ConfigureFontRegistry(Action<IPdfFontRegistry> fontRegistryConfiguration)
     {
         ArgumentNullException.ThrowIfNull(fontRegistryConfiguration);
-        fontRegistryConfiguration(this.FontRegistry); 
+        fontRegistryConfiguration(this.FontRegistry);
         return this;
     }
 

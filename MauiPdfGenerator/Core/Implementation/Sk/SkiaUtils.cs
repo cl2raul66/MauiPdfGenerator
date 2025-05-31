@@ -7,117 +7,194 @@ namespace MauiPdfGenerator.Core.Implementation.Sk;
 internal static class SkiaUtils
 {
     public static async Task<SKTypeface?> CreateSkTypefaceAsync(
-        string familyIdentifierAlias, // Este es el alias que viene del usuario/configuración
+        string familyIdentifierAlias,
         FontAttributes fontAttributes,
         Func<string, Task<Stream?>> streamProvider,
-        string? filePathIfEmbedding) // Este es el FilePath del FontRegistration
+        string? filePathToLoad)
     {
         ArgumentNullException.ThrowIfNull(streamProvider);
 
-        SKTypeface? typefaceFromFile = null;
-        string? actualFamilyNameFromFile = null;
+        SKTypeface? typefaceFromExplicitFile = null;
+        string? actualFamilyNameFromExplicitFile = null;
 
-        // Paso 1: Intentar cargar el typeface desde el archivo (si filePathIfEmbedding existe)
-        // Esto sirve para dos propósitos:
-        //   a) Si se va a incrustar, este es el typeface que se usará.
-        //   b) Si no se va a incrustar (o falla la incrustación pero el archivo existe),
-        //      podemos obtener el FamilyName real del archivo para usarlo con SKTypeface.FromFamilyName.
-        if (!string.IsNullOrEmpty(filePathIfEmbedding))
+        SKFontStyleWeight weightEnum = (fontAttributes & FontAttributes.Bold) != 0 ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
+        SKFontStyleSlant slantEnum = (fontAttributes & FontAttributes.Italic) != 0 ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
+        var requestedStyle = new SKFontStyle(weightEnum, SKFontStyleWidth.Normal, slantEnum);
+        int requestedWeightInt = (int)weightEnum;
+
+        if (!string.IsNullOrEmpty(filePathToLoad))
         {
             try
             {
-                Debug.WriteLine($"[SkiaUtils] Attempting to load font from file: {filePathIfEmbedding}");
-                using Stream? fontStream = await streamProvider(filePathIfEmbedding);
+                // Para depurar el intento de carga desde un archivo específico.
+                Debug.WriteLine($"[SkiaUtils] FontLoadAttempt: Trying file '{filePathToLoad}' for alias '{familyIdentifierAlias}', requested style: Weight={requestedWeightInt}, Slant={slantEnum}.");
+                using Stream? fontStream = await streamProvider(filePathToLoad);
                 if (fontStream is not null && fontStream.Length > 0)
                 {
-                    // Necesitamos una copia del stream si SKData.Create no lo hace,
-                    // o si el stream original se cierra prematuramente.
-                    // SKData.Create(Stream) hace una copia interna si el stream no es un MemoryStream.
                     using var fontData = SKData.Create(fontStream);
                     if (fontData is not null)
                     {
-                        typefaceFromFile = SKTypeface.FromData(fontData);
-                        if (typefaceFromFile is not null)
+                        typefaceFromExplicitFile = SKTypeface.FromData(fontData);
+                        if (typefaceFromExplicitFile is not null)
                         {
-                            actualFamilyNameFromFile = typefaceFromFile.FamilyName;
-                            Debug.WriteLine($"[SkiaUtils] Successfully loaded typeface from file '{filePathIfEmbedding}'. Actual FamilyName: '{actualFamilyNameFromFile}'. Will be used for embedding if requested.");
-                            // Si se solicita incrustar, ya tenemos el typeface correcto.
-                            // No es necesario hacer más nada, simplemente retornamos este typeface.
-                            // La decisión de si se usa para incrustar o solo para obtener el nombre
-                            // se toma basándose en si filePathIfEmbedding fue pasado para incrustar (implícito por su nombre)
-                            // o solo como una ruta conocida. El parámetro `filePathIfEmbedding` indica que se *debería* usar
-                            // este archivo para la incrustación si es posible.
-                            return typefaceFromFile;
+                            actualFamilyNameFromExplicitFile = typefaceFromExplicitFile.FamilyName;
+                            // Para confirmar la carga exitosa del archivo y sus propiedades.
+                            Debug.WriteLine($"[SkiaUtils] FontLoadSuccess: File '{filePathToLoad}' loaded. Actual Family: '{actualFamilyNameFromExplicitFile}', File Weight: {typefaceFromExplicitFile.FontWeight}, File Slant: {typefaceFromExplicitFile.FontSlant}.");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[SkiaUtils] Failed to load font from file '{filePathIfEmbedding}': {ex.Message}. Will attempt system font reference.");
-                typefaceFromFile?.Dispose(); // Asegurarse de liberar si se creó parcialmente
-                typefaceFromFile = null;
+                // Para registrar fallos al cargar desde el archivo.
+                Debug.WriteLine($"[SkiaUtils] FontLoadError: File '{filePathToLoad}' failed to load: {ex.Message}");
+                typefaceFromExplicitFile?.Dispose();
+                typefaceFromExplicitFile = null;
             }
         }
 
-        // Paso 2: Determinar el nombre a usar para SKTypeface.FromFamilyName
-        // Prioridad:
-        //   1. Nombre real obtenido del archivo (actualFamilyNameFromFile), si se pudo cargar.
-        //   2. El alias original (familyIdentifierAlias) si no se pudo obtener del archivo.
-        //   3. Si familyIdentifierAlias es nulo o vacío, usar Default.
+        SKTypeface? finalTypeface = null;
+        string baseFamilyNameToUseForSystemLookup = actualFamilyNameFromExplicitFile ?? familyIdentifierAlias;
 
-        string nameToUseForSkiaLookup;
-        if (!string.IsNullOrEmpty(actualFamilyNameFromFile))
+        if (string.IsNullOrEmpty(baseFamilyNameToUseForSystemLookup))
         {
-            nameToUseForSkiaLookup = actualFamilyNameFromFile;
-            Debug.WriteLine($"[SkiaUtils] Using actual family name from file ('{actualFamilyNameFromFile}') for system font lookup.");
-        }
-        else if (!string.IsNullOrEmpty(familyIdentifierAlias))
-        {
-            nameToUseForSkiaLookup = familyIdentifierAlias;
-            Debug.WriteLine($"[SkiaUtils] Using provided alias ('{familyIdentifierAlias}') for system font lookup (file not available or actual name not read).");
-        }
-        else
-        {
-            Debug.WriteLine("[SkiaUtils] familyIdentifierAlias is null or empty, and no file-based name available. Using system default typeface.");
+            // Para indicar que no hay nombre de fuente para buscar y se usará el default.
+            Debug.WriteLine($"[SkiaUtils] FontLookup: No family name for lookup (alias or from file). Using SKTypeface.Default.");
+            typefaceFromExplicitFile?.Dispose();
             return SKTypeface.Default;
         }
 
-        // Paso 3: Intentar obtener el typeface del sistema usando el nombre determinado.
-        SKFontStyleWeight weight = (fontAttributes & FontAttributes.Bold) != 0 ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
-        SKFontStyleSlant slant = (fontAttributes & FontAttributes.Italic) != 0 ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
-        var style = new SKFontStyle(weight, SKFontStyleWidth.Normal, slant);
-
-        Debug.WriteLine($"[SkiaUtils] Attempting SKTypeface.FromFamilyName for '{nameToUseForSkiaLookup}' with style {style}.");
-        SKTypeface? systemTypeface = SKTypeface.FromFamilyName(nameToUseForSkiaLookup, style);
-
-        if (systemTypeface is null || (systemTypeface.FamilyName == SKTypeface.Default.FamilyName && nameToUseForSkiaLookup != SKTypeface.Default.FamilyName))
+        if (typefaceFromExplicitFile != null)
         {
-            Debug.WriteLine($"[SkiaUtils] Specific style ({style}) not found or resolved to default for font '{nameToUseForSkiaLookup}'. Trying family default without style.");
-            systemTypeface?.Dispose(); // Liberar el anterior si se obtuvo uno por defecto
-            systemTypeface = SKTypeface.FromFamilyName(nameToUseForSkiaLookup);
+            // CASO ESPECIAL: Si el usuario NO especificó FontAttributes (o eran None),
+            // Y tenemos un archivo explícito cargado, DEBEMOS USAR ESE ARCHIVO TAL CUAL.
+            if (fontAttributes == FontAttributes.None)
+            {
+                // Para indicar que se usa el archivo explícito porque no se pidieron atributos.
+                Debug.WriteLine($"[SkiaUtils] FontSelection: Using typeface from explicit file '{filePathToLoad}' because no explicit FontAttributes were requested (attributes are None).");
+                finalTypeface = typefaceFromExplicitFile;
+                typefaceFromExplicitFile = null;
+            }
+            else // El usuario SÍ pidió FontAttributes específicos
+            {
+                bool styleMatches = typefaceFromExplicitFile.FontWeight == requestedWeightInt && typefaceFromExplicitFile.FontSlant == slantEnum;
+                if (styleMatches)
+                {
+                    // Para indicar que el archivo cargado ya coincide con el estilo solicitado.
+                    Debug.WriteLine($"[SkiaUtils] FontSelection: Using typeface from file '{filePathToLoad}' as its style matches requested style.");
+                    finalTypeface = typefaceFromExplicitFile;
+                    typefaceFromExplicitFile = null;
+                }
+                else
+                {
+                    // Para indicar que el archivo cargado no coincide y se intentará una búsqueda del sistema.
+                    Debug.WriteLine($"[SkiaUtils] FontSelection: File '{filePathToLoad}' (Family: '{actualFamilyNameFromExplicitFile}') loaded, but its style (W:{typefaceFromExplicitFile.FontWeight},S:{typefaceFromExplicitFile.FontSlant}) " +
+                                    $"does not match requested style (W:{requestedWeightInt},S:{slantEnum}). Will attempt system lookup for family '{baseFamilyNameToUseForSystemLookup}'.");
+                    // No se asigna finalTypeface aquí, se deja para la lógica de búsqueda del sistema.
+                }
+            }
         }
 
-        if (systemTypeface is null || (systemTypeface.FamilyName == SKTypeface.Default.FamilyName && nameToUseForSkiaLookup != SKTypeface.Default.FamilyName))
+        if (finalTypeface is null)
         {
-            Debug.WriteLine($"[SkiaUtils] Font family '{nameToUseForSkiaLookup}' not found on system by Skia. Using system default typeface. PDF will reference '{familyIdentifierAlias}'.");
-            systemTypeface?.Dispose(); // Liberar el anterior si se obtuvo uno por defecto
-            systemTypeface = SKTypeface.Default;
+            // Para rastrear el intento de búsqueda en el sistema con el nombre y estilo.
+            Debug.WriteLine($"[SkiaUtils] FontLookup: Attempting system font '{baseFamilyNameToUseForSystemLookup}' with style (W:{requestedWeightInt}, S:{slantEnum}).");
+            finalTypeface = SKTypeface.FromFamilyName(baseFamilyNameToUseForSystemLookup, requestedStyle);
+
+            if (finalTypeface is not null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && baseFamilyNameToUseForSystemLookup != SKTypeface.Default.FamilyName)
+            {
+                // Para indicar que la búsqueda con estilo resultó en la fuente default del sistema.
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font '{baseFamilyNameToUseForSystemLookup}' with style resolved to SKTypeface.Default. Discarding this result.");
+                finalTypeface.Dispose();
+                finalTypeface = null;
+            }
+            else if (finalTypeface is not null)
+            {
+                // Para confirmar una búsqueda exitosa en el sistema con estilo.
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font '{baseFamilyNameToUseForSystemLookup}' with style FOUND: '{finalTypeface.FamilyName}', W:{finalTypeface.FontWeight}, S:{finalTypeface.FontSlant}.");
+            }
         }
 
-        // Si llegamos aquí, significa que no se incrustó la fuente desde el archivo (o no había archivo para incrustar).
-        // Devolvemos el typeface del sistema que se encontró (o el Default).
-        // El PDF referenciará 'nameToUseForSkiaLookup' o, si se usó Default, el visor decidirá.
-        // Es importante que si systemTypeface es el Default, el PDF aún podría intentar referenciar 'nameToUseForSkiaLookup',
-        // y el visor haría la sustitución. SkiaSharp podría no tener una forma de "forzar" la referencia a un nombre
-        // si solo puede resolver SKTypeface.Default. La metadata del PDF es la que lleva el nombre.
-        Debug.WriteLine($"[SkiaUtils] Final SKTypeface for PDF font (referenced): Effective Skia FamilyName='{systemTypeface.FamilyName}', Weight={systemTypeface.FontWeight}, Slant={systemTypeface.FontSlant}. Original alias was '{familyIdentifierAlias}'.");
-        return systemTypeface;
+        if (finalTypeface is null && typefaceFromExplicitFile is not null)
+        {
+            // Para indicar que, tras fallar la búsqueda con estilo, se recurre al archivo explícito aunque no coincida perfectamente.
+            // Esto es importante si el filePathToLoad era para una fuente específica (ej. ComicBold.ttf)
+            // y la búsqueda con estilo (que sería redundante en este caso si fontAttributes era None, pero se hizo porque no entró en el primer if)
+            // falló en encontrar algo mejor.
+            Debug.WriteLine($"[SkiaUtils] FontSelection: System lookup for styled font failed OR explicit font was preferred. Using typeface from explicit file '{filePathToLoad}' as a fallback or primary choice.");
+            finalTypeface = typefaceFromExplicitFile;
+            typefaceFromExplicitFile = null;
+        }
+
+        if (finalTypeface is null && familyIdentifierAlias != baseFamilyNameToUseForSystemLookup && !string.IsNullOrEmpty(familyIdentifierAlias))
+        {
+            // Para rastrear un intento de búsqueda adicional usando el alias original si es diferente y el lookup anterior falló.
+            Debug.WriteLine($"[SkiaUtils] FontLookup: Attempting system font for original ALIAS '{familyIdentifierAlias}' with style (W:{requestedWeightInt}, S:{slantEnum}).");
+            finalTypeface = SKTypeface.FromFamilyName(familyIdentifierAlias, requestedStyle);
+            if (finalTypeface != null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && familyIdentifierAlias != SKTypeface.Default.FamilyName)
+            {
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font ALIAS '{familyIdentifierAlias}' with style resolved to SKTypeface.Default. Discarding.");
+                finalTypeface.Dispose();
+                finalTypeface = null;
+            }
+            else if (finalTypeface != null)
+            {
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font ALIAS '{familyIdentifierAlias}' with style FOUND: '{finalTypeface.FamilyName}', W:{finalTypeface.FontWeight}, S:{finalTypeface.FontSlant}.");
+            }
+        }
+
+        if (finalTypeface is null)
+        {
+            // Para indicar que todos los intentos con estilo fallaron y se intentará sin estilo.
+            Debug.WriteLine($"[SkiaUtils] FontLookup: Styled lookup failed. Attempting system font '{baseFamilyNameToUseForSystemLookup}' WITHOUT style.");
+            finalTypeface = SKTypeface.FromFamilyName(baseFamilyNameToUseForSystemLookup);
+            if (finalTypeface != null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && baseFamilyNameToUseForSystemLookup != SKTypeface.Default.FamilyName)
+            {
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font '{baseFamilyNameToUseForSystemLookup}' (no style) resolved to SKTypeface.Default. Discarding.");
+                finalTypeface.Dispose();
+                finalTypeface = null;
+            }
+            else if (finalTypeface is not null)
+            {
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font '{baseFamilyNameToUseForSystemLookup}' (no style) FOUND: '{finalTypeface.FamilyName}', W:{finalTypeface.FontWeight}, S:{finalTypeface.FontSlant}.");
+            }
+        }
+
+        if (finalTypeface is null && familyIdentifierAlias != baseFamilyNameToUseForSystemLookup && !string.IsNullOrEmpty(familyIdentifierAlias))
+        {
+            Debug.WriteLine($"[SkiaUtils] FontLookup: Still no typeface. Attempting system font for ALIAS '{familyIdentifierAlias}' WITHOUT style.");
+            finalTypeface = SKTypeface.FromFamilyName(familyIdentifierAlias);
+            if (finalTypeface is not null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && familyIdentifierAlias != SKTypeface.Default.FamilyName)
+            {
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font ALIAS '{familyIdentifierAlias}' (no style) resolved to SKTypeface.Default. Discarding.");
+                finalTypeface.Dispose();
+                finalTypeface = null;
+            }
+            else if (finalTypeface is not null)
+            {
+                Debug.WriteLine($"[SkiaUtils] FontLookup: System font ALIAS '{familyIdentifierAlias}' (no style) FOUND: '{finalTypeface.FamilyName}', W:{finalTypeface.FontWeight}, S:{finalTypeface.FontSlant}.");
+            }
+        }
+
+        if (finalTypeface is null)
+        {
+            // Para registrar que todos los intentos fallaron y se usa el default.
+            Debug.WriteLine($"[SkiaUtils] FontLookup: All lookups FAILED for alias '{familyIdentifierAlias}' with attributes '{fontAttributes}'. Using SKTypeface.Default.");
+            finalTypeface = SKTypeface.Default;
+        }
+
+        typefaceFromExplicitFile?.Dispose(); // Asegura que el archivo cargado inicialmente se libere si no fue el finalTypeface.
+
+        // Para mostrar la decisión final de SKTypeface.
+        Debug.WriteLine($"[SkiaUtils] CreateSkTypefaceAsync FINAL RESULT for Alias='{familyIdentifierAlias}', Attrs='{fontAttributes}', Path='{filePathToLoad ?? "N/A"}': " +
+                        $"SKTypeface Family='{finalTypeface.FamilyName}', Weight={finalTypeface.FontWeight}, Slant={finalTypeface.FontSlant}, IsBold={finalTypeface.IsBold}, IsItalic={finalTypeface.IsItalic}.");
+        return finalTypeface;
     }
 
     internal static string? GetMauiFontFilePath(string fontAlias)
     {
-        Debug.WriteLine($"[SkiaUtils.GetMauiFontFilePath] Functionality requiring MauiFontRegistryHelper for alias '{fontAlias}' is currently not available.");
+        // Para depurar la obtención de rutas de fuentes de MAUI (actualmente no implementado).
+        Debug.WriteLine($"[SkiaUtils.GetMauiFontFilePath] Functionality for alias '{fontAlias}' is currently not available.");
         return null;
     }
 
@@ -136,19 +213,17 @@ internal static class SkiaUtils
         float width, height;
         switch (size)
         {
-            // Tamaños comunes en puntos PostScript (72 DPI)
-            case PageSizeType.A3: width = 841.89f; height = 1190.55f; break; // 297 x 420 mm
-            case PageSizeType.A4: width = 595.28f; height = 841.89f; break; // 210 x 297 mm
-            case PageSizeType.A5: width = 419.53f; height = 595.28f; break; // 148 x 210 mm
-            case PageSizeType.Letter: width = 612f; height = 792f; break;    // 8.5 x 11 inches
-            case PageSizeType.Legal: width = 612f; height = 1008f; break;   // 8.5 x 14 inches
-            case PageSizeType.Executive: width = 521.86f; height = 756.00f; break; // 7.25 x 10.5 inches
-            case PageSizeType.B5: width = 498.89f; height = 708.66f; break; // 176 x 250 mm (ISO B5)
-            case PageSizeType.Tabloid: width = 792f; height = 1224f; break; // 11 x 17 inches
-            // Sobres - estos son aproximados y pueden variar.
-            case PageSizeType.Envelope_10: width = 297f; height = 684f; break; // #10 Envelope (4.125 x 9.5 inches)
-            case PageSizeType.Envelope_DL: width = 311.81f; height = 623.62f; break; // DL Envelope (110 x 220 mm)
-            default: // A4 por defecto
+            case PageSizeType.A3: width = 841.89f; height = 1190.55f; break;
+            case PageSizeType.A4: width = 595.28f; height = 841.89f; break;
+            case PageSizeType.A5: width = 419.53f; height = 595.28f; break;
+            case PageSizeType.Letter: width = 612f; height = 792f; break;
+            case PageSizeType.Legal: width = 612f; height = 1008f; break;
+            case PageSizeType.Executive: width = 521.86f; height = 756.00f; break;
+            case PageSizeType.B5: width = 498.89f; height = 708.66f; break;
+            case PageSizeType.Tabloid: width = 792f; height = 1224f; break;
+            case PageSizeType.Envelope_10: width = 297f; height = 684f; break;
+            case PageSizeType.Envelope_DL: width = 311.81f; height = 623.62f; break;
+            default:
                 width = 595.28f; height = 841.89f; break;
         }
         return orientation == PageOrientationType.Landscape ? new SKSize(height, width) : new SKSize(width, height);

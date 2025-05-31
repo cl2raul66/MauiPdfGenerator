@@ -51,9 +51,17 @@ public partial class MainPage : ContentPage
                 .Spacing(8f)
                 .Content(c =>
                 {
-                    c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces and this font is Default.");
-                    c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces and this font is Default.");
-                    c.Paragraph("Default (WordWrap): This is a relatively long sentence designed to test the default word wrapping behavior which should break lines at spaces and this font is Default.").FontFamily(PdfFonts.OpenSansSemibold);
+                    c.Paragraph("P1: Default Comic (Regular expected)");
+                    c.Paragraph("P2: Default Comic with BOLD attribute (Comic Bold expected)")
+                        .FontAttributes(FontAttributes.Bold);
+                    c.Paragraph("P3: Default Comic with ITALIC attribute (Comic Italic expected)")
+                        .FontAttributes(FontAttributes.Italic);
+                    c.Paragraph("P4: Explicitly ComicBoldFile (Comic Bold expected)")
+                        .FontFamily(PdfFonts.ComicBold); 
+                    c.Paragraph("P5: Explicitly OpenSansSemibold (OpenSans Semibold expected)")
+                        .FontFamily(PdfFonts.OpenSansSemibold);
+                    c.Paragraph("P6: Explicitly OpenSansSemibold (OpenSans Regular expected)")
+                        .FontFamily(PdfFonts.OpenSansRegular);
                     c.HorizontalLine();
                     c.PdfImage(imageUriStream)
                          .WidthRequest(64).HeightRequest(64)

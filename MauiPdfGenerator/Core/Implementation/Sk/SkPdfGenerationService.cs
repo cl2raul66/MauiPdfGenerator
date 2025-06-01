@@ -127,7 +127,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
                             break;
                         }
 
-                        if (currentProcessingElement != null)
+                        if (currentProcessingElement is not null)
                         {
                             break;
                         }

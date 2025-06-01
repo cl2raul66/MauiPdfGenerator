@@ -10,6 +10,8 @@ public class PdfParagraph : PdfElement
     public const TextAlignment DefaultAlignment = TextAlignment.Start;
     public const FontAttributes DefaultFontAttributes = Microsoft.Maui.Controls.FontAttributes.None;
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
+    public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
+    public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None; 
 
     internal string Text { get; }
     internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
@@ -18,6 +20,8 @@ public class PdfParagraph : PdfElement
     internal TextAlignment CurrentAlignment { get; private set; }
     internal FontAttributes? CurrentFontAttributes { get; private set; }
     internal LineBreakMode? CurrentLineBreakMode { get; private set; }
+    internal TextDecorations? CurrentTextDecorations { get; private set; }
+    internal TextTransform? CurrentTextTransform { get; private set; } 
     internal bool IsContinuation { get; private set; } = false;
 
     private readonly PdfFontRegistryBuilder? _fontRegistryRef;
@@ -34,11 +38,13 @@ public class PdfParagraph : PdfElement
         CurrentAlignment = DefaultAlignment;
         CurrentFontAttributes = null;
         CurrentLineBreakMode = null;
+        CurrentTextDecorations = null;
+        CurrentTextTransform = null; 
     }
 
     internal PdfParagraph(string text, PdfParagraph originalStyleSource)
     {
-        Text = text ?? string.Empty; 
+        Text = text ?? string.Empty;
         _fontRegistryRef = originalStyleSource._fontRegistryRef;
 
         this.CurrentFontFamily = originalStyleSource.CurrentFontFamily;
@@ -48,6 +54,8 @@ public class PdfParagraph : PdfElement
         this.CurrentAlignment = originalStyleSource.CurrentAlignment;
         this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
         this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
+        this.CurrentTextDecorations = originalStyleSource.CurrentTextDecorations;
+        this.CurrentTextTransform = originalStyleSource.CurrentTextTransform; 
         this.Margin(originalStyleSource.GetMargin);
         this.IsContinuation = true;
     }
@@ -56,19 +64,19 @@ public class PdfParagraph : PdfElement
     {
         CurrentFontFamily = family;
 
-        if (!family.HasValue || _fontRegistryRef is null)
-        {
-            ResolvedFontRegistration = null;
-        }
-        else
+        if (family.HasValue && _fontRegistryRef is not null)
         {
             ResolvedFontRegistration = _fontRegistryRef.GetFontRegistration(family.Value);
 
             if (ResolvedFontRegistration is null)
             {
                 Debug.WriteLine($"[PdfParagraph.FontFamily] WARNING: The font with alias '{family.Value.Alias}' was not found in the document's font registry. " +
-                                  "A system or default font will be attempted during rendering if it is the ultimately selected font for the paragraph.");
+                                  "A system or default font will be attempted during rendering if it is the font finally selected for the paragraph.");
             }
+        }
+        else
+        {
+            ResolvedFontRegistration = null;
         }
         return this;
     }
@@ -100,6 +108,19 @@ public class PdfParagraph : PdfElement
     public PdfParagraph LineBreakMode(LineBreakMode mode)
     {
         CurrentLineBreakMode = mode;
+        return this;
+    }
+
+    public PdfParagraph TextDecorations(TextDecorations decorations)
+    {
+        CurrentTextDecorations = decorations;
+        return this;
+    }
+
+    // NUEVO MÉTODO
+    public PdfParagraph TextTransform(TextTransform transform)
+    {
+        CurrentTextTransform = transform;
         return this;
     }
 }

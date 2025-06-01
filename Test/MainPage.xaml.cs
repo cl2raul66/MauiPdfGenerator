@@ -7,6 +7,7 @@ using static Microsoft.Maui.Graphics.Colors;
 using static Microsoft.Maui.Controls.FontAttributes;
 using static Microsoft.Maui.LineBreakMode;
 using static Microsoft.Maui.TextAlignment;
+using static Microsoft.Maui.TextDecorations;
 using static MauiPdfGenerator.Fluent.Enums.PageSizeType;
 using static MauiPdfGenerator.Fluent.Enums.DefaultMarginType;
 using static MauiPdfGenerator.Fluent.Enums.PageOrientationType;
@@ -42,22 +43,19 @@ public partial class MainPage : ContentPage
                     cfg.MetaData(data =>
                     {
                         Title = "MauiPdfGenerator sample";
-                    }).ConfigureFontRegistry(r =>
-                    {
-                        r.Font(PdfFonts.Comic).Default();
                     });
                 })                                      
                 .ContentPage()    
                 .Spacing(8f)
                 .Content(c =>
                 {
-                    c.Paragraph("P1: Default Comic (Regular expected)");
+                    c.Paragraph("P1: Default Comic (Regular expected)").TextDecorations(TextDecorations.Underline);
                     c.Paragraph("P2: Default Comic with BOLD attribute (Comic Bold expected)")
                         .FontAttributes(FontAttributes.Bold);
                     c.Paragraph("P3: Default Comic with ITALIC attribute (Comic Italic expected)")
                         .FontAttributes(FontAttributes.Italic);
                     c.Paragraph("P4: Explicitly ComicBoldFile (Comic Bold expected)")
-                        .FontFamily(PdfFonts.ComicBold); 
+                        .FontFamily(PdfFonts.ComicBold).TextDecorations(TextDecorations.Strikethrough); 
                     c.Paragraph("P5: Explicitly OpenSansSemibold (OpenSans Semibold expected)")
                         .FontFamily(PdfFonts.OpenSansSemibold);
                     c.Paragraph("P6: Explicitly OpenSansSemibold (OpenSans Regular expected)")
@@ -66,8 +64,12 @@ public partial class MainPage : ContentPage
                     c.PdfImage(imageUriStream)
                          .WidthRequest(64).HeightRequest(64)
                          .Aspect(Aspect.AspectFit);
-                })
-                .Build()
+                }).Build()
+                .ContentPage().DefaultTextDecorations(Strikethrough).DefaultTextTransform(TextTransform.Uppercase).Content(c =>
+                {
+                    c.Paragraph("Hola mundo").TextTransform(TextTransform.None);
+                    c.Paragraph("Hola mundo").TextDecorations(TextDecorations.None);
+                }).Build()
             .SaveAsync(targetFilePath);
 
             await Launcher.OpenAsync(new OpenFileRequest

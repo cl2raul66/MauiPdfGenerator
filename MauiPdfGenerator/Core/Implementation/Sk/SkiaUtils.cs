@@ -64,7 +64,7 @@ internal static class SkiaUtils
             return SKTypeface.Default;
         }
 
-        if (typefaceFromExplicitFile != null)
+        if (typefaceFromExplicitFile is not null)
         {
             // CASO ESPECIAL: Si el usuario NO especificó FontAttributes (o eran None),
             // Y tenemos un archivo explícito cargado, DEBEMOS USAR ESE ARCHIVO TAL CUAL.
@@ -131,13 +131,13 @@ internal static class SkiaUtils
             // Para rastrear un intento de búsqueda adicional usando el alias original si es diferente y el lookup anterior falló.
             Debug.WriteLine($"[SkiaUtils] FontLookup: Attempting system font for original ALIAS '{familyIdentifierAlias}' with style (W:{requestedWeightInt}, S:{slantEnum}).");
             finalTypeface = SKTypeface.FromFamilyName(familyIdentifierAlias, requestedStyle);
-            if (finalTypeface != null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && familyIdentifierAlias != SKTypeface.Default.FamilyName)
+            if (finalTypeface is not null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && familyIdentifierAlias != SKTypeface.Default.FamilyName)
             {
                 Debug.WriteLine($"[SkiaUtils] FontLookup: System font ALIAS '{familyIdentifierAlias}' with style resolved to SKTypeface.Default. Discarding.");
                 finalTypeface.Dispose();
                 finalTypeface = null;
             }
-            else if (finalTypeface != null)
+            else if (finalTypeface is not null)
             {
                 Debug.WriteLine($"[SkiaUtils] FontLookup: System font ALIAS '{familyIdentifierAlias}' with style FOUND: '{finalTypeface.FamilyName}', W:{finalTypeface.FontWeight}, S:{finalTypeface.FontSlant}.");
             }
@@ -148,7 +148,7 @@ internal static class SkiaUtils
             // Para indicar que todos los intentos con estilo fallaron y se intentará sin estilo.
             Debug.WriteLine($"[SkiaUtils] FontLookup: Styled lookup failed. Attempting system font '{baseFamilyNameToUseForSystemLookup}' WITHOUT style.");
             finalTypeface = SKTypeface.FromFamilyName(baseFamilyNameToUseForSystemLookup);
-            if (finalTypeface != null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && baseFamilyNameToUseForSystemLookup != SKTypeface.Default.FamilyName)
+            if (finalTypeface is not null && finalTypeface.FamilyName == SKTypeface.Default.FamilyName && baseFamilyNameToUseForSystemLookup != SKTypeface.Default.FamilyName)
             {
                 Debug.WriteLine($"[SkiaUtils] FontLookup: System font '{baseFamilyNameToUseForSystemLookup}' (no style) resolved to SKTypeface.Default. Discarding.");
                 finalTypeface.Dispose();

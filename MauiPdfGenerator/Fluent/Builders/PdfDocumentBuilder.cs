@@ -16,6 +16,7 @@ internal class PdfDocumentBuilder : IPdfDocument
     private readonly PdfConfigurationBuilder _configurationBuilder;
     private readonly List<IPdfPageBuilder> _pages;
     private readonly IPdfGenerationService _pdfGenerationService;
+
     public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, string? defaultPath = null)
     {
         _filePath = defaultPath;
@@ -69,7 +70,9 @@ internal class PdfDocumentBuilder : IPdfDocument
                     contentPageBuilder.GetPageDefaultFontFamily(),
                     contentPageBuilder.GetPageDefaultFontSize(),
                     contentPageBuilder.GetPageDefaultTextColor(),
-                    contentPageBuilder.GetPageDefaultFontAttributes()
+                    contentPageBuilder.GetPageDefaultFontAttributes(),
+                    contentPageBuilder.GetPageDefaultTextDecorations(),
+                    contentPageBuilder.GetPageDefaultTextTransform() 
                 );
                 pageDataList.Add(pageData);
             }

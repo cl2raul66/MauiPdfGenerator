@@ -1,37 +1,43 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Fluent.Models;
-internal class FontRegistration : IFontRegistrationOptions
+
+public class FontRegistration : IFontRegistrationOptions
 {
-    private readonly PdfFontRegistryBuilder _registry; 
+    public PdfFontIdentifier Identifier { get; }
+    public bool ShouldEmbed { get; private set; } = false;
+    public string? FilePath { get; internal set; }
+    private readonly PdfFontRegistryBuilder _registryBuilder;
 
-    public string Alias { get; }
-    public bool IsEmbedRequired { get; private set; } = false; 
-
-    public FontRegistration(string alias, PdfFontRegistryBuilder registry)
+    internal FontRegistration(PdfFontIdentifier identifier, PdfFontRegistryBuilder registryBuilder, string? filePath = null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(alias);
-        ArgumentNullException.ThrowIfNull(registry);
-
-        Alias = alias;
-        _registry = registry;
+        ArgumentNullException.ThrowIfNull(registryBuilder);
+        Identifier = identifier;
+        _registryBuilder = registryBuilder;
+        FilePath = filePath;
     }
 
     public IFontRegistrationOptions Default()
     {
-        _registry.SetDefault(this.Alias);
+        _registryBuilder.SetUserConfiguredDefault(Identifier);
         return this;
     }
 
     public IFontRegistrationOptions EmbeddedFont()
     {
-        IsEmbedRequired = true;
+        if (FilePath is not null && !string.IsNullOrEmpty(FilePath))
+        {
+            ShouldEmbed = true;
+            Debug.WriteLine($"[FontRegistration] Fuente '{Identifier.Alias}' (Archivo: '{FilePath}') marcada para incrustar.");
+        }
+        else
+        {
+            ShouldEmbed = false;
+            Debug.WriteLine($"[FontRegistration] Fuente '{Identifier.Alias}' no se puede marcar para incrustar: FilePath no está establecido. Se referenciará por nombre si está disponible en el sistema.");
+        }
         return this;
     }
-
-    public override string ToString()
-    {
-        return $"Font: {Alias}, Embed: {IsEmbedRequired}";
-    }
+    public override string ToString() => $"Identifier: {Identifier.Alias}, Embed: {ShouldEmbed}, FilePath: {FilePath ?? "N/A"}";
 }

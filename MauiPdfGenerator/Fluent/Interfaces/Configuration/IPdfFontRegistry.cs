@@ -1,6 +1,8 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces.Configuration;
+﻿using MauiPdfGenerator.Fluent.Models;
+
+namespace MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
 public interface IPdfFontRegistry
 {
-    IFontRegistrationOptions Font(string fontFamilyAlias);
+    IFontRegistrationOptions Font(PdfFontIdentifier fontIdentifier);
 }

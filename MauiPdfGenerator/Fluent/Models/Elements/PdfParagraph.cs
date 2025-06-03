@@ -1,73 +1,111 @@
-﻿namespace MauiPdfGenerator.Fluent.Models.Elements;
+﻿using MauiPdfGenerator.Fluent.Builders;
+using System.Diagnostics;
+
+namespace MauiPdfGenerator.Fluent.Models.Elements;
 
 public class PdfParagraph : PdfElement
 {
-    public const string DefaultFontFamily = "Helvetica";
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
-    public const TextAlignment DefaultAlignment = TextAlignment.Start;
+    public const TextAlignment DefaultHorizontalAlignment = TextAlignment.Start;
+    public const TextAlignment DefaultVerticalAlignment = TextAlignment.Start;
     public const FontAttributes DefaultFontAttributes = Microsoft.Maui.Controls.FontAttributes.None;
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
+    public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
+    public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None;
 
     internal string Text { get; }
-
-    internal string? CurrentFontFamily { get; private set; }
-
+    internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
     internal float CurrentFontSize { get; private set; }
-
     internal Color? CurrentTextColor { get; private set; }
-
-    internal TextAlignment CurrentAlignment { get; private set; }
-
+    internal TextAlignment CurrentHorizontalAlignment { get; private set; }
+    internal TextAlignment CurrentVerticalAlignment { get; private set; }
     internal FontAttributes? CurrentFontAttributes { get; private set; }
-
     internal LineBreakMode? CurrentLineBreakMode { get; private set; }
-
+    internal TextDecorations? CurrentTextDecorations { get; private set; }
+    internal TextTransform? CurrentTextTransform { get; private set; }
     internal bool IsContinuation { get; private set; } = false;
 
-    public PdfParagraph(string text)
+    private readonly PdfFontRegistryBuilder? _fontRegistryRef;
+    internal FontRegistration? ResolvedFontRegistration { get; private set; }
+
+    internal PdfParagraph(string text, PdfFontRegistryBuilder? fontRegistry)
     {
         Text = text ?? string.Empty;
+        _fontRegistryRef = fontRegistry;
+
+        CurrentFontFamily = null;
+        CurrentFontSize = 0;
+        CurrentTextColor = null;
+        CurrentHorizontalAlignment = DefaultHorizontalAlignment;
+        CurrentVerticalAlignment = DefaultVerticalAlignment;
+        CurrentFontAttributes = null;
+        CurrentLineBreakMode = null;
+        CurrentTextDecorations = null;
+        CurrentTextTransform = null;
     }
 
-    // Constructor for creating a continuation of a paragraph
-    internal PdfParagraph(string text, PdfParagraph originalStyleSource) : this(text)
+    internal PdfParagraph(string text, PdfParagraph originalStyleSource)
     {
-        // Inherit styles from the original paragraph
+        Text = text ?? string.Empty;
+        _fontRegistryRef = originalStyleSource._fontRegistryRef;
+
         this.CurrentFontFamily = originalStyleSource.CurrentFontFamily;
+        this.ResolvedFontRegistration = originalStyleSource.ResolvedFontRegistration;
         this.CurrentFontSize = originalStyleSource.CurrentFontSize;
         this.CurrentTextColor = originalStyleSource.CurrentTextColor;
-        this.CurrentAlignment = originalStyleSource.CurrentAlignment;
+        this.CurrentHorizontalAlignment = originalStyleSource.CurrentHorizontalAlignment;
+        this.CurrentVerticalAlignment = originalStyleSource.CurrentVerticalAlignment;
         this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
         this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
-
-        // Mark as a continuation paragraph.
-        // Its own GetMargin will be Thickness.Zero by default from PdfElement.
-        // SkPdfGenerationService will not apply its original top margin again.
+        this.CurrentTextDecorations = originalStyleSource.CurrentTextDecorations;
+        this.CurrentTextTransform = originalStyleSource.CurrentTextTransform;
+        this.Margin(originalStyleSource.GetMargin);
         this.IsContinuation = true;
     }
 
-    public PdfParagraph FontFamily(string family)
+    public PdfParagraph FontFamily(PdfFontIdentifier? family)
     {
-        CurrentFontFamily = string.IsNullOrWhiteSpace(family) ? DefaultFontFamily : family;
+        CurrentFontFamily = family;
+
+        if (family.HasValue && _fontRegistryRef is not null)
+        {
+            ResolvedFontRegistration = _fontRegistryRef.GetFontRegistration(family.Value);
+
+            if (ResolvedFontRegistration is null)
+            {
+                Debug.WriteLine($"[PdfParagraph.FontFamily] WARNING: The font with alias '{family.Value.Alias}' was not found in the document's font registry. " +
+                                  "A system or default font will be attempted during rendering if it is the font finally selected for the paragraph.");
+            }
+        }
+        else
+        {
+            ResolvedFontRegistration = null;
+        }
         return this;
     }
 
     public PdfParagraph FontSize(float size)
     {
-        CurrentFontSize = size > 0 ? size : DefaultFontSize;
+        CurrentFontSize = size > 0 ? size : 0;
         return this;
     }
 
     public PdfParagraph TextColor(Color color)
     {
-        CurrentTextColor = color ?? DefaultTextColor;
+        CurrentTextColor = color;
         return this;
     }
 
-    public PdfParagraph Alignment(TextAlignment alignment)
+    public PdfParagraph HorizontalAlignment(TextAlignment alignment)
     {
-        CurrentAlignment = alignment;
+        CurrentHorizontalAlignment = alignment;
+        return this;
+    }
+
+    public PdfParagraph VerticalAlignment(TextAlignment alignment)
+    {
+        CurrentVerticalAlignment = alignment;
         return this;
     }
 
@@ -80,6 +118,18 @@ public class PdfParagraph : PdfElement
     public PdfParagraph LineBreakMode(LineBreakMode mode)
     {
         CurrentLineBreakMode = mode;
+        return this;
+    }
+
+    public PdfParagraph TextDecorations(TextDecorations decorations)
+    {
+        CurrentTextDecorations = decorations;
+        return this;
+    }
+
+    public PdfParagraph TextTransform(TextTransform transform)
+    {
+        CurrentTextTransform = transform;
         return this;
     }
 }

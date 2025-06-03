@@ -10,7 +10,6 @@ internal class MarginCalculator
     private const float ModerateMarginH = NormalMargin;
     private const float WideMarginH = 144f;
     private const float WideMarginV = NormalMargin;
-
     internal static Thickness GetThickness(DefaultMarginType defaultMarginType)
     {
         return defaultMarginType switch

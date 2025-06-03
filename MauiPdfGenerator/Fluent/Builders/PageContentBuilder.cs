@@ -1,17 +1,24 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Fluent.Builders;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PageContentBuilder : IPageContentBuilder
 {
     private readonly List<PdfElement> _children = [];
+    private readonly PdfFontRegistryBuilder _fontRegistry;
+
+    public PageContentBuilder(PdfFontRegistryBuilder fontRegistry)
+    {
+        _fontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
+    }
 
     internal IReadOnlyList<PdfElement> GetChildren() => _children.AsReadOnly();
 
     public PdfParagraph Paragraph(string text)
     {
-        var paragraph = new PdfParagraph(text);
+        var paragraph = new PdfParagraph(text, _fontRegistry);
         _children.Add(paragraph);
         return paragraph;
     }
@@ -23,7 +30,7 @@ internal class PageContentBuilder : IPageContentBuilder
         return line;
     }
 
-    public PdfImage PdfImage(Stream stream) 
+    public PdfImage PdfImage(Stream stream)
     {
         var image = new PdfImage(stream);
         _children.Add(image);

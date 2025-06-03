@@ -27,10 +27,11 @@ internal class TextRenderer
         float fontSize = paragraph.CurrentFontSize > 0 ? paragraph.CurrentFontSize : pageDefinition.PageDefaultFontSize;
         Color textColor = paragraph.CurrentTextColor ?? pageDefinition.PageDefaultTextColor;
         FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes;
-        TextAlignment alignment = paragraph.CurrentAlignment;
+        TextAlignment horizontalAlignment = paragraph.CurrentHorizontalAlignment;
+        // TextAlignment verticalAlignment = paragraph.CurrentVerticalAlignment; // Guardado para futura implementación con HeightRequest
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraph.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
-        TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform; 
+        TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform;
 
         FontRegistration? fontRegistration = paragraph.ResolvedFontRegistration;
         if (fontRegistration is null && fontIdentifierToUse.HasValue)
@@ -79,21 +80,6 @@ internal class TextRenderer
         {
             TextTransform.Uppercase => originalText.ToUpperInvariant(),
             TextTransform.Lowercase => originalText.ToLowerInvariant(),
-            //case TextTransform.CapitalizeWord: // Esto es similar a ToTitleCase
-            //    textToRender = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(originalText.ToLowerInvariant());
-            //    break;
-            //case TextTransform.CapitalizeSentence:
-            //    // Implementación simple: capitalizar solo la primera letra de la cadena.
-            //    // Una implementación más robusta consideraría puntos y nuevas frases.
-            //    if (string.IsNullOrEmpty(originalText))
-            //    {
-            //        textToRender = originalText;
-            //    }
-            //    else
-            //    {
-            //        textToRender = char.ToUpperInvariant(originalText[0]) + originalText.Substring(1).ToLowerInvariant();
-            //    }
-            //    break;
             _ => originalText,
         };
 
@@ -103,7 +89,17 @@ internal class TextRenderer
         float elementContentRightX = currentPageContentRect.Right - (float)paragraph.GetMargin.Right;
         float availableHeightForDrawing = currentPageContentRect.Bottom - currentYOnPage;
 
-        List<string> allLines = BreakTextIntoLines(textToRender, font, availableWidthForTextLayout, lineBreakMode); 
+        // Lógica para VerticalTextAlignment (simplificada por ahora, necesitará HeightRequest para ser efectiva)
+        // float yOffsetForVerticalAlignment = 0f;
+        // if (paragraph.CurrentVerticalAlignment != VerticalTextAlignment.Start)
+        // {
+        //     // Aquí se necesitaría la altura total asignada al párrafo (HeightRequest)
+        //     // y la altura intrínseca del texto para calcular el offset.
+        //     // Por ahora, VerticalAlignment no tendrá efecto visual en el bloque de texto.
+        // }
+        // float drawStartY = currentYOnPage + yOffsetForVerticalAlignment;
+
+        List<string> allLines = BreakTextIntoLines(textToRender, font, availableWidthForTextLayout, lineBreakMode);
         if (allLines.Count == 0) return new RenderOutput(0, null, false);
 
         float fontLineSpacing = font.Spacing;
@@ -125,21 +121,25 @@ internal class TextRenderer
 
         List<string> linesToDrawThisCall = [.. allLines.Take(linesThatFit)];
         float heightDrawnThisCall = 0;
-        float lineY = currentYOnPage;
+        float lineY = currentYOnPage; 
 
         foreach (string line in linesToDrawThisCall)
         {
             if (lineY + fontLineSpacing > currentPageContentRect.Bottom + 0.01f) break;
+
             SKRect lineBounds = new();
             float measuredWidth = font.MeasureText(line, out lineBounds);
             float drawX = elementContentLeftX;
-            if (alignment is TextAlignment.Center) drawX = elementContentLeftX + (availableWidthForTextLayout - measuredWidth) / 2f;
-            else if (alignment is TextAlignment.End) drawX = elementContentRightX - measuredWidth;
+
+            if (horizontalAlignment is TextAlignment.Center) drawX = elementContentLeftX + (availableWidthForTextLayout - measuredWidth) / 2f;
+            else if (horizontalAlignment is TextAlignment.End) drawX = elementContentRightX - measuredWidth;
+
             drawX = Math.Max(elementContentLeftX, Math.Min(drawX, elementContentRightX - measuredWidth));
 
             float textDrawY = lineY - lineBounds.Top;
 
             canvas.Save();
+
             canvas.ClipRect(SKRect.Create(elementContentLeftX, currentYOnPage, availableWidthForTextLayout, availableHeightForDrawing));
             canvas.DrawText(line, drawX, textDrawY, font, paint);
 
@@ -197,6 +197,9 @@ internal class TextRenderer
             remainingParagraph = paragraph;
             requiresNewPage = true;
         }
+
+        // Si se implementa VerticalAlignment con HeightRequest, HeightDrawnThisCall podría necesitar
+        // ser la altura solicitada (si el texto cupo) en lugar de la altura intrínseca del texto.
         return new RenderOutput(heightDrawnThisCall, remainingParagraph, requiresNewPage);
     }
 

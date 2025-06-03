@@ -7,21 +7,23 @@ public class PdfParagraph : PdfElement
 {
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
-    public const TextAlignment DefaultAlignment = TextAlignment.Start;
+    public const TextAlignment DefaultHorizontalAlignment = TextAlignment.Start;
+    public const TextAlignment DefaultVerticalAlignment = TextAlignment.Start;
     public const FontAttributes DefaultFontAttributes = Microsoft.Maui.Controls.FontAttributes.None;
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
     public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
-    public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None; 
+    public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None;
 
     internal string Text { get; }
     internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
     internal float CurrentFontSize { get; private set; }
     internal Color? CurrentTextColor { get; private set; }
-    internal TextAlignment CurrentAlignment { get; private set; }
+    internal TextAlignment CurrentHorizontalAlignment { get; private set; }
+    internal TextAlignment CurrentVerticalAlignment { get; private set; }
     internal FontAttributes? CurrentFontAttributes { get; private set; }
     internal LineBreakMode? CurrentLineBreakMode { get; private set; }
     internal TextDecorations? CurrentTextDecorations { get; private set; }
-    internal TextTransform? CurrentTextTransform { get; private set; } 
+    internal TextTransform? CurrentTextTransform { get; private set; }
     internal bool IsContinuation { get; private set; } = false;
 
     private readonly PdfFontRegistryBuilder? _fontRegistryRef;
@@ -35,11 +37,12 @@ public class PdfParagraph : PdfElement
         CurrentFontFamily = null;
         CurrentFontSize = 0;
         CurrentTextColor = null;
-        CurrentAlignment = DefaultAlignment;
+        CurrentHorizontalAlignment = DefaultHorizontalAlignment;
+        CurrentVerticalAlignment = DefaultVerticalAlignment;
         CurrentFontAttributes = null;
         CurrentLineBreakMode = null;
         CurrentTextDecorations = null;
-        CurrentTextTransform = null; 
+        CurrentTextTransform = null;
     }
 
     internal PdfParagraph(string text, PdfParagraph originalStyleSource)
@@ -51,11 +54,12 @@ public class PdfParagraph : PdfElement
         this.ResolvedFontRegistration = originalStyleSource.ResolvedFontRegistration;
         this.CurrentFontSize = originalStyleSource.CurrentFontSize;
         this.CurrentTextColor = originalStyleSource.CurrentTextColor;
-        this.CurrentAlignment = originalStyleSource.CurrentAlignment;
+        this.CurrentHorizontalAlignment = originalStyleSource.CurrentHorizontalAlignment;
+        this.CurrentVerticalAlignment = originalStyleSource.CurrentVerticalAlignment;
         this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
         this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
         this.CurrentTextDecorations = originalStyleSource.CurrentTextDecorations;
-        this.CurrentTextTransform = originalStyleSource.CurrentTextTransform; 
+        this.CurrentTextTransform = originalStyleSource.CurrentTextTransform;
         this.Margin(originalStyleSource.GetMargin);
         this.IsContinuation = true;
     }
@@ -93,9 +97,15 @@ public class PdfParagraph : PdfElement
         return this;
     }
 
-    public PdfParagraph Alignment(TextAlignment alignment)
+    public PdfParagraph HorizontalAlignment(TextAlignment alignment)
     {
-        CurrentAlignment = alignment;
+        CurrentHorizontalAlignment = alignment;
+        return this;
+    }
+
+    public PdfParagraph VerticalAlignment(TextAlignment alignment)
+    {
+        CurrentVerticalAlignment = alignment;
         return this;
     }
 
@@ -117,7 +127,6 @@ public class PdfParagraph : PdfElement
         return this;
     }
 
-    // NUEVO MÉTODO
     public PdfParagraph TextTransform(TextTransform transform)
     {
         CurrentTextTransform = transform;

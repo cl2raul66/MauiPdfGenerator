@@ -70,14 +70,14 @@ internal class LayoutRenderer
 
         using SKPicture picture = recorder.EndRecording();
 
+        float finalConsumedHeight = totalHeightDrawn;
+
         if (totalHeightDrawn > 0)
         {
-            // --- START OF CORRECTION ---
-            // Un VerticalStackLayout se alinea horizontalmente. Usamos PdfHorizontalOptions.
             float finalWidth = vsl.PdfHorizontalOptions == LayoutAlignment.Fill ? vslContentRectInParent.Width : totalWidthDrawn;
             float offsetX = 0;
 
-            switch (vsl.PdfHorizontalOptions) // Usar la opción correcta
+            switch (vsl.PdfHorizontalOptions)
             {
                 case LayoutAlignment.Center:
                     offsetX = (vslContentRectInParent.Width - finalWidth) / 2;
@@ -91,14 +91,13 @@ internal class LayoutRenderer
                     offsetX = 0;
                     break;
             }
-            // --- END OF CORRECTION ---
 
             float finalX = vslContentRectInParent.Left + offsetX;
 
             if (vsl.CurrentBackgroundColor is not null)
             {
                 using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(vsl.CurrentBackgroundColor), Style = SKPaintStyle.Fill };
-                SKRect bgRect = SKRect.Create(finalX, startY, finalWidth, totalHeightDrawn);
+                SKRect bgRect = SKRect.Create(finalX, startY, finalWidth, finalConsumedHeight);
                 canvas.DrawRect(bgRect, bgPaint);
             }
 
@@ -114,7 +113,7 @@ internal class LayoutRenderer
             continuation = new PdfVerticalStackLayout(remainingChildrenForNextPage, vsl);
         }
 
-        return new RenderOutput(totalHeightDrawn, vslContentRectInParent.Width, continuation, requiresNewPage, totalHeightDrawn);
+        return new RenderOutput(finalConsumedHeight, totalWidthDrawn, continuation, requiresNewPage, finalConsumedHeight);
     }
 
     public async Task<RenderOutput> RenderHorizontalStackLayoutAsync(SKCanvas canvas, PdfHorizontalStackLayout hsl, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
@@ -129,12 +128,14 @@ internal class LayoutRenderer
             return new RenderOutput(0, 0, null, false);
         }
 
+        // --- START OF FINAL SIMPLIFIED LOGIC ---
+        // Single pass rendering. No more two-pass.
         using var recorder = new SKPictureRecorder();
         using SKCanvas recordingCanvas = recorder.BeginRecording(SKRect.Create(hslContentRectInParent.Width, hslContentRectInParent.Height));
 
         float currentXinHsl = 0;
         float maxChildHeight = 0;
-        float totalWidthDrawn = 0;
+        float naturalContentWidth = 0;
 
         var childrenToRender = new Queue<PdfElement>(hsl.Children);
         var remainingChildrenForNextPage = new List<PdfElement>();
@@ -152,6 +153,7 @@ internal class LayoutRenderer
             }
 
             childrenToRender.Dequeue();
+            // The available rect for the child is from its current position to the end of the line.
             var childAvailableRect = SKRect.Create(currentXinHsl, 0, hslContentRectInParent.Width - currentXinHsl, hslContentRectInParent.Height);
             var result = await elementRenderer(recordingCanvas, child, pageDef, childAvailableRect, 0);
 
@@ -159,11 +161,11 @@ internal class LayoutRenderer
             {
                 maxChildHeight = Math.Max(maxChildHeight, result.VisualHeightDrawn);
                 currentXinHsl += result.WidthDrawnThisCall;
-                totalWidthDrawn += result.WidthDrawnThisCall;
             }
 
             if (result.RequiresNewPage || result.RemainingElement is not null)
             {
+                // This logic is simplified as complex wrapping in HSL is not yet supported.
                 requiresNewPage = true;
                 if (result.RemainingElement is not null)
                 {
@@ -176,53 +178,72 @@ internal class LayoutRenderer
             if (childrenToRender.Any())
             {
                 currentXinHsl += hsl.CurrentSpacing;
-                totalWidthDrawn += hsl.CurrentSpacing;
             }
         }
 
+        // The natural width of the content is the final X position.
+        naturalContentWidth = currentXinHsl;
+        // --- END OF FINAL SIMPLIFIED LOGIC ---
+
         using SKPicture picture = recorder.EndRecording();
 
-        // --- START OF CORRECTION ---
-        // Un HorizontalStackLayout se alinea verticalmente. Usamos PdfVerticalOptions.
-        float finalHeight = hsl.PdfVerticalOptions == LayoutAlignment.Fill ? hslContentRectInParent.Height : maxChildHeight;
-        // --- END OF CORRECTION ---
+        float finalVisualHeight = hsl.PdfVerticalOptions == LayoutAlignment.Fill ? hslContentRectInParent.Height : maxChildHeight;
 
-        if (finalHeight > hslContentRectInParent.Height && finalHeight > 0)
+        if (finalVisualHeight > hslContentRectInParent.Height && finalVisualHeight > 0)
         {
             return new RenderOutput(0, 0, hsl, true);
         }
 
         if (maxChildHeight > 0)
         {
-            float offsetY = 0;
-            // --- START OF CORRECTION ---
-            switch (hsl.PdfVerticalOptions) // Usar la opción correcta
+            // Determine the final width of the container/background
+            float finalContainerWidth = hsl.PdfHorizontalOptions == LayoutAlignment.Fill ? hslContentRectInParent.Width : naturalContentWidth;
+
+            // Determine the horizontal offset for the entire content block
+            float offsetX = 0;
+            switch (hsl.PdfHorizontalOptions)
             {
                 case LayoutAlignment.Center:
-                    offsetY = (hslContentRectInParent.Height - finalHeight) / 2;
+                    offsetX = (hslContentRectInParent.Width - naturalContentWidth) / 2;
                     break;
                 case LayoutAlignment.End:
-                    offsetY = hslContentRectInParent.Height - finalHeight;
+                    offsetX = hslContentRectInParent.Width - naturalContentWidth;
                     break;
                 case LayoutAlignment.Start:
                 case LayoutAlignment.Fill:
                 default:
-                    offsetY = 0;
+                    offsetX = 0; // For 'Fill', the content block still starts at the left.
                     break;
             }
-            // --- END OF CORRECTION ---
+            float finalX = hslContentRectInParent.Left + offsetX;
 
-            float finalY = startY + offsetY;
+            float contentOffsetY = 0;
+            switch (hsl.PdfVerticalOptions)
+            {
+                case LayoutAlignment.Center:
+                    contentOffsetY = (finalVisualHeight - maxChildHeight) / 2;
+                    break;
+                case LayoutAlignment.End:
+                    contentOffsetY = finalVisualHeight - maxChildHeight;
+                    break;
+                case LayoutAlignment.Start:
+                case LayoutAlignment.Fill:
+                default:
+                    contentOffsetY = 0;
+                    break;
+            }
 
             if (hsl.CurrentBackgroundColor is not null)
             {
                 using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(hsl.CurrentBackgroundColor), Style = SKPaintStyle.Fill };
-                SKRect bgRect = SKRect.Create(hslContentRectInParent.Left, finalY, totalWidthDrawn, finalHeight);
+                // The background is drawn at the content's aligned X position, but with the container's final width.
+                SKRect bgRect = SKRect.Create(finalX, startY, finalContainerWidth, finalVisualHeight);
                 canvas.DrawRect(bgRect, bgPaint);
             }
 
             canvas.Save();
-            canvas.Translate(hslContentRectInParent.Left, finalY);
+            // The content itself is always drawn relative to the aligned X position.
+            canvas.Translate(finalX, startY + contentOffsetY);
             canvas.DrawPicture(picture);
             canvas.Restore();
         }
@@ -233,6 +254,6 @@ internal class LayoutRenderer
             continuation = new PdfHorizontalStackLayout(remainingChildrenForNextPage, hsl);
         }
 
-        return new RenderOutput(finalHeight, totalWidthDrawn, continuation, requiresNewPage, finalHeight);
+        return new RenderOutput(finalVisualHeight, naturalContentWidth, continuation, requiresNewPage, finalVisualHeight);
     }
 }

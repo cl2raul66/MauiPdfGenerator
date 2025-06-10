@@ -61,57 +61,9 @@ public partial class MainPage : ContentPage
 
                     c.HorizontalLine();
 
-                    c.HorizontalStackLayout(hsl =>
-                    { 
-                        hsl.PdfImage(new MemoryStream(imageData))
+                    c.PdfImage(new MemoryStream(imageData))
                          .WidthRequest(64).HeightRequest(64)
                          .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                    }).Spacing(16f).BackgroundColor(Colors.LightGray).HorizontalOptions(LayoutAlignment.Start);
-
-                    c.HorizontalStackLayout(hsl =>
-                    { 
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                    }).Spacing(16f).BackgroundColor(Colors.LightGray).HorizontalOptions(LayoutAlignment.Center);
-
-                    c.HorizontalStackLayout(hsl =>
-                    { 
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                    }).Spacing(16f).BackgroundColor(Colors.LightGray).HorizontalOptions(LayoutAlignment.End);
-
-                    c.HorizontalStackLayout(hsl =>
-                    { 
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                    }).Spacing(16f).BackgroundColor(Colors.LightGray).HorizontalOptions(LayoutAlignment.Fill);
                 }).Build()
             .SaveAsync(targetFilePath);
 

@@ -1,7 +1,7 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Fluent.Models.Elements;
 using SkiaSharp;
 using System.Diagnostics;
 
@@ -28,7 +28,6 @@ internal class TextRenderer
         Color textColor = paragraph.CurrentTextColor ?? pageDefinition.PageDefaultTextColor;
         FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes;
         TextAlignment horizontalAlignment = paragraph.CurrentHorizontalAlignment;
-        // TextAlignment verticalAlignment = paragraph.CurrentVerticalAlignment; // Guardado para futura implementación con HeightRequest
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraph.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
         TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform;
@@ -89,18 +88,8 @@ internal class TextRenderer
         float elementContentRightX = currentPageContentRect.Right - (float)paragraph.GetMargin.Right;
         float availableHeightForDrawing = currentPageContentRect.Bottom - currentYOnPage;
 
-        // Lógica para VerticalTextAlignment (simplificada por ahora, necesitará HeightRequest para ser efectiva)
-        // float yOffsetForVerticalAlignment = 0f;
-        // if (paragraph.CurrentVerticalAlignment != VerticalTextAlignment.Start)
-        // {
-        //     // Aquí se necesitaría la altura total asignada al párrafo (HeightRequest)
-        //     // y la altura intrínseca del texto para calcular el offset.
-        //     // Por ahora, VerticalAlignment no tendrá efecto visual en el bloque de texto.
-        // }
-        // float drawStartY = currentYOnPage + yOffsetForVerticalAlignment;
-
         List<string> allLines = BreakTextIntoLines(textToRender, font, availableWidthForTextLayout, lineBreakMode);
-        if (allLines.Count == 0) return new RenderOutput(0, null, false);
+        if (allLines.Count == 0) return new RenderOutput(0, 0, null, false);
 
         float fontLineSpacing = font.Spacing;
         if (fontLineSpacing <= 0) fontLineSpacing = fontSize * 1.2f;
@@ -120,8 +109,9 @@ internal class TextRenderer
         }
 
         List<string> linesToDrawThisCall = [.. allLines.Take(linesThatFit)];
-        float heightDrawnThisCall = 0;
-        float lineY = currentYOnPage; 
+        float widthDrawnThisCall = 0;
+        float lineY = currentYOnPage;
+        int linesDrawnCount = 0;
 
         foreach (string line in linesToDrawThisCall)
         {
@@ -129,6 +119,7 @@ internal class TextRenderer
 
             SKRect lineBounds = new();
             float measuredWidth = font.MeasureText(line, out lineBounds);
+            widthDrawnThisCall = Math.Max(widthDrawnThisCall, measuredWidth);
             float drawX = elementContentLeftX;
 
             if (horizontalAlignment is TextAlignment.Center) drawX = elementContentLeftX + (availableWidthForTextLayout - measuredWidth) / 2f;
@@ -176,9 +167,26 @@ internal class TextRenderer
             }
             canvas.Restore();
 
-            heightDrawnThisCall += fontLineSpacing;
             lineY += fontLineSpacing;
+            linesDrawnCount++;
         }
+
+        // --- START OF FINAL CHANGE ---
+        // Calculate both layout height and visual height.
+        float heightDrawnThisCall = linesDrawnCount * fontLineSpacing;
+        float visualHeightDrawn = 0;
+
+        if (linesDrawnCount > 0)
+        {
+            SKFontMetrics fontMetrics = font.Metrics;
+            // The visual height of a single line of text (from the very top to the very bottom of the ink).
+            float visualLineHeight = fontMetrics.Descent - fontMetrics.Ascent;
+
+            // The total visual height is the space taken by (n-1) full line spacings,
+            // plus the visual height of the font for the final line.
+            visualHeightDrawn = (linesDrawnCount - 1) * fontLineSpacing + visualLineHeight;
+        }
+        // --- END OF FINAL CHANGE ---
 
         PdfParagraph? remainingParagraph = null;
         bool requiresNewPage = false;
@@ -198,11 +206,10 @@ internal class TextRenderer
             requiresNewPage = true;
         }
 
-        // Si se implementa VerticalAlignment con HeightRequest, HeightDrawnThisCall podría necesitar
-        // ser la altura solicitada (si el texto cupo) en lugar de la altura intrínseca del texto.
-        return new RenderOutput(heightDrawnThisCall, remainingParagraph, requiresNewPage);
+        return new RenderOutput(heightDrawnThisCall, widthDrawnThisCall, remainingParagraph, requiresNewPage, visualHeightDrawn);
     }
 
+    // ... (El resto del fichero permanece sin cambios)
     private List<string> BreakTextIntoLines(string text, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
     {
         var lines = new List<string>();

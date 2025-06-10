@@ -47,7 +47,8 @@ internal class ImageRenderer
         if (skImage is null)
         {
             float phHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent);
-            return Task.FromResult(new RenderOutput(phHeight, null, false));
+            float phWidth = Math.Min(availableWidthForImageContent, 100f);
+            return Task.FromResult(new RenderOutput(phHeight, phWidth, null, false));
         }
 
         using (skImage)
@@ -60,7 +61,7 @@ internal class ImageRenderer
             if (targetRectInCurrentSpace.Height > 0 && targetRectInCurrentSpace.Width > 0 && targetRectInCurrentSpace.Height <= availableHeightForImageContent)
             {
                 canvas.DrawImage(skImage, targetRectInCurrentSpace);
-                return Task.FromResult(new RenderOutput(targetRectInCurrentSpace.Height, null, false));
+                return Task.FromResult(new RenderOutput(targetRectInCurrentSpace.Height, targetRectInCurrentSpace.Width, null, false));
             }
 
             SKSize newPagePhysicalSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
@@ -78,7 +79,8 @@ internal class ImageRenderer
             {
                 System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Image too large. No content space on new page. PageSize: {pageDefinition.Size}, PageMargins: {pageDefinition.Margins}, ImageMargins: {image.GetMargin}");
                 float phHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent, "[Imagen Demasiado Grande]");
-                return Task.FromResult(new RenderOutput(phHeight, null, false));
+                float phWidth = Math.Min(availableWidthForImageContent, 100f);
+                return Task.FromResult(new RenderOutput(phHeight, phWidth, null, false));
             }
 
             SKRect targetRectOnNewPage = CalculateTargetRect(skImage, image.CurrentAspect,
@@ -90,14 +92,15 @@ internal class ImageRenderer
                 targetRectOnNewPage.Height <= newPageAvailHeightForImageContent &&
                 targetRectOnNewPage.Width <= newPageAvailWidthForImageContent)
             {
-                return Task.FromResult(new RenderOutput(0, image, true));
+                return Task.FromResult(new RenderOutput(0, 0, image, true));
             }
 
             System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Image too large for a new page. Calculated new page rect: {targetRectOnNewPage}, Available: {newPageAvailWidthForImageContent}x{newPageAvailHeightForImageContent}");
             float placeholderHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY,
                                                       availableWidthForImageContent, availableHeightForImageContent,
                                                       "[Imagen Demasiado Grande]");
-            return Task.FromResult(new RenderOutput(placeholderHeight, null, false));
+            float placeholderWidth = Math.Min(availableWidthForImageContent, 100f);
+            return Task.FromResult(new RenderOutput(placeholderHeight, placeholderWidth, null, false));
         }
     }
 
@@ -210,7 +213,7 @@ internal class ImageRenderer
 
         if (resultWidth <= 0 || resultHeight <= 0) return SKRect.Empty;
 
-        float offsetX = (availableContentWidth - resultWidth) / 2f;
+        float offsetX = (containerWidth - resultWidth) / 2f;
         float offsetY = 0;
 
         return SKRect.Create(drawAtX + offsetX, drawAtY + offsetY, resultWidth, resultHeight);

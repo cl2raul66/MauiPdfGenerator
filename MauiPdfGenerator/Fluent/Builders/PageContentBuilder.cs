@@ -1,6 +1,5 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Models.Elements;
-using MauiPdfGenerator.Fluent.Builders;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -35,5 +34,21 @@ internal class PageContentBuilder : IPageContentBuilder
         var image = new PdfImage(stream);
         _children.Add(image);
         return image;
+    }
+
+    public PdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content)
+    {
+        var stack = new PdfVerticalStackLayout(_fontRegistry);
+        content(stack);
+        _children.Add(stack);
+        return stack;
+    }
+
+    public PdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content)
+    {
+        var stack = new PdfHorizontalStackLayout(_fontRegistry);
+        content(stack);
+        _children.Add(stack);
+        return stack;
     }
 }

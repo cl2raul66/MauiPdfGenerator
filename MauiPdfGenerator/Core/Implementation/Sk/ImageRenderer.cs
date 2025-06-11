@@ -35,11 +35,13 @@ internal class ImageRenderer
             skImage = null;
         }
 
-        float elementContentDrawX = contentRect.Left + (float)image.GetMargin.Left;
-        float elementContentDrawY = currentY;
+        // The padded area for the element's content, inside its own Margin.
+        float elementContentDrawX = contentRect.Left + (float)image.GetMargin.Left + (float)image.GetPadding.Left;
+        float elementContentDrawY = currentY + (float)image.GetPadding.Top;
 
-        float availableWidthForImageContent = contentRect.Width - (float)image.GetMargin.Left - (float)image.GetMargin.Right;
-        float availableHeightForImageContent = contentRect.Bottom - currentY - (float)image.GetMargin.Bottom;
+        // The available width/height for the image itself, after subtracting margin and padding.
+        float availableWidthForImageContent = contentRect.Width - (float)image.GetMargin.HorizontalThickness - (float)image.GetPadding.HorizontalThickness;
+        float availableHeightForImageContent = contentRect.Bottom - currentY - (float)image.GetMargin.VerticalThickness - (float)image.GetPadding.VerticalThickness;
 
         availableWidthForImageContent = Math.Max(0, availableWidthForImageContent);
         availableHeightForImageContent = Math.Max(0, availableHeightForImageContent);
@@ -48,7 +50,10 @@ internal class ImageRenderer
         {
             float phHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent);
             float phWidth = Math.Min(availableWidthForImageContent, 100f);
-            return Task.FromResult(new RenderOutput(phHeight, phWidth, null, false));
+
+            float totalHeight = phHeight + (float)image.GetPadding.VerticalThickness;
+            float totalWidth = phWidth + (float)image.GetPadding.HorizontalThickness;
+            return Task.FromResult(new RenderOutput(totalHeight, totalWidth, null, false, phHeight));
         }
 
         using (skImage)
@@ -61,26 +66,30 @@ internal class ImageRenderer
             if (targetRectInCurrentSpace.Height > 0 && targetRectInCurrentSpace.Width > 0 && targetRectInCurrentSpace.Height <= availableHeightForImageContent)
             {
                 canvas.DrawImage(skImage, targetRectInCurrentSpace);
-                return Task.FromResult(new RenderOutput(targetRectInCurrentSpace.Height, targetRectInCurrentSpace.Width, null, false));
+                float totalHeight = targetRectInCurrentSpace.Height + (float)image.GetPadding.VerticalThickness;
+                float totalWidth = targetRectInCurrentSpace.Width + (float)image.GetPadding.HorizontalThickness;
+                return Task.FromResult(new RenderOutput(totalHeight, totalWidth, null, false, targetRectInCurrentSpace.Height));
             }
 
             SKSize newPagePhysicalSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
             float newPageAvailWidthForImageContent = newPagePhysicalSize.Width
                                                  - (float)pageDefinition.Margins.Left - (float)pageDefinition.Margins.Right
-                                                 - (float)image.GetMargin.Left - (float)image.GetMargin.Right;
+                                                 - (float)image.GetMargin.HorizontalThickness - (float)image.GetPadding.HorizontalThickness;
             float newPageAvailHeightForImageContent = newPagePhysicalSize.Height
                                                   - (float)pageDefinition.Margins.Top - (float)pageDefinition.Margins.Bottom
-                                                  - (float)image.GetMargin.Top - (float)image.GetMargin.Bottom;
+                                                  - (float)image.GetMargin.VerticalThickness - (float)image.GetPadding.VerticalThickness;
 
             newPageAvailWidthForImageContent = Math.Max(0, newPageAvailWidthForImageContent);
             newPageAvailHeightForImageContent = Math.Max(0, newPageAvailHeightForImageContent);
 
             if (newPageAvailWidthForImageContent <= 0 || newPageAvailHeightForImageContent <= 0)
             {
-                System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Image too large. No content space on new page. PageSize: {pageDefinition.Size}, PageMargins: {pageDefinition.Margins}, ImageMargins: {image.GetMargin}");
+                System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Image too large. No content space on new page. PageSize: {pageDefinition.Size}, PageMargins: {pageDefinition.Margins}, ImageMargins: {image.GetMargin}, ImagePadding: {image.GetPadding}");
                 float phHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent, "[Imagen Demasiado Grande]");
                 float phWidth = Math.Min(availableWidthForImageContent, 100f);
-                return Task.FromResult(new RenderOutput(phHeight, phWidth, null, false));
+                float totalHeight = phHeight + (float)image.GetPadding.VerticalThickness;
+                float totalWidth = phWidth + (float)image.GetPadding.HorizontalThickness;
+                return Task.FromResult(new RenderOutput(totalHeight, totalWidth, null, false, phHeight));
             }
 
             SKRect targetRectOnNewPage = CalculateTargetRect(skImage, image.CurrentAspect,
@@ -100,7 +109,9 @@ internal class ImageRenderer
                                                       availableWidthForImageContent, availableHeightForImageContent,
                                                       "[Imagen Demasiado Grande]");
             float placeholderWidth = Math.Min(availableWidthForImageContent, 100f);
-            return Task.FromResult(new RenderOutput(placeholderHeight, placeholderWidth, null, false));
+            float totalFinalHeight = placeholderHeight + (float)image.GetPadding.VerticalThickness;
+            float totalFinalWidth = placeholderWidth + (float)image.GetPadding.HorizontalThickness;
+            return Task.FromResult(new RenderOutput(totalFinalHeight, totalFinalWidth, null, false, placeholderHeight));
         }
     }
 

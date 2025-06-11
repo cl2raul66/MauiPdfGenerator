@@ -82,14 +82,32 @@ internal class TextRenderer
             _ => originalText,
         };
 
-        float availableWidthForTextLayout = currentPageContentRect.Width - (float)paragraph.GetMargin.Left - (float)paragraph.GetMargin.Right;
+        // The padded area for the element's content, inside its own Margin.
+        float contentTopY = currentYOnPage + (float)paragraph.GetPadding.Top;
+
+        float availableWidthForTextLayout = currentPageContentRect.Width
+                                          - (float)paragraph.GetMargin.HorizontalThickness
+                                          - (float)paragraph.GetPadding.HorizontalThickness;
         availableWidthForTextLayout = Math.Max(0, availableWidthForTextLayout);
-        float elementContentLeftX = currentPageContentRect.Left + (float)paragraph.GetMargin.Left;
-        float elementContentRightX = currentPageContentRect.Right - (float)paragraph.GetMargin.Right;
-        float availableHeightForDrawing = currentPageContentRect.Bottom - currentYOnPage;
+
+        float elementContentLeftX = currentPageContentRect.Left
+                                  + (float)paragraph.GetMargin.Left
+                                  + (float)paragraph.GetPadding.Left;
+
+        float elementContentRightX = currentPageContentRect.Right
+                                   - (float)paragraph.GetMargin.Right
+                                   - (float)paragraph.GetPadding.Right;
+
+        // The total height available for drawing now starts from the padded top position.
+        float availableHeightForDrawing = currentPageContentRect.Bottom - contentTopY - (float)paragraph.GetPadding.Bottom;
 
         List<string> allLines = BreakTextIntoLines(textToRender, font, availableWidthForTextLayout, lineBreakMode);
-        if (allLines.Count == 0) return new RenderOutput(0, 0, null, false);
+        if (allLines.Count == 0)
+        {
+            // Even if there's no text, padding still takes up space.
+            float emptyHeight = (float)paragraph.GetPadding.VerticalThickness;
+            return new RenderOutput(emptyHeight, (float)paragraph.GetPadding.HorizontalThickness, null, false, 0);
+        }
 
         float fontLineSpacing = font.Spacing;
         if (fontLineSpacing <= 0) fontLineSpacing = fontSize * 1.2f;
@@ -110,12 +128,12 @@ internal class TextRenderer
 
         List<string> linesToDrawThisCall = [.. allLines.Take(linesThatFit)];
         float widthDrawnThisCall = 0;
-        float lineY = currentYOnPage;
+        float lineY = contentTopY; // Drawing starts inside the top padding
         int linesDrawnCount = 0;
 
         foreach (string line in linesToDrawThisCall)
         {
-            if (lineY + fontLineSpacing > currentPageContentRect.Bottom + 0.01f) break;
+            if (lineY + fontLineSpacing > contentTopY + availableHeightForDrawing + 0.01f) break;
 
             SKRect lineBounds = new();
             float measuredWidth = font.MeasureText(line, out lineBounds);
@@ -131,7 +149,8 @@ internal class TextRenderer
 
             canvas.Save();
 
-            canvas.ClipRect(SKRect.Create(elementContentLeftX, currentYOnPage, availableWidthForTextLayout, availableHeightForDrawing));
+            var clipRect = SKRect.Create(elementContentLeftX, contentTopY, availableWidthForTextLayout, availableHeightForDrawing);
+            canvas.ClipRect(clipRect);
             canvas.DrawText(line, drawX, textDrawY, font, paint);
 
             if (textDecorations is not TextDecorations.None)
@@ -171,22 +190,17 @@ internal class TextRenderer
             linesDrawnCount++;
         }
 
-        // --- START OF FINAL CHANGE ---
-        // Calculate both layout height and visual height.
-        float heightDrawnThisCall = linesDrawnCount * fontLineSpacing;
         float visualHeightDrawn = 0;
-
         if (linesDrawnCount > 0)
         {
             SKFontMetrics fontMetrics = font.Metrics;
-            // The visual height of a single line of text (from the very top to the very bottom of the ink).
             float visualLineHeight = fontMetrics.Descent - fontMetrics.Ascent;
-
-            // The total visual height is the space taken by (n-1) full line spacings,
-            // plus the visual height of the font for the final line.
             visualHeightDrawn = (linesDrawnCount - 1) * fontLineSpacing + visualLineHeight;
         }
-        // --- END OF FINAL CHANGE ---
+
+        // The total height consumed by the element is its visual content plus its vertical padding.
+        float heightDrawnThisCall = visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
+        float totalWidth = widthDrawnThisCall + (float)paragraph.GetPadding.HorizontalThickness;
 
         PdfParagraph? remainingParagraph = null;
         bool requiresNewPage = false;
@@ -206,10 +220,9 @@ internal class TextRenderer
             requiresNewPage = true;
         }
 
-        return new RenderOutput(heightDrawnThisCall, widthDrawnThisCall, remainingParagraph, requiresNewPage, visualHeightDrawn);
+        return new RenderOutput(heightDrawnThisCall, totalWidth, remainingParagraph, requiresNewPage, visualHeightDrawn);
     }
 
-    // ... (El resto del fichero permanece sin cambios)
     private List<string> BreakTextIntoLines(string text, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
     {
         var lines = new List<string>();

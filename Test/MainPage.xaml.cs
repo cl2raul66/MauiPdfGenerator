@@ -54,16 +54,26 @@ public partial class MainPage : ContentPage
                     {
                         vsl.Paragraph("HSL Item A").FontSize(10);
                         vsl.Paragraph("HSL Item B").FontSize(10);
-                        vsl.Paragraph("HSL Item C").FontSize(10);
-                    }).Spacing(16f).BackgroundColor(Colors.LightGray).HorizontalOptions(LayoutAlignment.Fill);
+                        vsl.Paragraph("HSL Item C").FontSize(10).Padding(8f);
+                    }).BackgroundColor(Colors.LightGray);
 
                     c.Paragraph("Elemento 3 después del HSL, de nuevo en el VerticalStackLayout.");
 
                     c.HorizontalLine();
 
-                    c.PdfImage(new MemoryStream(imageData))
+                    c.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.PdfImage(new MemoryStream(imageData))
                          .WidthRequest(64).HeightRequest(64)
                          .Aspect(Aspect.AspectFit);
+                        hsl.PdfImage(new MemoryStream(imageData))
+                         .WidthRequest(64).HeightRequest(64)
+                         .Aspect(Aspect.AspectFit);
+                        hsl.PdfImage(new MemoryStream(imageData))
+                         .WidthRequest(64).HeightRequest(64)
+                         .Aspect(Aspect.AspectFit).Padding(8f);
+                    }).BackgroundColor(Colors.LightGray);
+                    
                 }).Build()
             .SaveAsync(targetFilePath);
 

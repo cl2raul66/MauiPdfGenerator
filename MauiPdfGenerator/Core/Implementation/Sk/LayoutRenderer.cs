@@ -50,7 +50,6 @@ internal class LayoutRenderer
             {
                 currentYinVsl += result.HeightDrawnThisCall;
                 totalContentHeightDrawn += result.HeightDrawnThisCall;
-                // <<< CORRECTION: The total width of the content must account for the child's full width, including its padding.
                 totalContentWidthDrawn = Math.Max(totalContentWidthDrawn, result.WidthDrawnThisCall);
             }
 
@@ -140,7 +139,7 @@ internal class LayoutRenderer
         using SKCanvas recordingCanvas = recorder.BeginRecording(hslPaddedContentRect);
 
         float currentXinHsl = 0;
-        float maxContentHeight = 0;
+        float maxChildContentHeight = 0;
 
         var childrenToRender = new Queue<PdfElement>(hsl.Children);
         var remainingChildrenForNextPage = new List<PdfElement>();
@@ -163,8 +162,8 @@ internal class LayoutRenderer
 
             if (result.HeightDrawnThisCall > 0)
             {
-                // <<< CORRECTION: The max height of the content must account for the child's full height, including its padding.
-                maxContentHeight = Math.Max(maxContentHeight, result.HeightDrawnThisCall);
+                // We use HeightDrawnThisCall because it includes the child's own padding.
+                maxChildContentHeight = Math.Max(maxChildContentHeight, result.HeightDrawnThisCall);
                 currentXinHsl += result.WidthDrawnThisCall;
             }
 
@@ -178,7 +177,7 @@ internal class LayoutRenderer
 
         using SKPicture picture = recorder.EndRecording();
 
-        float layoutContentHeight = maxContentHeight;
+        float layoutContentHeight = maxChildContentHeight;
         float finalVisualHeight = hsl.GetVerticalOptions == LayoutAlignment.Fill ? hslMarginRect.Height : layoutContentHeight + (float)hsl.GetPadding.VerticalThickness;
 
         if (finalVisualHeight > hslMarginRect.Height && finalVisualHeight > 0)
@@ -200,12 +199,25 @@ internal class LayoutRenderer
             }
             float finalX = hslMarginRect.Left + offsetX;
 
+            // --- START OF CORRECTION ---
             float contentOffsetY = 0;
+            // The available vertical space for the content, inside the layout's padding.
+            float availableContentHeight = finalVisualHeight - (float)hsl.GetPadding.VerticalThickness;
+
             switch (hsl.GetVerticalOptions)
             {
-                case LayoutAlignment.Center: contentOffsetY = (finalVisualHeight - layoutContentHeight - (float)hsl.GetPadding.VerticalThickness) / 2; break;
-                case LayoutAlignment.End: contentOffsetY = finalVisualHeight - layoutContentHeight - (float)hsl.GetPadding.Bottom; break;
-                default: contentOffsetY = (float)hsl.GetPadding.Top; break;
+                case LayoutAlignment.Center:
+                    contentOffsetY = (availableContentHeight - layoutContentHeight) / 2;
+                    break;
+                case LayoutAlignment.End:
+                    contentOffsetY = availableContentHeight - layoutContentHeight;
+                    break;
+                // 'Start' and 'Fill' both align content to the top of the padded area.
+                case LayoutAlignment.Start:
+                case LayoutAlignment.Fill:
+                default:
+                    contentOffsetY = 0;
+                    break;
             }
 
             if (hsl.GetBackgroundColor is not null)
@@ -216,9 +228,11 @@ internal class LayoutRenderer
             }
 
             canvas.Save();
-            canvas.Translate(finalX + (float)hsl.GetPadding.Left, startY + contentOffsetY);
+            // The final translation includes the layout's top padding PLUS the calculated content offset.
+            canvas.Translate(finalX + (float)hsl.GetPadding.Left, startY + (float)hsl.GetPadding.Top + contentOffsetY);
             canvas.DrawPicture(picture);
             canvas.Restore();
+            // --- END OF CORRECTION ---
         }
 
         PdfHorizontalStackLayout? continuation = null;
@@ -227,6 +241,6 @@ internal class LayoutRenderer
             continuation = new PdfHorizontalStackLayout(remainingChildrenForNextPage, hsl);
         }
 
-        return new RenderOutput(finalVisualHeight, naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness, continuation, requiresNewPage, maxContentHeight);
+        return new RenderOutput(finalVisualHeight, naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness, continuation, requiresNewPage, layoutContentHeight);
     }
 }

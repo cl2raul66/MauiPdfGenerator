@@ -48,14 +48,7 @@ public partial class MainPage : ContentPage
                 .Content(c =>
                 {
                     c.Paragraph("Elemento 1 dentro del VerticalStackLayout.");
-                    c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");
-
-                    c.VerticalStackLayout(vsl =>
-                    {
-                        vsl.Paragraph("HSL Item A").FontSize(10);
-                        vsl.Paragraph("HSL Item B").FontSize(10);
-                        vsl.Paragraph("HSL Item C").FontSize(10).Padding(8f);
-                    }).BackgroundColor(Colors.LightGray);
+                    c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");                    
 
                     c.Paragraph("Elemento 3 después del HSL, de nuevo en el VerticalStackLayout.");
 
@@ -65,15 +58,18 @@ public partial class MainPage : ContentPage
                     {
                         hsl.PdfImage(new MemoryStream(imageData))
                          .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
+                         .Aspect(Aspect.AspectFit).Padding(8f, 0);
+                        hsl.VerticalStackLayout(vsl =>
+                        {
+                            vsl.Paragraph("HSL Item A").FontSize(10);
+                            vsl.Paragraph("HSL Item B").FontSize(10).Padding(8f, 0);
+                            vsl.Paragraph("HSL Item C").FontSize(10).Padding(0, 8f);
+                        }).BackgroundColor(Colors.LightGray);
                         hsl.PdfImage(new MemoryStream(imageData))
                          .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                        hsl.PdfImage(new MemoryStream(imageData))
-                         .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit).Padding(8f);
-                    }).BackgroundColor(Colors.LightGray);
-                    
+                         .Aspect(Aspect.Fill).Padding(0, 8f);
+                    }).HorizontalOptions(LayoutAlignment.Fill).Padding(8f);
+
                 }).Build()
             .SaveAsync(targetFilePath);
 

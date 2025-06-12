@@ -3,6 +3,13 @@ name: Publish NuGet Packages
 on:
   push:
     branches: [ master ] 
+    paths-ignore:
+      - 'README.md'
+      - '.github/FUNDING.yml'
+      - '.github/workflows/nuget-publish.yml'
+      - 'LICENSE.txt'
+      - '.github/ISSUE_TEMPLATE/feature_request.md'
+      - '.github/ISSUE_TEMPLATE/bug_report.md'
     
 jobs:
   detect-changes:

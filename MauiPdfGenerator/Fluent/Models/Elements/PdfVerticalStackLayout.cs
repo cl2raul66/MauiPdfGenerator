@@ -8,7 +8,7 @@ public class PdfVerticalStackLayout : PdfLayoutElement<PdfVerticalStackLayout>, 
     private readonly List<PdfElement> _children = [];
     private readonly PdfFontRegistryBuilder _fontRegistry;
 
-    public IReadOnlyList<PdfElement> Children => _children.AsReadOnly();
+    internal IReadOnlyList<PdfElement> Children => _children.AsReadOnly();
 
     internal PdfVerticalStackLayout(PdfFontRegistryBuilder fontRegistry)
     {

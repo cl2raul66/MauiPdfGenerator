@@ -67,7 +67,7 @@ public partial class MainPage : ContentPage
                         }).BackgroundColor(Colors.LightGray).HeightRequest(64).WidthRequest(64);
                         hsl.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.Fill)
                          .WidthRequest(64).HeightRequest(64);
-                    }).BackgroundColor(Colors.Snow).HorizontalOptions(LayoutAlignment.Fill).Padding(8f).HeightRequest(100);
+                    }).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.Lime);
 
                 }).Build()
             .SaveAsync(targetFilePath);

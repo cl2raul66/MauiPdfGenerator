@@ -10,19 +10,21 @@ internal class LayoutRenderer
 {
     public async Task<RenderOutput> RenderVerticalStackLayoutAsync(SKCanvas canvas, PdfVerticalStackLayout vsl, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
     {
-        // The available area for the layout, inside its parent, after applying its own margin.
         float leftMargin = (float)vsl.GetMargin.Left;
         float rightMargin = (float)vsl.GetMargin.Right;
         SKRect vslMarginRect = SKRect.Create(parentRect.Left + leftMargin, startY, parentRect.Width - leftMargin - rightMargin, parentRect.Bottom - startY);
+
+        if (vsl.GetWidthRequest.HasValue)
+        {
+            vslMarginRect.Right = vslMarginRect.Left + (float)vsl.GetWidthRequest.Value;
+        }
 
         if (vslMarginRect.Width <= 0 || vslMarginRect.Height <= 0)
         {
             return new RenderOutput(0, 0, null, false);
         }
 
-        // The area for the CHILDREN, inside the layout's PADDING.
-        // This rect is relative to the recording canvas, which starts at (0,0).
-        SKRect vslPaddedContentRect = new SKRect(
+        SKRect vslPaddedContentRect = new(
             0, 0,
             vslMarginRect.Width - (float)vsl.GetPadding.HorizontalThickness,
             vslMarginRect.Height - (float)vsl.GetPadding.VerticalThickness
@@ -39,10 +41,9 @@ internal class LayoutRenderer
         var remainingChildrenForNextPage = new List<PdfElement>();
         bool requiresNewPage = false;
 
-        while (childrenToRender.Any())
+        while (childrenToRender.Count != 0)
         {
             var child = childrenToRender.Dequeue();
-            // The available rect for a child is relative to the recording canvas.
             var childAvailableRect = SKRect.Create(0, currentYinVsl, vslPaddedContentRect.Width, vslPaddedContentRect.Height - currentYinVsl);
             var result = await elementRenderer(recordingCanvas, child, pageDef, childAvailableRect, currentYinVsl);
 
@@ -61,7 +62,7 @@ internal class LayoutRenderer
                 break;
             }
 
-            if (childrenToRender.Any())
+            if (childrenToRender.Count != 0)
             {
                 if (currentYinVsl + vsl.GetSpacing > vslPaddedContentRect.Height + 0.01f)
                 {
@@ -76,19 +77,25 @@ internal class LayoutRenderer
 
         using SKPicture picture = recorder.EndRecording();
 
-        // The final height/width of the layout includes its content and padding.
-        float finalLayoutHeight = totalContentHeightDrawn + (float)vsl.GetPadding.VerticalThickness;
+        float visualContentHeight = totalContentHeightDrawn;
+
+        float finalLayoutHeight = vsl.GetHeightRequest.HasValue ?
+            (float)vsl.GetHeightRequest.Value :
+            visualContentHeight + (float)vsl.GetPadding.VerticalThickness;
+
         float naturalLayoutWidth = totalContentWidthDrawn + (float)vsl.GetPadding.HorizontalThickness;
 
         if (totalContentHeightDrawn > 0)
         {
-            float finalContainerWidth = vsl.GetHorizontalOptions == LayoutAlignment.Fill ? vslMarginRect.Width : naturalLayoutWidth;
+            float finalContainerWidth = vsl.GetHorizontalOptions is LayoutAlignment.Fill ? vslMarginRect.Width : naturalLayoutWidth;
+            if (vsl.GetWidthRequest.HasValue) finalContainerWidth = (float)vsl.GetWidthRequest.Value;
+
             float offsetX = 0;
 
             switch (vsl.GetHorizontalOptions)
             {
-                case LayoutAlignment.Center: offsetX = (vslMarginRect.Width - naturalLayoutWidth) / 2; break;
-                case LayoutAlignment.End: offsetX = vslMarginRect.Width - naturalLayoutWidth; break;
+                case LayoutAlignment.Center: offsetX = (vslMarginRect.Width - finalContainerWidth) / 2; break;
+                case LayoutAlignment.End: offsetX = vslMarginRect.Width - finalContainerWidth; break;
                 default: offsetX = 0; break;
             }
 
@@ -102,20 +109,19 @@ internal class LayoutRenderer
             }
 
             canvas.Save();
-            // Translate to the final aligned position, then account for padding to draw the children.
             canvas.Translate(finalX + (float)vsl.GetPadding.Left, startY + (float)vsl.GetPadding.Top);
             canvas.DrawPicture(picture);
             canvas.Restore();
         }
 
         PdfVerticalStackLayout? continuation = null;
-        if (remainingChildrenForNextPage.Any())
+        if (remainingChildrenForNextPage.Count != 0)
         {
             continuation = new PdfVerticalStackLayout(remainingChildrenForNextPage, vsl);
         }
 
-        // The height consumed by this element in the parent layout is its total final height.
-        return new RenderOutput(finalLayoutHeight, naturalLayoutWidth, continuation, requiresNewPage, totalContentHeightDrawn);
+        float consumedWidth = vsl.GetWidthRequest.HasValue ? (float)vsl.GetWidthRequest.Value : naturalLayoutWidth;
+        return new RenderOutput(finalLayoutHeight, consumedWidth, continuation, requiresNewPage, visualContentHeight);
     }
 
     public async Task<RenderOutput> RenderHorizontalStackLayoutAsync(SKCanvas canvas, PdfHorizontalStackLayout hsl, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
@@ -124,12 +130,17 @@ internal class LayoutRenderer
         float rightMargin = (float)hsl.GetMargin.Right;
         SKRect hslMarginRect = SKRect.Create(parentRect.Left + leftMargin, startY, parentRect.Width - leftMargin - rightMargin, parentRect.Bottom - startY);
 
+        if (hsl.GetWidthRequest.HasValue)
+        {
+            hslMarginRect.Right = hslMarginRect.Left + (float)hsl.GetWidthRequest.Value;
+        }
+
         if (hslMarginRect.Width <= 0 || hslMarginRect.Height <= 0)
         {
             return new RenderOutput(0, 0, null, false);
         }
 
-        SKRect hslPaddedContentRect = new SKRect(
+        SKRect hslPaddedContentRect = new(
             0, 0,
             hslMarginRect.Width - (float)hsl.GetPadding.HorizontalThickness,
             hslMarginRect.Height - (float)hsl.GetPadding.VerticalThickness
@@ -162,12 +173,11 @@ internal class LayoutRenderer
 
             if (result.HeightDrawnThisCall > 0)
             {
-                // We use HeightDrawnThisCall because it includes the child's own padding.
                 maxChildContentHeight = Math.Max(maxChildContentHeight, result.HeightDrawnThisCall);
                 currentXinHsl += result.WidthDrawnThisCall;
             }
 
-            if (childrenToRender.Any())
+            if (childrenToRender.Count != 0)
             {
                 currentXinHsl += hsl.GetSpacing;
             }
@@ -178,7 +188,10 @@ internal class LayoutRenderer
         using SKPicture picture = recorder.EndRecording();
 
         float layoutContentHeight = maxChildContentHeight;
-        float finalVisualHeight = hsl.GetVerticalOptions == LayoutAlignment.Fill ? hslMarginRect.Height : layoutContentHeight + (float)hsl.GetPadding.VerticalThickness;
+
+        float finalVisualHeight = hsl.GetHeightRequest.HasValue ?
+            (float)hsl.GetHeightRequest.Value :
+            layoutContentHeight + (float)hsl.GetPadding.VerticalThickness;
 
         if (finalVisualHeight > hslMarginRect.Height && finalVisualHeight > 0)
         {
@@ -189,37 +202,24 @@ internal class LayoutRenderer
         {
             float naturalLayoutWidth = naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness;
             float finalContainerWidth = hsl.GetHorizontalOptions == LayoutAlignment.Fill ? hslMarginRect.Width : naturalLayoutWidth;
-            float offsetX = 0;
+            if (hsl.GetWidthRequest.HasValue) finalContainerWidth = (float)hsl.GetWidthRequest.Value;
 
-            switch (hsl.GetHorizontalOptions)
+            float offsetX = hsl.GetHorizontalOptions switch
             {
-                case LayoutAlignment.Center: offsetX = (hslMarginRect.Width - naturalLayoutWidth) / 2; break;
-                case LayoutAlignment.End: offsetX = hslMarginRect.Width - naturalLayoutWidth; break;
-                default: offsetX = 0; break;
-            }
+                LayoutAlignment.Center => (hslMarginRect.Width - finalContainerWidth) / 2,
+                LayoutAlignment.End => offsetX = hslMarginRect.Width - finalContainerWidth,
+                _ => offsetX = 0
+            };
             float finalX = hslMarginRect.Left + offsetX;
 
-            // --- START OF CORRECTION ---
-            float contentOffsetY = 0;
-            // The available vertical space for the content, inside the layout's padding.
             float availableContentHeight = finalVisualHeight - (float)hsl.GetPadding.VerticalThickness;
-
-            switch (hsl.GetVerticalOptions)
+            float contentOffsetY = 0;
+            contentOffsetY = hsl.GetVerticalOptions switch
             {
-                case LayoutAlignment.Center:
-                    contentOffsetY = (availableContentHeight - layoutContentHeight) / 2;
-                    break;
-                case LayoutAlignment.End:
-                    contentOffsetY = availableContentHeight - layoutContentHeight;
-                    break;
-                // 'Start' and 'Fill' both align content to the top of the padded area.
-                case LayoutAlignment.Start:
-                case LayoutAlignment.Fill:
-                default:
-                    contentOffsetY = 0;
-                    break;
-            }
-
+                LayoutAlignment.Center => (availableContentHeight - layoutContentHeight) / 2,
+                LayoutAlignment.End => availableContentHeight - layoutContentHeight,
+                _ => 0,
+            };
             if (hsl.GetBackgroundColor is not null)
             {
                 using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(hsl.GetBackgroundColor), Style = SKPaintStyle.Fill };
@@ -228,19 +228,18 @@ internal class LayoutRenderer
             }
 
             canvas.Save();
-            // The final translation includes the layout's top padding PLUS the calculated content offset.
             canvas.Translate(finalX + (float)hsl.GetPadding.Left, startY + (float)hsl.GetPadding.Top + contentOffsetY);
             canvas.DrawPicture(picture);
             canvas.Restore();
-            // --- END OF CORRECTION ---
         }
 
         PdfHorizontalStackLayout? continuation = null;
-        if (remainingChildrenForNextPage.Any())
+        if (remainingChildrenForNextPage.Count != 0)
         {
             continuation = new PdfHorizontalStackLayout(remainingChildrenForNextPage, hsl);
         }
 
-        return new RenderOutput(finalVisualHeight, naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness, continuation, requiresNewPage, layoutContentHeight);
+        float consumedWidth = hsl.GetWidthRequest.HasValue ? (float)hsl.GetWidthRequest.Value : naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness;
+        return new RenderOutput(finalVisualHeight, consumedWidth, continuation, requiresNewPage, layoutContentHeight);
     }
 }

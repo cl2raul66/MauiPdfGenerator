@@ -82,31 +82,33 @@ internal class TextRenderer
             _ => originalText,
         };
 
-        // The padded area for the element's content, inside its own Margin.
+        float availableWidthForElement = paragraph.GetWidthRequest.HasValue ?
+            (float)paragraph.GetWidthRequest.Value :
+            currentPageContentRect.Width - (float)paragraph.GetMargin.HorizontalThickness;
+
         float contentTopY = currentYOnPage + (float)paragraph.GetPadding.Top;
 
-        float availableWidthForTextLayout = currentPageContentRect.Width
-                                          - (float)paragraph.GetMargin.HorizontalThickness
-                                          - (float)paragraph.GetPadding.HorizontalThickness;
+        float availableWidthForTextLayout = availableWidthForElement - (float)paragraph.GetPadding.HorizontalThickness;
         availableWidthForTextLayout = Math.Max(0, availableWidthForTextLayout);
 
-        float elementContentLeftX = currentPageContentRect.Left
-                                  + (float)paragraph.GetMargin.Left
-                                  + (float)paragraph.GetPadding.Left;
+        float elementContentLeftX = currentPageContentRect.Left + (float)paragraph.GetMargin.Left + (float)paragraph.GetPadding.Left;
+        float elementContentRightX = elementContentLeftX + availableWidthForTextLayout;
 
-        float elementContentRightX = currentPageContentRect.Right
-                                   - (float)paragraph.GetMargin.Right
-                                   - (float)paragraph.GetPadding.Right;
+        float availableHeightForElement = paragraph.GetHeightRequest.HasValue ?
+            (float)paragraph.GetHeightRequest.Value :
+            currentPageContentRect.Bottom - currentYOnPage - (float)paragraph.GetMargin.VerticalThickness;
 
-        // The total height available for drawing now starts from the padded top position.
-        float availableHeightForDrawing = currentPageContentRect.Bottom - contentTopY - (float)paragraph.GetPadding.Bottom;
+        float availableHeightForDrawing = availableHeightForElement - (float)paragraph.GetPadding.VerticalThickness;
 
         List<string> allLines = BreakTextIntoLines(textToRender, font, availableWidthForTextLayout, lineBreakMode);
         if (allLines.Count == 0)
         {
-            // Even if there's no text, padding still takes up space.
             float emptyHeight = (float)paragraph.GetPadding.VerticalThickness;
-            return new RenderOutput(emptyHeight, (float)paragraph.GetPadding.HorizontalThickness, null, false, 0);
+            if (paragraph.GetHeightRequest.HasValue) emptyHeight = Math.Max(emptyHeight, (float)paragraph.GetHeightRequest.Value);
+            float emptyWidth = (float)paragraph.GetPadding.HorizontalThickness;
+            if (paragraph.GetWidthRequest.HasValue) emptyWidth = Math.Max(emptyWidth, (float)paragraph.GetWidthRequest.Value);
+
+            return new RenderOutput(emptyHeight, emptyWidth, null, false, 0);
         }
 
         float fontLineSpacing = font.Spacing;
@@ -128,7 +130,7 @@ internal class TextRenderer
 
         List<string> linesToDrawThisCall = [.. allLines.Take(linesThatFit)];
         float widthDrawnThisCall = 0;
-        float lineY = contentTopY; // Drawing starts inside the top padding
+        float lineY = contentTopY;
         int linesDrawnCount = 0;
 
         foreach (string line in linesToDrawThisCall)
@@ -198,9 +200,13 @@ internal class TextRenderer
             visualHeightDrawn = (linesDrawnCount - 1) * fontLineSpacing + visualLineHeight;
         }
 
-        // The total height consumed by the element is its visual content plus its vertical padding.
-        float heightDrawnThisCall = visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
-        float totalWidth = widthDrawnThisCall + (float)paragraph.GetPadding.HorizontalThickness;
+        float heightDrawnThisCall = paragraph.GetHeightRequest.HasValue ?
+            (float)paragraph.GetHeightRequest.Value + (float)paragraph.GetPadding.VerticalThickness :
+            visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
+
+        float totalWidth = paragraph.GetWidthRequest.HasValue ?
+            (float)paragraph.GetWidthRequest.Value + (float)paragraph.GetPadding.HorizontalThickness :
+            widthDrawnThisCall + (float)paragraph.GetPadding.HorizontalThickness;
 
         PdfParagraph? remainingParagraph = null;
         bool requiresNewPage = false;
@@ -254,7 +260,7 @@ internal class TextRenderer
     private string TruncateSingleLine(string textSegment, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
     {
         float ellipsisWidth = font.MeasureText(Ellipsis);
-        if (maxWidth < ellipsisWidth && maxWidth > 0) return Ellipsis.Substring(0, (int)font.BreakText(Ellipsis, maxWidth));
+        if (maxWidth < ellipsisWidth && maxWidth > 0) return Ellipsis[..(int)font.BreakText(Ellipsis, maxWidth)];
         if (maxWidth <= 0) return string.Empty;
 
         float availableWidthForText = maxWidth - ellipsisWidth;

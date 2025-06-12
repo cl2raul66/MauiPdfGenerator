@@ -35,11 +35,9 @@ internal class ImageRenderer
             skImage = null;
         }
 
-        // The padded area for the element's content, inside its own Margin.
         float elementContentDrawX = contentRect.Left + (float)image.GetMargin.Left + (float)image.GetPadding.Left;
         float elementContentDrawY = currentY + (float)image.GetPadding.Top;
 
-        // The available width/height for the image itself, after subtracting margin and padding.
         float availableWidthForImageContent = contentRect.Width - (float)image.GetMargin.HorizontalThickness - (float)image.GetPadding.HorizontalThickness;
         float availableHeightForImageContent = contentRect.Bottom - currentY - (float)image.GetMargin.VerticalThickness - (float)image.GetPadding.VerticalThickness;
 
@@ -49,9 +47,8 @@ internal class ImageRenderer
         if (skImage is null)
         {
             float phHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent);
-            float phWidth = Math.Min(availableWidthForImageContent, 100f);
-
-            float totalHeight = phHeight + (float)image.GetPadding.VerticalThickness;
+            float phWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableWidthForImageContent, 100f);
+            float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : phHeight) + (float)image.GetPadding.VerticalThickness;
             float totalWidth = phWidth + (float)image.GetPadding.HorizontalThickness;
             return Task.FromResult(new RenderOutput(totalHeight, totalWidth, null, false, phHeight));
         }
@@ -61,13 +58,13 @@ internal class ImageRenderer
             SKRect targetRectInCurrentSpace = CalculateTargetRect(skImage, image.CurrentAspect,
                                                        elementContentDrawX, elementContentDrawY,
                                                        availableWidthForImageContent, availableHeightForImageContent,
-                                                       image.RequestedWidth, image.RequestedHeight);
+                                                       image.GetWidthRequest, image.GetHeightRequest);
 
             if (targetRectInCurrentSpace.Height > 0 && targetRectInCurrentSpace.Width > 0 && targetRectInCurrentSpace.Height <= availableHeightForImageContent)
             {
                 canvas.DrawImage(skImage, targetRectInCurrentSpace);
-                float totalHeight = targetRectInCurrentSpace.Height + (float)image.GetPadding.VerticalThickness;
-                float totalWidth = targetRectInCurrentSpace.Width + (float)image.GetPadding.HorizontalThickness;
+                float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : targetRectInCurrentSpace.Height) + (float)image.GetPadding.VerticalThickness;
+                float totalWidth = (image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : targetRectInCurrentSpace.Width) + (float)image.GetPadding.HorizontalThickness;
                 return Task.FromResult(new RenderOutput(totalHeight, totalWidth, null, false, targetRectInCurrentSpace.Height));
             }
 
@@ -86,8 +83,8 @@ internal class ImageRenderer
             {
                 System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Image too large. No content space on new page. PageSize: {pageDefinition.Size}, PageMargins: {pageDefinition.Margins}, ImageMargins: {image.GetMargin}, ImagePadding: {image.GetPadding}");
                 float phHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent, "[Imagen Demasiado Grande]");
-                float phWidth = Math.Min(availableWidthForImageContent, 100f);
-                float totalHeight = phHeight + (float)image.GetPadding.VerticalThickness;
+                float phWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableWidthForImageContent, 100f);
+                float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : phHeight) + (float)image.GetPadding.VerticalThickness;
                 float totalWidth = phWidth + (float)image.GetPadding.HorizontalThickness;
                 return Task.FromResult(new RenderOutput(totalHeight, totalWidth, null, false, phHeight));
             }
@@ -95,7 +92,7 @@ internal class ImageRenderer
             SKRect targetRectOnNewPage = CalculateTargetRect(skImage, image.CurrentAspect,
                                                            0, 0,
                                                            newPageAvailWidthForImageContent, newPageAvailHeightForImageContent,
-                                                           image.RequestedWidth, image.RequestedHeight);
+                                                           image.GetWidthRequest, image.GetHeightRequest);
 
             if (targetRectOnNewPage.Height > 0 && targetRectOnNewPage.Width > 0 &&
                 targetRectOnNewPage.Height <= newPageAvailHeightForImageContent &&
@@ -108,8 +105,8 @@ internal class ImageRenderer
             float placeholderHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY,
                                                       availableWidthForImageContent, availableHeightForImageContent,
                                                       "[Imagen Demasiado Grande]");
-            float placeholderWidth = Math.Min(availableWidthForImageContent, 100f);
-            float totalFinalHeight = placeholderHeight + (float)image.GetPadding.VerticalThickness;
+            float placeholderWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableWidthForImageContent, 100f);
+            float totalFinalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : placeholderHeight) + (float)image.GetPadding.VerticalThickness;
             float totalFinalWidth = placeholderWidth + (float)image.GetPadding.HorizontalThickness;
             return Task.FromResult(new RenderOutput(totalFinalHeight, totalFinalWidth, null, false, placeholderHeight));
         }

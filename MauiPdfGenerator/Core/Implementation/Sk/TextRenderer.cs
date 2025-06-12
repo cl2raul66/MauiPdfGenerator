@@ -1,7 +1,7 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Fluent.Models.Elements;
 using SkiaSharp;
 using System.Diagnostics;
 
@@ -28,7 +28,6 @@ internal class TextRenderer
         Color textColor = paragraph.CurrentTextColor ?? pageDefinition.PageDefaultTextColor;
         FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes;
         TextAlignment horizontalAlignment = paragraph.CurrentHorizontalAlignment;
-        // TextAlignment verticalAlignment = paragraph.CurrentVerticalAlignment; // Guardado para futura implementación con HeightRequest
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraph.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
         TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform;
@@ -83,24 +82,32 @@ internal class TextRenderer
             _ => originalText,
         };
 
-        float availableWidthForTextLayout = currentPageContentRect.Width - (float)paragraph.GetMargin.Left - (float)paragraph.GetMargin.Right;
-        availableWidthForTextLayout = Math.Max(0, availableWidthForTextLayout);
-        float elementContentLeftX = currentPageContentRect.Left + (float)paragraph.GetMargin.Left;
-        float elementContentRightX = currentPageContentRect.Right - (float)paragraph.GetMargin.Right;
-        float availableHeightForDrawing = currentPageContentRect.Bottom - currentYOnPage;
+        // The padded area for the element's content, inside its own Margin.
+        float contentTopY = currentYOnPage + (float)paragraph.GetPadding.Top;
 
-        // Lógica para VerticalTextAlignment (simplificada por ahora, necesitará HeightRequest para ser efectiva)
-        // float yOffsetForVerticalAlignment = 0f;
-        // if (paragraph.CurrentVerticalAlignment != VerticalTextAlignment.Start)
-        // {
-        //     // Aquí se necesitaría la altura total asignada al párrafo (HeightRequest)
-        //     // y la altura intrínseca del texto para calcular el offset.
-        //     // Por ahora, VerticalAlignment no tendrá efecto visual en el bloque de texto.
-        // }
-        // float drawStartY = currentYOnPage + yOffsetForVerticalAlignment;
+        float availableWidthForTextLayout = currentPageContentRect.Width
+                                          - (float)paragraph.GetMargin.HorizontalThickness
+                                          - (float)paragraph.GetPadding.HorizontalThickness;
+        availableWidthForTextLayout = Math.Max(0, availableWidthForTextLayout);
+
+        float elementContentLeftX = currentPageContentRect.Left
+                                  + (float)paragraph.GetMargin.Left
+                                  + (float)paragraph.GetPadding.Left;
+
+        float elementContentRightX = currentPageContentRect.Right
+                                   - (float)paragraph.GetMargin.Right
+                                   - (float)paragraph.GetPadding.Right;
+
+        // The total height available for drawing now starts from the padded top position.
+        float availableHeightForDrawing = currentPageContentRect.Bottom - contentTopY - (float)paragraph.GetPadding.Bottom;
 
         List<string> allLines = BreakTextIntoLines(textToRender, font, availableWidthForTextLayout, lineBreakMode);
-        if (allLines.Count == 0) return new RenderOutput(0, null, false);
+        if (allLines.Count == 0)
+        {
+            // Even if there's no text, padding still takes up space.
+            float emptyHeight = (float)paragraph.GetPadding.VerticalThickness;
+            return new RenderOutput(emptyHeight, (float)paragraph.GetPadding.HorizontalThickness, null, false, 0);
+        }
 
         float fontLineSpacing = font.Spacing;
         if (fontLineSpacing <= 0) fontLineSpacing = fontSize * 1.2f;
@@ -120,15 +127,17 @@ internal class TextRenderer
         }
 
         List<string> linesToDrawThisCall = [.. allLines.Take(linesThatFit)];
-        float heightDrawnThisCall = 0;
-        float lineY = currentYOnPage; 
+        float widthDrawnThisCall = 0;
+        float lineY = contentTopY; // Drawing starts inside the top padding
+        int linesDrawnCount = 0;
 
         foreach (string line in linesToDrawThisCall)
         {
-            if (lineY + fontLineSpacing > currentPageContentRect.Bottom + 0.01f) break;
+            if (lineY + fontLineSpacing > contentTopY + availableHeightForDrawing + 0.01f) break;
 
             SKRect lineBounds = new();
             float measuredWidth = font.MeasureText(line, out lineBounds);
+            widthDrawnThisCall = Math.Max(widthDrawnThisCall, measuredWidth);
             float drawX = elementContentLeftX;
 
             if (horizontalAlignment is TextAlignment.Center) drawX = elementContentLeftX + (availableWidthForTextLayout - measuredWidth) / 2f;
@@ -140,7 +149,8 @@ internal class TextRenderer
 
             canvas.Save();
 
-            canvas.ClipRect(SKRect.Create(elementContentLeftX, currentYOnPage, availableWidthForTextLayout, availableHeightForDrawing));
+            var clipRect = SKRect.Create(elementContentLeftX, contentTopY, availableWidthForTextLayout, availableHeightForDrawing);
+            canvas.ClipRect(clipRect);
             canvas.DrawText(line, drawX, textDrawY, font, paint);
 
             if (textDecorations is not TextDecorations.None)
@@ -176,9 +186,21 @@ internal class TextRenderer
             }
             canvas.Restore();
 
-            heightDrawnThisCall += fontLineSpacing;
             lineY += fontLineSpacing;
+            linesDrawnCount++;
         }
+
+        float visualHeightDrawn = 0;
+        if (linesDrawnCount > 0)
+        {
+            SKFontMetrics fontMetrics = font.Metrics;
+            float visualLineHeight = fontMetrics.Descent - fontMetrics.Ascent;
+            visualHeightDrawn = (linesDrawnCount - 1) * fontLineSpacing + visualLineHeight;
+        }
+
+        // The total height consumed by the element is its visual content plus its vertical padding.
+        float heightDrawnThisCall = visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
+        float totalWidth = widthDrawnThisCall + (float)paragraph.GetPadding.HorizontalThickness;
 
         PdfParagraph? remainingParagraph = null;
         bool requiresNewPage = false;
@@ -198,9 +220,7 @@ internal class TextRenderer
             requiresNewPage = true;
         }
 
-        // Si se implementa VerticalAlignment con HeightRequest, HeightDrawnThisCall podría necesitar
-        // ser la altura solicitada (si el texto cupo) en lugar de la altura intrínseca del texto.
-        return new RenderOutput(heightDrawnThisCall, remainingParagraph, requiresNewPage);
+        return new RenderOutput(heightDrawnThisCall, totalWidth, remainingParagraph, requiresNewPage, visualHeightDrawn);
     }
 
     private List<string> BreakTextIntoLines(string text, SKFont font, float maxWidth, LineBreakMode lineBreakMode)

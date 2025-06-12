@@ -21,49 +21,55 @@ public partial class MainPage : ContentPage
     }
 
     private async void GeneratePdf_Clicked(object sender, EventArgs e)
-    { 
-        using var httpClient = new HttpClient(); 
-        var uri2 = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
-        using Stream imageUriStream = await httpClient.GetStreamAsync(uri2);
-        
+    {
+        byte[] imageData;
+        using (var httpClient = new HttpClient())
+        {
+            var uri = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
+            imageData = await httpClient.GetByteArrayAsync(uri);
+        }
+
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
         try
         {
-            var doc = pdfDocFactory.CreateDocument(); 
-            Image i = new();           
+            var doc = pdfDocFactory.CreateDocument();
+            Image i = new();
 
             await doc
                 .Configuration(cfg =>
                 {
                     cfg.MetaData(data =>
                     {
-                        Title = "MauiPdfGenerator sample";
+                        data.Title("MauiPdfGenerator sample");
                     });
-                })                                      
-                .ContentPage()    
+                })
+                .ContentPage()
                 .Spacing(8f)
                 .Content(c =>
                 {
-                    c.Paragraph("P1: Default Comic (Regular expected)").TextDecorations(TextDecorations.Underline).HorizontalAlignment(TextAlignment.Center);
-                    c.Paragraph("P2: Default Comic with BOLD attribute (Comic Bold expected)")
-                        .FontAttributes(FontAttributes.Bold).HorizontalAlignment(TextAlignment.End);
-                    c.Paragraph("P3: Default Comic with ITALIC attribute (Comic Italic expected)")
-                        .FontAttributes(FontAttributes.Italic).VerticalAlignment(TextAlignment.End);
-                    c.Paragraph("P4: Explicitly ComicBoldFile (Comic Bold expected)")
-                        .FontFamily(PdfFonts.ComicBold).TextDecorations(TextDecorations.Strikethrough); 
-                    c.Paragraph("P5: Explicitly OpenSansSemibold (OpenSans Semibold expected)")
-                        .FontFamily(PdfFonts.OpenSansSemibold);
-                    c.Paragraph("P6: Explicitly OpenSansSemibold (OpenSans Regular expected)")
-                        .FontFamily(PdfFonts.OpenSansRegular);
+                    c.Paragraph("Elemento 1 dentro del VerticalStackLayout.");
+                    c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");                    
+
+                    c.Paragraph("Elemento 3 después del HSL, de nuevo en el VerticalStackLayout.");
+
                     c.HorizontalLine();
-                    c.PdfImage(imageUriStream)
+
+                    c.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.PdfImage(new MemoryStream(imageData))
                          .WidthRequest(64).HeightRequest(64)
-                         .Aspect(Aspect.AspectFit);
-                }).Build()
-                .ContentPage().DefaultTextDecorations(TextDecorations.Strikethrough).DefaultTextTransform(TextTransform.Uppercase).Content(c =>
-                {
-                    c.Paragraph("Hola mundo").TextTransform(TextTransform.None);
-                    c.Paragraph("Hola mundo").TextDecorations(TextDecorations.None);
+                         .Aspect(Aspect.AspectFit).Padding(8f, 0);
+                        hsl.VerticalStackLayout(vsl =>
+                        {
+                            vsl.Paragraph("HSL Item A").FontSize(10);
+                            vsl.Paragraph("HSL Item B").FontSize(10).Padding(8f, 0);
+                            vsl.Paragraph("HSL Item C").FontSize(10).Padding(0, 8f);
+                        }).BackgroundColor(Colors.LightGray);
+                        hsl.PdfImage(new MemoryStream(imageData))
+                         .WidthRequest(64).HeightRequest(64)
+                         .Aspect(Aspect.Fill).Padding(0, 8f);
+                    }).HorizontalOptions(LayoutAlignment.Fill).Padding(8f);
+
                 }).Build()
             .SaveAsync(targetFilePath);
 

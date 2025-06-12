@@ -2,7 +2,7 @@
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
-public interface IPageContentBuilder
+public interface IStackLayoutBuilder
 {
     PdfParagraph Paragraph(string text);
     PdfHorizontalLine HorizontalLine();

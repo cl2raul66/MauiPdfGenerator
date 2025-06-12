@@ -25,7 +25,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     private Color _pageDefaultTextColor = PdfParagraph.DefaultTextColor;
     private FontAttributes _pageDefaultFontAttributes = PdfParagraph.DefaultFontAttributes;
     private TextDecorations _pageDefaultTextDecorations = PdfParagraph.DefaultTextDecorations;
-    private TextTransform _pageDefaultTextTransform = PdfParagraph.DefaultTextTransform; 
+    private TextTransform _pageDefaultTextTransform = PdfParagraph.DefaultTextTransform;
 
 
     public PdfContentPageBuilder(PdfDocumentBuilder documentBuilder, PdfConfigurationBuilder documentConfiguration)
@@ -78,7 +78,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
 
     public PdfFontIdentifier? GetPageDefaultFontFamily() => _pageDefaultFontFamily;
     public TextDecorations GetPageDefaultTextDecorations() => _pageDefaultTextDecorations;
-    public TextTransform GetPageDefaultTextTransform() => _pageDefaultTextTransform; // NUEVO GETTER
+    public TextTransform GetPageDefaultTextTransform() => _pageDefaultTextTransform;
 
     public IPdfContentPage PageSize(PageSizeType pageSizeType)
     {

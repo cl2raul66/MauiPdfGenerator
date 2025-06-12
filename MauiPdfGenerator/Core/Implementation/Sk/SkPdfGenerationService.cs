@@ -9,9 +9,11 @@ namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal class SkPdfGenerationService : IPdfGenerationService
 {
-    private TextRenderer _textRenderer = new();
-    private ImageRenderer _imageRenderer = new();
+    private readonly TextRenderer _textRenderer = new();
+    private readonly ImageRenderer _imageRenderer = new();
+    private readonly LayoutRenderer _layoutRenderer = new();
     private PdfFontRegistryBuilder? _currentFontRegistry;
+
     public async Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry)
     {
         _currentFontRegistry = fontRegistry;
@@ -71,11 +73,8 @@ internal class SkPdfGenerationService : IPdfGenerationService
 
                     while (currentProcessingElement is not null || elementsToProcess.Count > 0)
                     {
-                        PdfElement elementToRender;
-
-                        elementToRender = currentProcessingElement is null
-                            ? elementsToProcess.Dequeue()
-                            : currentProcessingElement;
+                        PdfElement elementToRender = currentProcessingElement ?? elementsToProcess.Dequeue();
+                        currentProcessingElement = null;
 
                         bool isElementIntrinsicallyAContinuation = (elementToRender is PdfParagraph p && p.IsContinuation);
                         float elementTopMarginToApply = (float)elementToRender.GetMargin.Top;
@@ -96,23 +95,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
                         }
                         currentY += elementTopMarginToApply;
 
-                        RenderOutput result;
-                        switch (elementToRender)
-                        {
-                            case PdfParagraph para:
-                                result = await _textRenderer.RenderAsync(canvas, para, originalPageDefinition, currentPageContentRect, currentY, _currentFontRegistry);
-                                break;
-                            case PdfImage img:
-                                result = await _imageRenderer.RenderAsync(canvas, img, originalPageDefinition, currentPageContentRect, currentY);
-                                break;
-                            case PdfHorizontalLine line:
-                                float hlHeight = RenderHorizontalLine(canvas, line, originalPageDefinition, currentPageContentRect, currentY);
-                                result = new RenderOutput(hlHeight, null, false);
-                                break;
-                            default:
-                                result = new RenderOutput(0, null, false);
-                                break;
-                        }
+                        var result = await RenderElementAsync(canvas, elementToRender, originalPageDefinition, currentPageContentRect, currentY);
 
                         currentProcessingElement = result.RemainingElement;
 
@@ -153,11 +136,6 @@ internal class SkPdfGenerationService : IPdfGenerationService
                         {
                             break;
                         }
-
-                        if (elementsToProcess.Count == 0 && currentProcessingElement is null)
-                        {
-                            break;
-                        }
                     }
                     if (pageHasDrawnContent || currentProcessingElement is not null || elementsToProcess.Any())
                     {
@@ -183,7 +161,20 @@ internal class SkPdfGenerationService : IPdfGenerationService
         }
     }
 
-    private float RenderHorizontalLine(SKCanvas canvas, PdfHorizontalLine line, PdfPageData pageData, SKRect contentRect, float currentY)
+    private async Task<RenderOutput> RenderElementAsync(SKCanvas canvas, PdfElement element, PdfPageData pageDef, SKRect availableRect, float currentY)
+    {
+        return element switch
+        {
+            PdfParagraph para => await _textRenderer.RenderAsync(canvas, para, pageDef, availableRect, currentY, _currentFontRegistry),
+            PdfImage img => await _imageRenderer.RenderAsync(canvas, img, pageDef, availableRect, currentY),
+            PdfHorizontalLine line => RenderHorizontalLine(canvas, line, availableRect, currentY),
+            PdfVerticalStackLayout vsl => await _layoutRenderer.RenderVerticalStackLayoutAsync(canvas, vsl, pageDef, availableRect, currentY, RenderElementAsync),
+            PdfHorizontalStackLayout hsl => await _layoutRenderer.RenderHorizontalStackLayoutAsync(canvas, hsl, pageDef, availableRect, currentY, RenderElementAsync),
+            _ => new RenderOutput(0, 0, null, false),
+        };
+    }
+
+    private RenderOutput RenderHorizontalLine(SKCanvas canvas, PdfHorizontalLine line, SKRect contentRect, float currentY)
     {
         float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
         Color color = line.CurrentColor ?? PdfHorizontalLine.DefaultColor;
@@ -192,13 +183,13 @@ internal class SkPdfGenerationService : IPdfGenerationService
         float lineContentX = contentRect.Left + (float)line.GetMargin.Left;
         float lineContentWidth = contentRect.Width - (float)line.GetMargin.Left - (float)line.GetMargin.Right;
 
-        if (lineContentWidth <= 0) return thickness;
+        if (lineContentWidth <= 0) return new RenderOutput(thickness, 0, null, false);
 
         float availableHeightForLineContent = contentRect.Bottom - currentY - (float)line.GetMargin.Bottom;
 
         if (thickness > availableHeightForLineContent)
         {
-            return thickness;
+            return new RenderOutput(thickness, lineContentWidth, null, true);
         }
 
         using var paint = new SKPaint
@@ -215,10 +206,10 @@ internal class SkPdfGenerationService : IPdfGenerationService
 
         if (lineDrawY - thickness / 2f < contentRect.Top - 0.01f || lineDrawY + thickness / 2f > contentRect.Bottom + 0.01f)
         {
-            return thickness;
+            return new RenderOutput(thickness, lineContentWidth, null, true);
         }
 
         canvas.DrawLine(startX, lineDrawY, endX, lineDrawY, paint);
-        return thickness;
+        return new RenderOutput(thickness, lineContentWidth, null, false);
     }
 }

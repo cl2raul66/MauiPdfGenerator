@@ -25,7 +25,7 @@
 		<PackageTags>.NET MAUI; PDF; SkiaSharp;</PackageTags>
 		<PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<Version>1.5.0</Version>
+		<Version>1.5.1</Version>
 		<Authors>cl2raul66</Authors>
 		<Company>RandAMediaLabGroup</Company>
 		<PackageId>RandAMediaLabGroup.MauiPdfGenerator</PackageId>

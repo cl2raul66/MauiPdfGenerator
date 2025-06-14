@@ -64,10 +64,10 @@ public partial class MainPage : ContentPage
                             vsl.Paragraph("HSL Item A").FontSize(10);
                             vsl.Paragraph("HSL Item B").FontSize(10).LineBreakMode(LineBreakMode.TailTruncation).Padding(8f, 0);
                             vsl.Paragraph("HSL Item C").FontSize(10).Padding(0, 8f);
-                        }).BackgroundColor(Colors.LightGray).HeightRequest(64).WidthRequest(64);
+                        }).Margin(2f).BackgroundColor(Colors.LightGray).HeightRequest(64).WidthRequest(64);
                         hsl.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.Fill)
                          .WidthRequest(64).HeightRequest(64);
-                    }).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.Lime);
+                    }).Padding(8f).BackgroundColor(Colors.Azure);
 
                 }).Build()
             .SaveAsync(targetFilePath);

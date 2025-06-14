@@ -1,50 +1,90 @@
 ﻿namespace MauiPdfGenerator.Fluent.Models.Elements;
 
-/// <summary>
-/// Represents a base class for layout elements that can contain other elements
-/// and have common layout properties like Spacing, Padding, and Alignment.
-/// </summary>
-/// <typeparam name="TSelf">The type of the inheriting layout class, for fluent chaining.</typeparam>
-public abstract class PdfLayoutElement<TSelf> : PdfElement where TSelf : PdfLayoutElement<TSelf>
+public abstract class PdfLayoutElement : PdfElement
 {
-    internal protected float GetSpacing { get; protected set; }
-    internal protected Color? GetBackgroundColor { get; protected set; }
-    internal protected LayoutAlignment GetHorizontalOptions { get; protected set; }
-    internal protected LayoutAlignment GetVerticalOptions { get; protected set; }
+    protected readonly List<PdfElement> _children = [];
 
-    /// <summary>
-    /// Sets the space between child elements.
-    /// </summary>
-    public TSelf Spacing(float value)
+    internal float GetSpacing { get; private set; }
+    internal Color? GetBackgroundColor { get; private set; }
+    internal LayoutAlignment GetHorizontalOptions { get; private protected set; }
+    internal LayoutAlignment GetVerticalOptions { get; private protected set; }
+
+    internal IReadOnlyList<PdfElement> Children => _children.AsReadOnly();
+
+    internal void Add(PdfElement element)
+    {
+        _children.Add(element);
+    }
+
+    public new PdfLayoutElement Margin(double uniformMargin)
+    {
+        base.Margin(uniformMargin);
+        return this;
+    }
+
+    public new PdfLayoutElement Margin(double horizontalMargin, double verticalMargin)
+    {
+        base.Margin(horizontalMargin, verticalMargin);
+        return this;
+    }
+
+    public new PdfLayoutElement Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin)
+    {
+        base.Margin(leftMargin, topMargin, rightMargin, bottomMargin);
+        return this;
+    }
+
+    public new PdfLayoutElement Padding(double uniformPadding)
+    {
+        base.Padding(uniformPadding);
+        return this;
+    }
+
+    public new PdfLayoutElement Padding(double horizontalPadding, double verticalPadding)
+    {
+        base.Padding(horizontalPadding, verticalPadding);
+        return this;
+    }
+
+    public new PdfLayoutElement Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin)
+    {
+        base.Padding(leftPadding, topPadding, rightPadding, bottomMargin);
+        return this;
+    }
+
+    public new PdfLayoutElement WidthRequest(double width)
+    {
+        base.WidthRequest(width);
+        return this;
+    }
+
+    public new PdfLayoutElement HeightRequest(double height)
+    {
+        base.HeightRequest(height);
+        return this;
+    }
+
+    public PdfLayoutElement Spacing(float value)
     {
         GetSpacing = value >= 0 ? value : 0;
-        return (TSelf)this;
+        return this;
     }
 
-    /// <summary>
-    /// Sets the background color of the layout. The color covers the area including Padding, but not Margin.
-    /// </summary>
-    public TSelf BackgroundColor(Color color)
+    public PdfLayoutElement BackgroundColor(Color? color)
     {
         GetBackgroundColor = color;
-        return (TSelf)this;
+        return this;
     }
 
-    /// <summary>
-    /// Sets the horizontal alignment of the layout within its parent's allocated space.
-    /// </summary>
-    public TSelf HorizontalOptions(LayoutAlignment layoutAlignment)
+    public PdfLayoutElement HorizontalOptions(LayoutAlignment layoutAlignment)
     {
         GetHorizontalOptions = layoutAlignment;
-        return (TSelf)this;
+        return this;
     }
 
-    /// <summary>
-    /// Sets the vertical alignment of the layout within its parent's allocated space.
-    /// </summary>
-    public TSelf VerticalOptions(LayoutAlignment layoutAlignment)
+    public PdfLayoutElement VerticalOptions(LayoutAlignment layoutAlignment)
     {
         GetVerticalOptions = layoutAlignment;
-        return (TSelf)this;
+        return this;
     }
 }

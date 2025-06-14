@@ -64,6 +64,15 @@ public class PdfParagraph : PdfElement
         this.IsContinuation = true;
     }
 
+    public new PdfParagraph Margin(double uniformMargin) { base.Margin(uniformMargin); return this; }
+    public new PdfParagraph Margin(double horizontalMargin, double verticalMargin) { base.Margin(horizontalMargin, verticalMargin); return this; }
+    public new PdfParagraph Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin) { base.Margin(leftMargin, topMargin, rightMargin, bottomMargin); return this; }
+    public new PdfParagraph Padding(double uniformPadding) { base.Padding(uniformPadding); return this; }
+    public new PdfParagraph Padding(double horizontalPadding, double verticalPadding) { base.Padding(horizontalPadding, verticalPadding); return this; }
+    public new PdfParagraph Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin) { base.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this; }
+    public new PdfParagraph WidthRequest(double width) { base.WidthRequest(width); return this; }
+    public new PdfParagraph HeightRequest(double height) { base.HeightRequest(height); return this; }
+
     public PdfParagraph FontFamily(PdfFontIdentifier? family)
     {
         CurrentFontFamily = family;

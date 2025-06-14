@@ -4,10 +4,6 @@ public partial class PdfImage : PdfElement
 {
     public Aspect CurrentAspect { get; private set; } = Microsoft.Maui.Aspect.AspectFit;
 
-    internal double? RequestedWidth { get; private set; }
-
-    internal double? RequestedHeight { get; private set; }
-
     internal Stream ImageStream { get; }
 
     public PdfImage(Stream stream)
@@ -20,17 +16,14 @@ public partial class PdfImage : PdfElement
         ImageStream = stream;
     }
 
-    public PdfImage WidthRequest(double width)
-    {
-        RequestedWidth = width > 0 ? width : null;
-        return this;
-    }
-
-    public PdfImage HeightRequest(double height)
-    {
-        RequestedHeight = height > 0 ? height : null;
-        return this;
-    }
+    public new PdfImage Margin(double uniformMargin) { base.Margin(uniformMargin); return this; }
+    public new PdfImage Margin(double horizontalMargin, double verticalMargin) { base.Margin(horizontalMargin, verticalMargin); return this; }
+    public new PdfImage Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin) { base.Margin(leftMargin, topMargin, rightMargin, bottomMargin); return this; }
+    public new PdfImage Padding(double uniformPadding) { base.Padding(uniformPadding); return this; }
+    public new PdfImage Padding(double horizontalPadding, double verticalPadding) { base.Padding(horizontalPadding, verticalPadding); return this; }
+    public new PdfImage Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin) { base.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this; }
+    public new PdfImage WidthRequest(double width) { base.WidthRequest(width); return this; }
+    public new PdfImage HeightRequest(double height) { base.HeightRequest(height); return this; }
 
     public PdfImage Aspect(Aspect aspect)
     {

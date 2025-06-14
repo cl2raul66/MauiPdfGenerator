@@ -1,39 +1,43 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Models.Elements;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
-internal class PageContentBuilder : IPageContentBuilder
+internal class StackLayoutContentBuilder : IStackLayoutBuilder
 {
-    private readonly List<PdfElement> _children = [];
+    private readonly PdfLayoutElement _layout;
     private readonly PdfFontRegistryBuilder _fontRegistry;
 
-    public PageContentBuilder(PdfFontRegistryBuilder fontRegistry)
+    public StackLayoutContentBuilder(PdfLayoutElement layout, PdfFontRegistryBuilder fontRegistry)
     {
+        _layout = layout ?? throw new ArgumentNullException(nameof(layout));
         _fontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
     }
 
-    internal IReadOnlyList<PdfElement> GetChildren() => _children.AsReadOnly();
-
     public PdfParagraph Paragraph(string text)
     {
-        var paragraph = new PdfParagraph(text, _fontRegistry);
-        _children.Add(paragraph);
-        return paragraph;
+        var p = new PdfParagraph(text, _fontRegistry);
+        _layout.Add(p);
+        return p;
     }
 
     public PdfHorizontalLine HorizontalLine()
     {
         var line = new PdfHorizontalLine();
-        _children.Add(line);
+        _layout.Add(line);
         return line;
     }
 
     public PdfImage PdfImage(Stream stream)
     {
-        var image = new PdfImage(stream);
-        _children.Add(image);
-        return image;
+        var img = new PdfImage(stream);
+        _layout.Add(img);
+        return img;
     }
 
     public PdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content)
@@ -41,7 +45,7 @@ internal class PageContentBuilder : IPageContentBuilder
         var stack = new PdfVerticalStackLayout(_fontRegistry);
         var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
         content(builder);
-        _children.Add(stack);
+        _layout.Add(stack);
         return stack;
     }
 
@@ -50,8 +54,8 @@ internal class PageContentBuilder : IPageContentBuilder
         var stack = new PdfHorizontalStackLayout(_fontRegistry);
         var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
         content(builder);
-        _children.Add(stack);
+        _layout.Add(stack);
         return stack;
     }
 }
-// --- END OF FILE PageContentBuilder.cs ---
+// --- END OF FILE StackLayoutContentBuilder.cs ---

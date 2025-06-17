@@ -9,4 +9,5 @@ public interface IStackLayoutBuilder
     PdfImage PdfImage(Stream stream);
     PdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content);
     PdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content);
+    PdfGrid PdfGrid();
 }

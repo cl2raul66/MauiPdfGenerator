@@ -48,26 +48,40 @@ public partial class MainPage : ContentPage
                 .Content(c =>
                 {
                     c.Paragraph("Elemento 1 dentro del VerticalStackLayout.");
-                    c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");                    
-
+                    c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");
+                    c.PdfGrid()
+                        .BackgroundColor(Colors.LightSlateGray)
+                        .HorizontalOptions(LayoutAlignment.Center)
+                        .RowDefinitions(rd =>
+                        {
+                            rd.GridLength(GridUnitType.Auto);
+                            rd.GridLength(GridUnitType.Auto);
+                            rd.GridLength(GridUnitType.Star);
+                            rd.GridLength(100);
+                        })
+                        .ColumnDefinitions(cd =>
+                        {
+                            cd.GridLength(GridUnitType.Auto);
+                            cd.GridLength(GridUnitType.Star);
+                            cd.GridLength(100);
+                        })
+                        .Children(children =>
+                        {
+                            children.Paragraph("Grid").ColumnSpan(3);
+                            children.Paragraph("Autosized cell").Row(1);
+                            children.Paragraph("Other cell").Row(1).Column(1);
+                            children.Paragraph("Span two rows (or more if you want)").Row(1).Column(2).RowSpan(2);
+                            children.Paragraph("Autosized cell in with").Row(2);
+                            children.Paragraph("Leftover space").Row(2).Column(1);
+                            children.Paragraph("Span 2 columns").Row(3).ColumnSpan(2);
+                            children.Paragraph("Fixed 100x100").Row(3).Column(2);
+                        });
                     c.Paragraph("Elemento 3 después del HSL, de nuevo en el VerticalStackLayout.");
 
                     c.HorizontalLine();
 
-                    c.HorizontalStackLayout(hsl =>
-                    {
-                        hsl.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.AspectFit)
-                         .WidthRequest(64).HeightRequest(64)
-                         .Padding(8f, 0);
-                        hsl.VerticalStackLayout(vsl =>
-                        {
-                            vsl.Paragraph("HSL Item A").FontSize(10);
-                            vsl.Paragraph("HSL Item B").FontSize(10).LineBreakMode(LineBreakMode.TailTruncation).Padding(8f, 0);
-                            vsl.Paragraph("HSL Item C").FontSize(10).Padding(0, 8f);
-                        }).Margin(2f).BackgroundColor(Colors.LightGray).HeightRequest(64).WidthRequest(64);
-                        hsl.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.Fill)
+                    c.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.Fill)
                          .WidthRequest(64).HeightRequest(64);
-                    }).Padding(8f).BackgroundColor(Colors.Azure);
 
                 }).Build()
             .SaveAsync(targetFilePath);

@@ -57,5 +57,11 @@ internal class StackLayoutContentBuilder : IStackLayoutBuilder
         _layout.Add(stack);
         return stack;
     }
+
+    public PdfGrid PdfGrid()
+    {
+        var grid = new PdfGrid(_fontRegistry);
+        _layout.Add(grid);
+        return grid;
+    }
 }
-// --- END OF FILE StackLayoutContentBuilder.cs ---

@@ -12,6 +12,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
     private readonly TextRenderer _textRenderer = new();
     private readonly ImageRenderer _imageRenderer = new();
     private readonly LayoutRenderer _layoutRenderer = new();
+    private readonly GridRenderer _gridRenderer = new();
     private PdfFontRegistryBuilder? _currentFontRegistry;
 
     public async Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry)
@@ -168,6 +169,7 @@ internal class SkPdfGenerationService : IPdfGenerationService
             PdfParagraph para => await _textRenderer.RenderAsync(canvas, para, pageDef, availableRect, currentY, _currentFontRegistry),
             PdfImage img => await _imageRenderer.RenderAsync(canvas, img, pageDef, availableRect, currentY),
             PdfHorizontalLine line => RenderHorizontalLine(canvas, line, availableRect, currentY),
+            PdfGrid grid => await _gridRenderer.RenderAsync(canvas, grid, pageDef, availableRect, currentY, RenderElementAsync),
             PdfVerticalStackLayout vsl => await _layoutRenderer.RenderVerticalStackLayoutAsync(canvas, vsl, pageDef, availableRect, currentY, RenderElementAsync),
             PdfHorizontalStackLayout hsl => await _layoutRenderer.RenderHorizontalStackLayoutAsync(canvas, hsl, pageDef, availableRect, currentY, RenderElementAsync),
             _ => new RenderOutput(0, 0, null, false),

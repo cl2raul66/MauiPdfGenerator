@@ -4,9 +4,9 @@ namespace MauiPdfGenerator.Fluent.Models.Elements;
 
 public class PdfHorizontalStackLayout : PdfLayoutElement
 {
-    private readonly PdfFontRegistryBuilder _fontRegistry;
+    private readonly PdfFontRegistryBuilder? _fontRegistry;
 
-    internal PdfHorizontalStackLayout(PdfFontRegistryBuilder fontRegistry)
+    internal PdfHorizontalStackLayout(PdfFontRegistryBuilder? fontRegistry)
     {
         _fontRegistry = fontRegistry;
         GetHorizontalOptions = LayoutAlignment.Start;
@@ -25,4 +25,3 @@ public class PdfHorizontalStackLayout : PdfLayoutElement
         Padding(originalStyleSource.GetPadding);
     }
 }
-// --- END OF FILE PdfHorizontalStackLayout.cs ---

@@ -9,7 +9,7 @@ public abstract class PdfLayoutElement : PdfElement
     internal LayoutAlignment GetHorizontalOptions { get; private protected set; }
     internal LayoutAlignment GetVerticalOptions { get; private protected set; }
 
-    internal IReadOnlyList<PdfElement> Children => _children.AsReadOnly();
+    internal IReadOnlyList<PdfElement> GetChildren => _children.AsReadOnly();
 
     internal void Add(PdfElement element)
     {

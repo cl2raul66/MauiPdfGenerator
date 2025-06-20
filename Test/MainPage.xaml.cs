@@ -50,37 +50,29 @@ public partial class MainPage : ContentPage
                     c.Paragraph("Elemento 1 dentro del VerticalStackLayout.");
                     c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");
                     c.PdfGrid()
-                        .BackgroundColor(Colors.LightSlateGray)
-                        .HorizontalOptions(LayoutAlignment.Center)
                         .RowDefinitions(rd =>
                         {
                             rd.GridLength(GridUnitType.Auto);
-                            rd.GridLength(GridUnitType.Auto);
-                            rd.GridLength(GridUnitType.Star);
-                            rd.GridLength(100);
+                            rd.GridLength(50);
                         })
                         .ColumnDefinitions(cd =>
                         {
-                            cd.GridLength(GridUnitType.Auto);
-                            cd.GridLength(GridUnitType.Star);
                             cd.GridLength(100);
+                            cd.GridLength(GridUnitType.Auto);
                         })
                         .Children(children =>
                         {
-                            children.Paragraph("Grid").ColumnSpan(3);
-                            children.Paragraph("Autosized cell").Row(1);
-                            children.Paragraph("Other cell").Row(1).Column(1);
-                            children.Paragraph("Span two rows (or more if you want)").Row(1).Column(2).RowSpan(2);
-                            children.Paragraph("Autosized cell in with").Row(2);
-                            children.Paragraph("Leftover space").Row(2).Column(1);
-                            children.Paragraph("Span 2 columns").Row(3).ColumnSpan(2);
-                            children.Paragraph("Fixed 100x100").Row(3).Column(2);
+                            children.Paragraph("Celda 0,0 con texto largo que debería ajustar el alto de la fila.").TextColor(Colors.Red).Row(0).Column(0);
+                            children.Paragraph("Columna Auto").Row(0).Column(1);
+
+                            children.Paragraph("Celda Fija 1,0").Row(1).Column(0);
+                            children.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.AspectFit).HeightRequest(100).Row(1).Column(1);
                         });
                     c.Paragraph("Elemento 3 después del HSL, de nuevo en el VerticalStackLayout.");
 
                     c.HorizontalLine();
 
-                    c.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.Fill)
+                    c.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.AspectFit)
                          .WidthRequest(64).HeightRequest(64);
 
                 }).Build()

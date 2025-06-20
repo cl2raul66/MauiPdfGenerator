@@ -9,6 +9,7 @@ internal class GridCellChild : IGridCellChild
     internal int GetColumn { get; private set; } = 0;
     internal int GetRowSpan { get; private set; } = 1;
     internal int GetColumnSpan { get; private set; } = 1;
+    internal bool IsPositionExplicit { get; private set; } = false;
 
     public GridCellChild(PdfElement element)
     {
@@ -17,12 +18,14 @@ internal class GridCellChild : IGridCellChild
 
     public IGridCellChild Row(int row)
     {
-        GetRow = row > 0 ? row : 0;
+        GetRow = row >= 0 ? row : 0;
+        IsPositionExplicit = true;
         return this;
     }
     public IGridCellChild Column(int column)
     {
-        GetColumn = column > 0 ? column : 0;
+        GetColumn = column >= 0 ? column : 0;
+        IsPositionExplicit = true;
         return this;
     }
     public IGridCellChild RowSpan(int span)

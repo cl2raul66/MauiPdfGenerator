@@ -7,6 +7,12 @@ public abstract class PdfElement
     internal double? GetWidthRequest { get; private set; }
     internal double? GetHeightRequest { get; private set; }
 
+    internal int GridRow { get; private set; }
+    internal int GridColumn { get; private set; }
+    internal int GridRowSpan { get; private set; } = 1;
+    internal int GridColumnSpan { get; private set; } = 1;
+    internal bool IsGridPositionExplicit { get; private set; }
+
     public PdfElement Margin(double uniformMargin)
     {
         GetMargin = new Thickness(uniformMargin);
@@ -64,6 +70,32 @@ public abstract class PdfElement
     public PdfElement HeightRequest(double height)
     {
         GetHeightRequest = height > 0 ? height : null;
+        return this;
+    }
+
+    public PdfElement Row(int row)
+    {
+        GridRow = row > 0 ? row : 0;
+        IsGridPositionExplicit = true;
+        return this;
+    }
+
+    public PdfElement Column(int column)
+    {
+        GridColumn = column > 0 ? column : 0;
+        IsGridPositionExplicit = true;
+        return this;
+    }
+
+    public PdfElement RowSpan(int span)
+    {
+        GridRowSpan = span > 1 ? span : 1;
+        return this;
+    }
+
+    public PdfElement ColumnSpan(int span)
+    {
+        GridColumnSpan = span > 1 ? span : 1;
         return this;
     }
 }

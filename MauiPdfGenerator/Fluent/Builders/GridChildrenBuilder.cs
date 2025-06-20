@@ -14,38 +14,41 @@ internal class GridChildrenBuilder : IGridChildrenBuilder
         _fontRegistry = fontRegistry;
     }
 
-    private IGridCellChild AddElement(PdfElement element)
+    private PdfElement AddElement(PdfElement element)
     {
-        var cellChild = new GridCellChild(element);
-        _grid.AddChild(cellChild);
-        return cellChild;
+        _grid.Add(element);
+        return element;
     }
 
-    public IGridCellChild Paragraph(string text) => AddElement(new PdfParagraph(text, _fontRegistry));
-    public IGridCellChild PdfImage(Stream stream) => AddElement(new PdfImage(stream));
-    public IGridCellChild HorizontalLine() => AddElement(new PdfHorizontalLine());
+    public PdfParagraph Paragraph(string text) => (PdfParagraph)AddElement(new PdfParagraph(text, _fontRegistry));
+    public PdfImage PdfImage(Stream stream) => (PdfImage)AddElement(new PdfImage(stream));
+    public PdfHorizontalLine HorizontalLine() => (PdfHorizontalLine)AddElement(new PdfHorizontalLine());
 
-    public IGridCellChild VerticalStackLayout(Action<IStackLayoutBuilder> content)
+    public PdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content)
     {
         var stack = new PdfVerticalStackLayout(_fontRegistry);
         var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
         content(builder);
-        return AddElement(stack);
+        return (PdfVerticalStackLayout)AddElement(stack);
     }
 
-    public IGridCellChild HorizontalStackLayout(Action<IStackLayoutBuilder> content)
+    public PdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content)
     {
         var stack = new PdfHorizontalStackLayout(_fontRegistry);
         var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
         content(builder);
-        return AddElement(stack);
+        return (PdfHorizontalStackLayout)AddElement(stack);
     }
 
-    public IGridCellChild Grid(Action<IGridChildrenBuilder> content)
+    public PdfGrid Grid(Action<IPageContentBuilder> content)
     {
         var grid = new PdfGrid(_fontRegistry);
-        var builder = new GridChildrenBuilder(grid, _fontRegistry);
+        var builder = new PageContentBuilder(_fontRegistry);
         content(builder);
-        return AddElement(grid);
+        foreach (var item in builder.GetChildren())
+        {
+            grid.Add(item);
+        }
+        return (PdfGrid)AddElement(grid);
     }
 }

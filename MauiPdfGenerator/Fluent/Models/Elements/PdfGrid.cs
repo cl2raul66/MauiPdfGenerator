@@ -6,24 +6,22 @@ namespace MauiPdfGenerator.Fluent.Models.Elements;
 public class PdfGrid : PdfLayoutElement
 {
     private readonly PdfFontRegistryBuilder _fontRegistry;
-    private readonly List<GridCellChild> _gridChildren = [];
+    private List<PdfGridLength>? _rowDefinitions;
+    private List<PdfGridLength>? _columnDefinitions;
 
-    internal IReadOnlyList<PdfGridLength> RowDefinitionsList { get; private set; } = [];
-    internal IReadOnlyList<PdfGridLength> ColumnDefinitionsList { get; private set; } = [];
-    internal IReadOnlyList<GridCellChild> ChildrenList => _gridChildren.AsReadOnly();
+    internal IReadOnlyList<PdfGridLength> RowDefinitionsList => _rowDefinitions ??= [new PdfGridLength(1, GridUnitType.Star)];
+    internal IReadOnlyList<PdfGridLength> ColumnDefinitionsList => _columnDefinitions ??= [new PdfGridLength(1, GridUnitType.Star)];
 
     internal PdfGrid(PdfFontRegistryBuilder fontRegistry)
     {
         _fontRegistry = fontRegistry;
     }
 
-    internal void AddChild(GridCellChild child) => _gridChildren.Add(child);
-
     public PdfGrid RowDefinitions(Action<IGridDefinitionBuilder> config)
     {
         var builder = new GridDefinitionBuilder();
         config(builder);
-        RowDefinitionsList = builder.GetDefinitions();
+        _rowDefinitions = [.. builder.GetDefinitions()];
         return this;
     }
 
@@ -31,14 +29,15 @@ public class PdfGrid : PdfLayoutElement
     {
         var builder = new GridDefinitionBuilder();
         config(builder);
-        ColumnDefinitionsList = builder.GetDefinitions();
+        _columnDefinitions = [.. builder.GetDefinitions()];
         return this;
     }
 
-    public new PdfGrid Children(Action<IGridChildrenBuilder> config)
+    public PdfGrid Children(Action<IPageContentBuilder> config)
     {
-        var builder = new GridChildrenBuilder(this, _fontRegistry);
+        var builder = new PageContentBuilder(_fontRegistry);
         config(builder);
+        _children.AddRange(builder.GetChildren());
         return this;
     }
 

@@ -1,10 +1,9 @@
 ﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui;
 using System.Diagnostics;
 using MauiPdfGenerator;
 using MauiPdfGenerator.Fonts;
 using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Models;
 
@@ -47,34 +46,30 @@ public partial class MainPage : ContentPage
                 .Spacing(8f)
                 .Content(c =>
                 {
-                    c.Paragraph("Elemento 1 dentro del VerticalStackLayout.");
+                    c.Paragraph("Elemento 1 dentro del VerticalStackLayout.").HorizontalOptions(LayoutAlignment.Center);
                     c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");
-                    c.PdfGrid()
+                    c.PdfGrid().HorizontalOptions(LayoutAlignment.End).BackgroundColor(Colors.LightGrey)
                         .RowDefinitions(rd =>
                         {
                             rd.GridLength(GridUnitType.Auto);
-                            rd.GridLength(50);
+                            rd.GridLength(GridUnitType.Auto);
                         })
                         .ColumnDefinitions(cd =>
                         {
-                            cd.GridLength(100);
                             cd.GridLength(GridUnitType.Auto);
+                            cd.GridLength(200);
                         })
                         .Children(children =>
                         {
                             children.Paragraph("Celda 0,0 con texto largo que debería ajustar el alto de la fila.").TextColor(Colors.Red).Row(0).Column(0);
-                            children.Paragraph("Columna Auto").Row(0).Column(1);
+                            children.Paragraph("Columna fija 0,1").Row(0).Column(1).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightCyan);
 
-                            children.Paragraph("Celda Fija 1,0").Row(1).Column(0);
-                            children.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.AspectFit).HeightRequest(100).Row(1).Column(1);
+                            children.Paragraph("Celda auto 1,0").Row(1).Column(0);
+                            children.PdfImage(new MemoryStream(imageData)).Row(1).Column(1);
                         });
                     c.Paragraph("Elemento 3 después del HSL, de nuevo en el VerticalStackLayout.");
-
                     c.HorizontalLine();
-
-                    c.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.AspectFit)
-                         .WidthRequest(64).HeightRequest(64);
-
+                    c.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.AspectFit).HeightRequest(64).HorizontalOptions(LayoutAlignment.Center);                    
                 }).Build()
             .SaveAsync(targetFilePath);
 

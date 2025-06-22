@@ -143,4 +143,14 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     public float GetPageDefaultFontSize() => _pageDefaultFontSize;
     public Color GetPageDefaultTextColor() => _pageDefaultTextColor;
     public FontAttributes GetPageDefaultFontAttributes() => _pageDefaultFontAttributes;
+
+    // Implementación explícita de IPdfPage<IPdfContentPage>
+    IPdfContentPage IPdfPage<IPdfContentPage>.PageSize(PageSizeType pageSizeType) => PageSize(pageSizeType);
+    IPdfContentPage IPdfPage<IPdfContentPage>.PageOrientation(PageOrientationType pageOrientationType) => PageOrientation(pageOrientationType);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(float uniformMargin) => Margins(uniformMargin);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(float verticalMargin, float horizontalMargin) => Margins(verticalMargin, horizontalMargin);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(float leftMargin, float topMargin, float rightMargin, float bottomMargin) => Margins(leftMargin, topMargin, rightMargin, bottomMargin);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(DefaultMarginType defaultMarginType) => Margins(defaultMarginType);
+    IPdfContentPage IPdfPage<IPdfContentPage>.BackgroundColor(Color backgroundColor) => BackgroundColor(backgroundColor);
+    IPdfDocument IPdfPage<IPdfContentPage>.Build() => Build();
 }

@@ -1,6 +1,6 @@
-﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
+﻿using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
-namespace MauiPdfGenerator.Fluent.Models.Elements;
+namespace MauiPdfGenerator.Fluent.Models.Layouts;
 
 internal class GridCellChild : IGridCellChild
 {

@@ -1,5 +1,4 @@
 ﻿using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Core.Models;

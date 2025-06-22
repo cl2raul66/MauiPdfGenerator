@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Fluent.Models.Elements;
+﻿namespace MauiPdfGenerator.Fluent.Models;
 
 public abstract class PdfElement
 {
@@ -12,6 +12,10 @@ public abstract class PdfElement
     internal int GridRowSpan { get; private set; } = 1;
     internal int GridColumnSpan { get; private set; } = 1;
     internal bool IsGridPositionExplicit { get; private set; }
+
+    internal LayoutAlignment GetHorizontalOptions { get; private set; } = LayoutAlignment.Fill;
+    internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Fill;
+    internal Color? GetBackgroundColor { get; private set; }
 
     public PdfElement Margin(double uniformMargin)
     {
@@ -73,6 +77,32 @@ public abstract class PdfElement
         return this;
     }
 
+    public T Row<T>(int row) where T : PdfElement
+    {
+        GridRow = row > 0 ? row : 0;
+        IsGridPositionExplicit = true;
+        return (T)this;
+    }
+
+    public T Column<T>(int column) where T : PdfElement
+    {
+        GridColumn = column > 0 ? column : 0;
+        IsGridPositionExplicit = true;
+        return (T)this;
+    }
+
+    public T RowSpan<T>(int span) where T : PdfElement
+    {
+        GridRowSpan = span > 1 ? span : 1;
+        return (T)this;
+    }
+
+    public T ColumnSpan<T>(int span) where T : PdfElement
+    {
+        GridColumnSpan = span > 1 ? span : 1;
+        return (T)this;
+    }
+
     public PdfElement Row(int row)
     {
         GridRow = row > 0 ? row : 0;
@@ -96,6 +126,24 @@ public abstract class PdfElement
     public PdfElement ColumnSpan(int span)
     {
         GridColumnSpan = span > 1 ? span : 1;
+        return this;
+    }
+
+    public PdfElement HorizontalOptions(LayoutAlignment layoutAlignment)
+    {
+        GetHorizontalOptions = layoutAlignment;
+        return this;
+    }
+
+    public PdfElement VerticalOptions(LayoutAlignment layoutAlignment)
+    {
+        GetVerticalOptions = layoutAlignment;
+        return this;
+    }
+
+    public PdfElement BackgroundColor(Color? color)
+    {
+        GetBackgroundColor = color;
         return this;
     }
 }

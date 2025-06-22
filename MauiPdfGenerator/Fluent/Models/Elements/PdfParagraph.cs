@@ -1,5 +1,7 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
 using System.Diagnostics;
+using Microsoft.Maui.Graphics;
+using MauiPdfGenerator.Fluent.Enums;
 
 namespace MauiPdfGenerator.Fluent.Models.Elements;
 
@@ -72,6 +74,20 @@ public class PdfParagraph : PdfElement
     public new PdfParagraph Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin) { base.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this; }
     public new PdfParagraph WidthRequest(double width) { base.WidthRequest(width); return this; }
     public new PdfParagraph HeightRequest(double height) { base.HeightRequest(height); return this; }
+
+    public new PdfParagraph HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
+    public new PdfParagraph VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
+    public new PdfParagraph BackgroundColor(Color? color) { base.BackgroundColor(color); return this; }
+
+    public new PdfParagraph Row(int row) { base.Row(row); return this; }
+    public new PdfParagraph Column(int column) { base.Column(column); return this; }
+    public new PdfParagraph RowSpan(int span) { base.RowSpan(span); return this; }
+    public new PdfParagraph ColumnSpan(int span) { base.ColumnSpan(span); return this; }
+
+    public PdfParagraph RowGeneric(int row) { base.Row<PdfParagraph>(row); return this; }
+    public PdfParagraph ColumnGeneric(int column) { base.Column<PdfParagraph>(column); return this; }
+    public PdfParagraph RowSpanGeneric(int span) { base.RowSpan<PdfParagraph>(span); return this; }
+    public PdfParagraph ColumnSpanGeneric(int span) { base.ColumnSpan<PdfParagraph>(span); return this; }
 
     public PdfParagraph FontFamily(PdfFontIdentifier? family)
     {

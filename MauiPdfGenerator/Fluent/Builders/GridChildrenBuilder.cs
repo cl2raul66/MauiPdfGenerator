@@ -1,5 +1,7 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Fluent.Models.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 

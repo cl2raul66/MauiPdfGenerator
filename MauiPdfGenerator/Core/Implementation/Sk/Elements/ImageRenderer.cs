@@ -2,7 +2,7 @@
 using MauiPdfGenerator.Fluent.Models.Elements;
 using SkiaSharp;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
 internal class ImageRenderer
 {
@@ -18,7 +18,7 @@ internal class ImageRenderer
         {
             if (!imageStream.CanRead)
             {
-                System.Diagnostics.Debug.WriteLine("DEBUG ImageRenderer: Image stream is not readable. Rendering placeholder.");
+                System.Diagnostics.Debug.WriteLine("ERROR ImageRenderer: Image stream is not readable. Rendering placeholder.");
             }
             else
             {
@@ -31,18 +31,46 @@ internal class ImageRenderer
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Exception processing image stream: {ex.Message}. Rendering placeholder.");
+            System.Diagnostics.Debug.WriteLine($"ERROR ImageRenderer: Exception processing image stream: {ex.Message}. Rendering placeholder.");
             skImage = null;
         }
 
-        float elementContentDrawX = contentRect.Left + (float)image.GetMargin.Left + (float)image.GetPadding.Left;
-        float elementContentDrawY = currentY + (float)image.GetPadding.Top;
-
-        float availableWidthForImageContent = contentRect.Width - (float)image.GetMargin.HorizontalThickness - (float)image.GetPadding.HorizontalThickness;
-        float availableHeightForImageContent = contentRect.Bottom - currentY - (float)image.GetMargin.VerticalThickness - (float)image.GetPadding.VerticalThickness;
+        // Usar el área recibida tal cual, sin sumar márgenes ni paddings
+        float elementContentDrawX = contentRect.Left;
+        float elementContentDrawY = contentRect.Top;
+        float availableWidthForImageContent = contentRect.Width;
+        float availableHeightForImageContent = contentRect.Height;
 
         availableWidthForImageContent = Math.Max(0, availableWidthForImageContent);
         availableHeightForImageContent = Math.Max(0, availableHeightForImageContent);
+
+        // Dibuja el fondo si se especifica
+        SKRect? imageRectForBackground = null;
+        if (skImage is not null)
+        {
+            SKRect targetRectInCurrentSpace = CalculateTargetRect(skImage, image.CurrentAspect,
+                                                       elementContentDrawX, elementContentDrawY,
+                                                       availableWidthForImageContent, availableHeightForImageContent,
+                                                       image.GetWidthRequest, image.GetHeightRequest);
+            float extraX = (availableWidthForImageContent - targetRectInCurrentSpace.Width) / 2f;
+            float extraY = (availableHeightForImageContent - targetRectInCurrentSpace.Height) / 2f;
+            imageRectForBackground = SKRect.Create(
+                elementContentDrawX + Math.Max(0, extraX),
+                elementContentDrawY + Math.Max(0, extraY),
+                targetRectInCurrentSpace.Width,
+                targetRectInCurrentSpace.Height
+            );
+        }
+        if (image.GetBackgroundColor is not null && imageRectForBackground is not null)
+        {
+            using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(image.GetBackgroundColor), Style = SKPaintStyle.Fill };
+            canvas.DrawRect(imageRectForBackground.Value, bgPaint);
+        }
+        else if (image.GetBackgroundColor is not null && imageRectForBackground is null)
+        {
+            using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(image.GetBackgroundColor), Style = SKPaintStyle.Fill };
+            canvas.DrawRect(SKRect.Create(elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent), bgPaint);
+        }
 
         if (skImage is null)
         {
@@ -60,12 +88,23 @@ internal class ImageRenderer
                                                        availableWidthForImageContent, availableHeightForImageContent,
                                                        image.GetWidthRequest, image.GetHeightRequest);
 
-            if (targetRectInCurrentSpace.Height > 0 && targetRectInCurrentSpace.Width > 0 && targetRectInCurrentSpace.Height <= availableHeightForImageContent)
+            // Ajuste: centrar la imagen dentro del área asignada si sobra espacio
+            float extraX = (availableWidthForImageContent - targetRectInCurrentSpace.Width) / 2f;
+            float extraY = (availableHeightForImageContent - targetRectInCurrentSpace.Height) / 2f;
+            SKRect centeredRect = SKRect.Create(
+                elementContentDrawX + Math.Max(0, extraX),
+                elementContentDrawY + Math.Max(0, extraY),
+                targetRectInCurrentSpace.Width,
+                targetRectInCurrentSpace.Height
+            );
+
+            if (centeredRect.Height > 0 && centeredRect.Width > 0 && centeredRect.Height <= availableHeightForImageContent)
             {
-                canvas.DrawImage(skImage, targetRectInCurrentSpace);
-                float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : targetRectInCurrentSpace.Height) + (float)image.GetPadding.VerticalThickness;
-                float totalWidth = (image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : targetRectInCurrentSpace.Width) + (float)image.GetPadding.HorizontalThickness;
-                return Task.FromResult(new RenderOutput(totalHeight, totalWidth, null, false, targetRectInCurrentSpace.Height));
+                canvas.DrawImage(skImage, centeredRect);
+                float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : centeredRect.Height) + (float)image.GetPadding.VerticalThickness;
+                float totalWidth = (image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : centeredRect.Width) + (float)image.GetPadding.HorizontalThickness;
+                // Pasa la altura real como HeightDrawnThisCall y VisualHeightDrawn
+                return Task.FromResult(new RenderOutput(centeredRect.Height, totalWidth, null, false, centeredRect.Height));
             }
 
             SKSize newPagePhysicalSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
@@ -81,7 +120,7 @@ internal class ImageRenderer
 
             if (newPageAvailWidthForImageContent <= 0 || newPageAvailHeightForImageContent <= 0)
             {
-                System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Image too large. No content space on new page. PageSize: {pageDefinition.Size}, PageMargins: {pageDefinition.Margins}, ImageMargins: {image.GetMargin}, ImagePadding: {image.GetPadding}");
+                System.Diagnostics.Debug.WriteLine($"ERROR ImageRenderer: Image too large. No content space on new page. PageSize: {pageDefinition.Size}, Margins: {pageDefinition.Margins}, ImageMargins: {image.GetMargin}, ImagePadding: {image.GetPadding}");
                 float phHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY, availableWidthForImageContent, availableHeightForImageContent, "[Imagen Demasiado Grande]");
                 float phWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableWidthForImageContent, 100f);
                 float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : phHeight) + (float)image.GetPadding.VerticalThickness;
@@ -101,7 +140,7 @@ internal class ImageRenderer
                 return Task.FromResult(new RenderOutput(0, 0, image, true));
             }
 
-            System.Diagnostics.Debug.WriteLine($"DEBUG ImageRenderer: Image too large for a new page. Calculated new page rect: {targetRectOnNewPage}, Available: {newPageAvailWidthForImageContent}x{newPageAvailHeightForImageContent}");
+            System.Diagnostics.Debug.WriteLine($"ERROR ImageRenderer: Image too large for a new page. Calculated new page rect: {targetRectOnNewPage}, Available: {newPageAvailWidthForImageContent}x{newPageAvailHeightForImageContent}");
             float placeholderHeight = RenderPlaceholder(canvas, elementContentDrawX, elementContentDrawY,
                                                       availableWidthForImageContent, availableHeightForImageContent,
                                                       "[Imagen Demasiado Grande]");

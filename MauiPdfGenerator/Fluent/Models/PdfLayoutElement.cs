@@ -1,13 +1,13 @@
-﻿namespace MauiPdfGenerator.Fluent.Models.Elements;
+﻿namespace MauiPdfGenerator.Fluent.Models;
 
 public abstract class PdfLayoutElement : PdfElement
 {
     protected readonly List<PdfElement> _children = [];
 
     internal float GetSpacing { get; private set; }
-    internal Color? GetBackgroundColor { get; private set; }
-    internal LayoutAlignment GetHorizontalOptions { get; private protected set; }
-    internal LayoutAlignment GetVerticalOptions { get; private protected set; }
+    internal new Color? GetBackgroundColor { get; private set; }
+    internal new LayoutAlignment GetHorizontalOptions { get; private protected set; }
+    internal new LayoutAlignment GetVerticalOptions { get; private protected set; }
 
     internal IReadOnlyList<PdfElement> GetChildren => _children.AsReadOnly();
 
@@ -70,19 +70,19 @@ public abstract class PdfLayoutElement : PdfElement
         return this;
     }
 
-    public PdfLayoutElement BackgroundColor(Color? color)
+    public new PdfLayoutElement BackgroundColor(Color? color)
     {
         GetBackgroundColor = color;
         return this;
     }
 
-    public PdfLayoutElement HorizontalOptions(LayoutAlignment layoutAlignment)
+    public new PdfLayoutElement HorizontalOptions(LayoutAlignment layoutAlignment)
     {
         GetHorizontalOptions = layoutAlignment;
         return this;
     }
 
-    public PdfLayoutElement VerticalOptions(LayoutAlignment layoutAlignment)
+    public new PdfLayoutElement VerticalOptions(LayoutAlignment layoutAlignment)
     {
         GetVerticalOptions = layoutAlignment;
         return this;

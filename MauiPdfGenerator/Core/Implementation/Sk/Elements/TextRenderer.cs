@@ -5,7 +5,7 @@ using MauiPdfGenerator.Fluent.Models.Elements;
 using SkiaSharp;
 using System.Diagnostics;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
 internal class TextRenderer
 {
@@ -27,7 +27,20 @@ internal class TextRenderer
         float fontSize = paragraph.CurrentFontSize > 0 ? paragraph.CurrentFontSize : pageDefinition.PageDefaultFontSize;
         Color textColor = paragraph.CurrentTextColor ?? pageDefinition.PageDefaultTextColor;
         FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes;
+        
+        // Determinar alineación horizontal efectiva
         TextAlignment horizontalAlignment = paragraph.CurrentHorizontalAlignment;
+        if (horizontalAlignment == PdfParagraph.DefaultHorizontalAlignment)
+        {
+            // Mapear HorizontalOptions si no se especificó HorizontalAlignment explícitamente
+            horizontalAlignment = paragraph.GetHorizontalOptions switch
+            {
+                LayoutAlignment.Center => TextAlignment.Center,
+                LayoutAlignment.End => TextAlignment.End,
+                _ => TextAlignment.Start
+            };
+        }
+
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraph.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
         TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform;
@@ -119,7 +132,7 @@ internal class TextRenderer
         {
             if (lineBreakMode is LineBreakMode.NoWrap or LineBreakMode.HeadTruncation or LineBreakMode.MiddleTruncation or LineBreakMode.TailTruncation)
             {
-                linesThatFit = (availableHeightForDrawing >= fontLineSpacing && allLines.Count != 0) ? 1 : 0;
+                linesThatFit = availableHeightForDrawing >= fontLineSpacing && allLines.Count != 0 ? 1 : 0;
             }
             else
             {
@@ -132,6 +145,35 @@ internal class TextRenderer
         float widthDrawnThisCall = 0;
         float lineY = contentTopY;
         int linesDrawnCount = 0;
+
+        // Calcular altura real del contenido a dibujar
+        float visualHeightDrawn = 0;
+        if (linesToDrawThisCall.Count > 0)
+        {
+            SKFontMetrics fontMetrics = font.Metrics;
+            float visualLineHeight = fontMetrics.Descent - fontMetrics.Ascent;
+            visualHeightDrawn = (linesToDrawThisCall.Count - 1) * fontLineSpacing + visualLineHeight;
+        }
+        float heightDrawnThisCall = paragraph.GetHeightRequest.HasValue ?
+            (float)paragraph.GetHeightRequest.Value + (float)paragraph.GetPadding.VerticalThickness :
+            visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
+
+        // Dibuja el fondo si está definido (ajustado a la altura real)
+        if (paragraph.GetBackgroundColor is not null)
+        {
+            using var backgroundPaint = new SKPaint
+            {
+                Color = SkiaUtils.ConvertToSkColor(paragraph.GetBackgroundColor),
+                Style = SKPaintStyle.Fill
+            };
+            var backgroundRect = SKRect.Create(
+                elementContentLeftX,
+                contentTopY,
+                availableWidthForTextLayout,
+                heightDrawnThisCall
+            );
+            canvas.DrawRect(backgroundRect, backgroundPaint);
+        }
 
         foreach (string line in linesToDrawThisCall)
         {
@@ -169,7 +211,7 @@ internal class TextRenderer
 
                 if ((textDecorations & TextDecorations.Underline) != 0)
                 {
-                    float underlineY = textDrawY + (fontMetrics.UnderlinePosition ?? (decorationThickness * 2));
+                    float underlineY = textDrawY + (fontMetrics.UnderlinePosition ?? decorationThickness * 2);
                     if (fontMetrics.UnderlineThickness.HasValue && fontMetrics.UnderlineThickness.Value > 0)
                     {
                         decorationPaint.StrokeWidth = fontMetrics.UnderlineThickness.Value;
@@ -178,7 +220,7 @@ internal class TextRenderer
                 }
                 if ((textDecorations & TextDecorations.Strikethrough) != 0)
                 {
-                    float strikeY = textDrawY + (fontMetrics.StrikeoutPosition ?? (-fontMetrics.XHeight / 2f));
+                    float strikeY = textDrawY + (fontMetrics.StrikeoutPosition ?? -fontMetrics.XHeight / 2f);
                     if (fontMetrics.StrikeoutThickness.HasValue && fontMetrics.StrikeoutThickness.Value > 0)
                     {
                         decorationPaint.StrokeWidth = fontMetrics.StrikeoutThickness.Value;
@@ -191,18 +233,6 @@ internal class TextRenderer
             lineY += fontLineSpacing;
             linesDrawnCount++;
         }
-
-        float visualHeightDrawn = 0;
-        if (linesDrawnCount > 0)
-        {
-            SKFontMetrics fontMetrics = font.Metrics;
-            float visualLineHeight = fontMetrics.Descent - fontMetrics.Ascent;
-            visualHeightDrawn = (linesDrawnCount - 1) * fontLineSpacing + visualLineHeight;
-        }
-
-        float heightDrawnThisCall = paragraph.GetHeightRequest.HasValue ?
-            (float)paragraph.GetHeightRequest.Value + (float)paragraph.GetPadding.VerticalThickness :
-            visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
 
         float totalWidth = paragraph.GetWidthRequest.HasValue ?
             (float)paragraph.GetWidthRequest.Value + (float)paragraph.GetPadding.HorizontalThickness :
@@ -260,7 +290,7 @@ internal class TextRenderer
     private string TruncateSingleLine(string textSegment, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
     {
         float ellipsisWidth = font.MeasureText(Ellipsis);
-        if (maxWidth < ellipsisWidth && maxWidth > 0) return Ellipsis[..(int)font.BreakText(Ellipsis, maxWidth)];
+        if (maxWidth < ellipsisWidth && maxWidth > 0) return Ellipsis[..font.BreakText(Ellipsis, maxWidth)];
         if (maxWidth <= 0) return string.Empty;
 
         float availableWidthForText = maxWidth - ellipsisWidth;
@@ -287,7 +317,7 @@ internal class TextRenderer
                     break;
                 }
             }
-            return (startIndex == textLength && textLength > 0 && ellipsisWidth > 0) ? Ellipsis : Ellipsis + textSegment[startIndex..];
+            return startIndex == textLength && textLength > 0 && ellipsisWidth > 0 ? Ellipsis : Ellipsis + textSegment[startIndex..];
         }
         if (lineBreakMode is LineBreakMode.MiddleTruncation)
         {
@@ -317,7 +347,7 @@ internal class TextRenderer
             {
                 return TruncateSingleLine(textSegment, font, maxWidth, LineBreakMode.TailTruncation);
             }
-            if ((int)startCount >= (textLength - tempEndString.Length) && textLength > 0 && tempEndString.Length == 0 && ellipsisWidth > 0)
+            if ((int)startCount >= textLength - tempEndString.Length && textLength > 0 && tempEndString.Length == 0 && ellipsisWidth > 0)
             {
                 long countTail = font.BreakText(textSegment, availableWidthForText);
                 return textSegment[..(int)Math.Max(0, countTail)] + Ellipsis;
@@ -378,7 +408,7 @@ internal class TextRenderer
                     }
                 }
 
-                if (lastValidBreakInSegment > 0 && (currentPosition + lastValidBreakInSegment + 1) > currentPosition)
+                if (lastValidBreakInSegment > 0 && currentPosition + lastValidBreakInSegment + 1 > currentPosition)
                 {
                     actualBreakPosition = currentPosition + lastValidBreakInSegment + 1;
                 }

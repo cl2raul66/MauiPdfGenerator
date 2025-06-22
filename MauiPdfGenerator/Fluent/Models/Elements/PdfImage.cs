@@ -1,4 +1,7 @@
-﻿namespace MauiPdfGenerator.Fluent.Models.Elements;
+﻿using Microsoft.Maui.Graphics;
+using MauiPdfGenerator.Fluent.Enums;
+
+namespace MauiPdfGenerator.Fluent.Models.Elements;
 
 public partial class PdfImage : PdfElement
 {
@@ -24,6 +27,11 @@ public partial class PdfImage : PdfElement
     public new PdfImage Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin) { base.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this; }
     public new PdfImage WidthRequest(double width) { base.WidthRequest(width); return this; }
     public new PdfImage HeightRequest(double height) { base.HeightRequest(height); return this; }
+
+    // New: Fluent API for layout options and background
+    public new PdfImage HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
+    public new PdfImage VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
+    public new PdfImage BackgroundColor(Color? color) { base.BackgroundColor(color); return this; }
 
     public PdfImage Aspect(Aspect aspect)
     {

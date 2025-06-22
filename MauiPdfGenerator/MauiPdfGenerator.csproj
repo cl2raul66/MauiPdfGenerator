@@ -40,13 +40,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Fluent\Builders\Elements\" />
-	  <Folder Include="Fluent\Interfaces\Elements\FormattedText\" />
-	  <Folder Include="Fluent\Interfaces\Layouts\Grid\" />
-	  <Folder Include="Fluent\Styles\" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <None Include="..\Media\Img\logo.png">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>

@@ -1,5 +1,6 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Models.Elements;
+﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui;
+using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;

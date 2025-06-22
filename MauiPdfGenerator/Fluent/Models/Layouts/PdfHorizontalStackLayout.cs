@@ -1,19 +1,19 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
 
-namespace MauiPdfGenerator.Fluent.Models.Elements;
+namespace MauiPdfGenerator.Fluent.Models.Layouts;
 
-public class PdfVerticalStackLayout : PdfLayoutElement
+public class PdfHorizontalStackLayout : PdfLayoutElement
 {
     private readonly PdfFontRegistryBuilder? _fontRegistry;
 
-    internal PdfVerticalStackLayout(PdfFontRegistryBuilder? fontRegistry)
+    internal PdfHorizontalStackLayout(PdfFontRegistryBuilder? fontRegistry)
     {
         _fontRegistry = fontRegistry;
         GetHorizontalOptions = LayoutAlignment.Start;
         GetVerticalOptions = LayoutAlignment.Start;
     }
 
-    internal PdfVerticalStackLayout(IEnumerable<PdfElement> remainingChildren, PdfVerticalStackLayout originalStyleSource)
+    internal PdfHorizontalStackLayout(IEnumerable<PdfElement> remainingChildren, PdfHorizontalStackLayout originalStyleSource)
     {
         _children.AddRange(remainingChildren);
         _fontRegistry = originalStyleSource._fontRegistry;

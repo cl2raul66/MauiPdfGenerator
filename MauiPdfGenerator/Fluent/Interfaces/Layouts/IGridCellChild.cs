@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
+﻿namespace MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 public interface IGridCellChild
 {

@@ -1,7 +1,8 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
-namespace MauiPdfGenerator.Fluent.Models.Elements;
+namespace MauiPdfGenerator.Fluent.Models.Layouts;
 
 public class PdfGrid : PdfLayoutElement
 {
@@ -33,12 +34,13 @@ public class PdfGrid : PdfLayoutElement
         return this;
     }
 
-    public PdfGrid Children(Action<IPageContentBuilder> config)
+    // Cambia el tipo de retorno a IGridAfterChildren para cortar el flujo
+    public IGridAfterChildren Children(Action<IPageContentBuilder> config)
     {
         var builder = new PageContentBuilder(_fontRegistry);
         config(builder);
         _children.AddRange(builder.GetChildren());
-        return this;
+        return new GridAfterChildren();
     }
 
     public new PdfGrid Margin(double uniformMargin) { base.Margin(uniformMargin); return this; }
@@ -53,4 +55,7 @@ public class PdfGrid : PdfLayoutElement
     public new PdfGrid BackgroundColor(Color? color) { base.BackgroundColor(color); return this; }
     public new PdfGrid HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
     public new PdfGrid VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
+
+    // Implementación vacía para el estado después de Children
+    private class GridAfterChildren : IGridAfterChildren { }
 }

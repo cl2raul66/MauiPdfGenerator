@@ -48,7 +48,7 @@ public partial class MainPage : ContentPage
                 {
                     c.Paragraph("Elemento 1 dentro del VerticalStackLayout.").HorizontalOptions(LayoutAlignment.Center);
                     c.Paragraph("Elemento 2 dentro del VerticalStackLayout, con un texto un poco más largo para ver cómo se ajusta.");
-                    c.PdfGrid().HorizontalOptions(LayoutAlignment.End).BackgroundColor(Colors.LightGrey)
+                    c.PdfGrid().HorizontalOptions(LayoutAlignment.Fill).BackgroundColor(Colors.LightGrey)
                         .RowDefinitions(rd =>
                         {
                             rd.GridLength(GridUnitType.Auto);
@@ -57,12 +57,12 @@ public partial class MainPage : ContentPage
                         .ColumnDefinitions(cd =>
                         {
                             cd.GridLength(GridUnitType.Auto);
-                            cd.GridLength(200);
+                            cd.GridLength(GridUnitType.Star);
                         })
                         .Children(children =>
                         {
                             children.Paragraph("Celda 0,0 con texto largo que debería ajustar el alto de la fila.").TextColor(Colors.Red).Row(0).Column(0);
-                            children.Paragraph("Columna fija 0,1").Row(0).Column(1).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightCyan);
+                            children.Paragraph("Columna fija 0,1").Row(0).Column(1).BackgroundColor(Colors.LightCyan);
 
                             children.Paragraph("Celda auto 1,0").Row(1).Column(0);
                             children.PdfImage(new MemoryStream(imageData)).Row(1).Column(1);

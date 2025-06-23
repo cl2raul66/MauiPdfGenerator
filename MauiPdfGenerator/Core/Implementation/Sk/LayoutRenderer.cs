@@ -1,6 +1,4 @@
-﻿// Ignore Spelling: vsl hsl
-
-using MauiPdfGenerator.Core.Models;
+﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 using SkiaSharp;
 using MauiPdfGenerator.Fluent.Builders;
@@ -11,65 +9,59 @@ namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal class LayoutRenderer
 {
+    private static readonly Dictionary<PdfGrid, float> _gridLeftPositions = new();
+
     public async Task<RenderOutput> RenderGridAsLayoutAsync(SKCanvas canvas, PdfGrid grid, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
     {
-        // Detectar fase de medición o renderizado
         bool isMeasurePhase = canvas.DeviceClipBounds.Width == 1 && canvas.DeviceClipBounds.Height == 1;
-        string phase = isMeasurePhase ? "[MEASURE]" : "[DRAW]";
-
-        // Usar el nuevo GridVirtualLayoutCalculator
         var layoutCalculator = new GridVirtualLayoutCalculator();
         var layoutResult = await layoutCalculator.MeasureAsync(grid, pageDef, elementRenderer);
         float[] colWidths = layoutResult.ColumnWidths;
         float[] rowHeights = layoutResult.RowHeights;
         var colDefs = grid.ColumnDefinitionsList;
         var rowDefs = grid.RowDefinitionsList;
-
-        // Calcular el área real del grid dentro del parentRect
         float gridWidth = colWidths.Sum();
         float gridHeight = rowHeights.Sum();
         float totalHorizontal = (float)grid.GetMargin.Left + (float)grid.GetMargin.Right + (float)grid.GetPadding.Left + (float)grid.GetPadding.Right;
-
-        // Depuración: área disponible y ancho del grid
-        System.Diagnostics.Debug.WriteLine($"[GRID-DEBUG]{phase} parentRect: Left={parentRect.Left}, Top={parentRect.Top}, Width={parentRect.Width}, Height={parentRect.Height}, gridWidth={gridWidth}, gridHeight={gridHeight}");
-
         float left;
-        // Solo aplicar alineación si el área disponible es mayor que el grid
-        if (parentRect.Width > gridWidth)
+        if (isMeasurePhase)
         {
-            if (grid.GetHorizontalOptions == LayoutAlignment.Center)
+            if (parentRect.Width > gridWidth)
             {
-                left = parentRect.Left + (parentRect.Width - gridWidth) / 2f;
-            }
-            else if (grid.GetHorizontalOptions == LayoutAlignment.End)
-            {
-                left = parentRect.Left + (parentRect.Width - gridWidth);
+                if (grid.GetHorizontalOptions == LayoutAlignment.Center)
+                {
+                    left = parentRect.Left + (parentRect.Width - gridWidth) / 2f;
+                }
+                else if (grid.GetHorizontalOptions == LayoutAlignment.End)
+                {
+                    left = parentRect.Left + (parentRect.Width - gridWidth);
+                }
+                else
+                {
+                    left = parentRect.Left;
+                }
             }
             else
             {
                 left = parentRect.Left;
             }
+            left += (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
+            _gridLeftPositions[grid] = left;
         }
         else
         {
-            // Si el área disponible es igual al grid, no aplicar alineación
-            left = parentRect.Left;
+            if (!_gridLeftPositions.TryGetValue(grid, out left))
+            {
+                left = parentRect.Left + (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
+            }
         }
-        left += (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
         float top = startY + (float)grid.GetMargin.Top + (float)grid.GetPadding.Top;
-
-        // Depuración: posición final donde se dibuja el grid
-        System.Diagnostics.Debug.WriteLine($"[GRID-DEBUG]{phase} Grid se dibuja en: Left={left}, Top={top}, Width={gridWidth}, Height={gridHeight}");
-
-        // Dibuja el fondo del grid si corresponde
         if (grid.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(grid.GetBackgroundColor), Style = SKPaintStyle.Fill };
             SKRect bgRect = SKRect.Create(left, top, gridWidth, gridHeight);
             canvas.DrawRect(bgRect, bgPaint);
         }
-
-        // Renderizado manual de celdas para respetar HorizontalOptions/VerticalOptions
         float y = top;
         for (int r = 0; r < rowHeights.Length; r++)
         {
@@ -80,12 +72,10 @@ internal class LayoutRenderer
                 if (child == null) { x += colWidths[c]; continue; }
                 float cellWidth = colWidths[c];
                 float cellHeight = rowHeights[r];
-                // Medir el contenido del hijo para saber su tamaño natural
                 var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
                 var measure = await elementRenderer(dummyCanvas, child, pageDef, new SKRect(0, 0, cellWidth, cellHeight), 0);
                 float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? cellWidth : measure.WidthDrawnThisCall;
                 float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? cellHeight : measure.VisualHeightDrawn;
-                // Calcular alineación
                 float offsetX = child.GetHorizontalOptions switch
                 {
                     LayoutAlignment.Center => (cellWidth - childWidth) / 2f,
@@ -106,6 +96,10 @@ internal class LayoutRenderer
         }
         float totalHeight = gridHeight + (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
         float totalWidth = gridWidth + (float)grid.GetPadding.HorizontalThickness + (float)grid.GetMargin.HorizontalThickness;
+        if (!isMeasurePhase)
+        {
+            _gridLeftPositions.Remove(grid);
+        }
         return new RenderOutput(totalHeight, totalWidth, null, false);
     }
 
@@ -215,7 +209,6 @@ internal class LayoutRenderer
         while (childrenToRender.Count != 0)
         {
             var child = childrenToRender.Dequeue();
-            // Medir el ancho natural del hijo
             var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
             var measure = await elementRenderer(dummyCanvas, child, pageDef, SKRect.Create(0, 0, vslPaddedContentRect.Width, vslPaddedContentRect.Height - currentYinVsl), 0);
             float childWidth;
@@ -236,22 +229,14 @@ internal class LayoutRenderer
             var childAvailableRect = SKRect.Create(vslMarginRect.Left + (float)vsl.GetPadding.Left + offsetX, startY + (float)vsl.GetPadding.Top + currentYinVsl, childWidth, childHeight);
             var result = await elementRenderer(canvas, child, pageDef, childAvailableRect, childAvailableRect.Top);
 
-            // Usar VisualHeightDrawn si es mayor que cero, para imágenes y otros elementos
             float heightToAdvance = result.VisualHeightDrawn > 0 ? result.VisualHeightDrawn : result.HeightDrawnThisCall;
             if (heightToAdvance > 0)
             {
-                // Mensaje de depuración: diferencia vertical con el elemento anterior
-                if (elementIndex > 0)
-                {
-                    float espacioArriba = childAvailableRect.Top - previousElementBottom;
-                    System.Diagnostics.Debug.WriteLine($"[INFO] Espacio arriba del elemento {elementIndex} ({child.GetType().Name}): {espacioArriba}");
-                }
                 previousElementBottom = childAvailableRect.Top + heightToAdvance;
                 elementIndex++;
                 currentYinVsl += heightToAdvance;
                 totalContentHeightDrawn += heightToAdvance;
                 totalContentWidthDrawn = Math.Max(totalContentWidthDrawn, result.WidthDrawnThisCall);
-                System.Diagnostics.Debug.WriteLine($"[INFO] Elemento tipo {child.GetType().Name} ocupa ancho: {result.WidthDrawnThisCall} y alto: {heightToAdvance}");
             }
 
             if (result.RequiresNewPage || result.RemainingElement is not null)
@@ -436,7 +421,6 @@ internal class LayoutRenderer
         return new RenderOutput(finalVisualHeight, consumedWidth, continuation, requiresNewPage, layoutContentHeight);
     }
 
-    // Renderiza los elementos directos de una página de contenido (flujo vertical)
     public async Task<RenderOutput> RenderPdfContentPageAsLayoutAsync(
         SKCanvas canvas,
         PdfPageData pageDef,
@@ -448,7 +432,6 @@ internal class LayoutRenderer
         float maxWidth = 0;
         foreach (var element in pageDef.Elements)
         {
-            // Medir el elemento para obtener su altura
             var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
             var measure = await elementRenderer(dummyCanvas, element, pageDef, contentRect, currentY, fontRegistry);
             float elementHeight = element.GetHeightRequest.HasValue ? (float)element.GetHeightRequest.Value : (measure.VisualHeightDrawn > 0 ? measure.VisualHeightDrawn : measure.HeightDrawnThisCall);

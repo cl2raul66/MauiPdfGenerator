@@ -11,9 +11,15 @@ public abstract class PdfLayoutElement : PdfElement
 
     internal IReadOnlyList<PdfElement> GetChildren => _children.AsReadOnly();
 
+    protected void AddChild(PdfElement element)
+    {
+        element.Parent = this;
+        _children.Add(element);
+    }
+
     internal void Add(PdfElement element)
     {
-        _children.Add(element);
+        AddChild(element);
     }
 
     public new PdfLayoutElement Margin(double uniformMargin)

@@ -1,16 +1,15 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
+using MauiPdfGenerator.Common;
 
 namespace MauiPdfGenerator.Fluent.Models.Layouts;
 
-public class PdfHorizontalStackLayout : PdfLayoutElement
+public class PdfHorizontalStackLayout : PdfLayoutElement, ILayoutElement
 {
     private readonly PdfFontRegistryBuilder? _fontRegistry;
 
     internal PdfHorizontalStackLayout(PdfFontRegistryBuilder? fontRegistry)
     {
         _fontRegistry = fontRegistry;
-        GetHorizontalOptions = LayoutAlignment.Start;
-        GetVerticalOptions = LayoutAlignment.Start;
     }
 
     internal PdfHorizontalStackLayout(IEnumerable<PdfElement> remainingChildren, PdfHorizontalStackLayout originalStyleSource)
@@ -21,7 +20,13 @@ public class PdfHorizontalStackLayout : PdfLayoutElement
         BackgroundColor(originalStyleSource.GetBackgroundColor);
         HorizontalOptions(originalStyleSource.GetHorizontalOptions);
         VerticalOptions(originalStyleSource.GetVerticalOptions);
-        Margin(originalStyleSource.GetMargin);
-        Padding(originalStyleSource.GetPadding);
+        Margin(originalStyleSource.GetMargin.Left, originalStyleSource.GetMargin.Top, originalStyleSource.GetMargin.Right, originalStyleSource.GetMargin.Bottom);
+        Padding(originalStyleSource.GetPadding.Left, originalStyleSource.GetPadding.Top, originalStyleSource.GetPadding.Right, originalStyleSource.GetPadding.Bottom);
     }
+
+    // ILayoutElement implementation
+    IReadOnlyList<object> ILayoutElement.Children => _children.Cast<object>().ToList();
+    LayoutType ILayoutElement.LayoutType => LayoutType.HorizontalStack;
+    Thickness ILayoutElement.Margin => GetMargin;
+    Thickness ILayoutElement.Padding => GetPadding;
 }

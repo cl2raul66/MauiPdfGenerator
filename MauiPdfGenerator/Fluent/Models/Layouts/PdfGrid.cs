@@ -1,10 +1,11 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Common;
 
 namespace MauiPdfGenerator.Fluent.Models.Layouts;
 
-public class PdfGrid : PdfLayoutElement
+public class PdfGrid : PdfLayoutElement, ILayoutElement
 {
     private readonly PdfFontRegistryBuilder _fontRegistry;
     private List<PdfGridLength>? _rowDefinitions;
@@ -34,12 +35,10 @@ public class PdfGrid : PdfLayoutElement
         return this;
     }
 
-    // Cambia el tipo de retorno a IGridAfterChildren para cortar el flujo
-    public IGridAfterChildren Children(Action<IPageContentBuilder> config)
+    public IGridAfterChildren Children(Action<IGridChildrenBuilder> config)
     {
-        var builder = new PageContentBuilder(_fontRegistry);
+        var builder = new GridChildrenBuilder(this, _fontRegistry);
         config(builder);
-        _children.AddRange(builder.GetChildren());
         return new GridAfterChildren();
     }
 
@@ -56,6 +55,11 @@ public class PdfGrid : PdfLayoutElement
     public new PdfGrid HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
     public new PdfGrid VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
 
-    // Implementación vacía para el estado después de Children
+    // ILayoutElement implementation
+    IReadOnlyList<object> ILayoutElement.Children => _children.Cast<object>().ToList();
+    LayoutType ILayoutElement.LayoutType => LayoutType.Grid;
+    Thickness ILayoutElement.Margin => GetMargin;
+    Thickness ILayoutElement.Padding => GetPadding;
+
     private class GridAfterChildren : IGridAfterChildren { }
 }

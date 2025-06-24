@@ -9,52 +9,46 @@ namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal class LayoutRenderer
 {
-    private static readonly Dictionary<PdfGrid, float> _gridLeftPositions = new();
+    private static readonly Dictionary<PdfGrid, float> _gridLeftPositions = [];
+
+    private async Task<Dictionary<PdfElement, RenderOutput>> MeasureAndPrerenderChildren(IEnumerable<PdfElement> children, SKRect availableRect, PdfPageData pageDef, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
+    {
+        var result = new Dictionary<PdfElement, RenderOutput>();
+        using var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
+        foreach (var child in children)
+        {
+            var measure = await elementRenderer(dummyCanvas, child, pageDef, availableRect, 0);
+            result[child] = measure;
+        }
+        return result;
+    }
+
+    // Estrategia automática: decide si usar layout por fases o tradicional
+    public async Task<RenderOutput> RenderPdfContentPageAutoAsync(
+        SKCanvas canvas,
+        PdfPageData pageDef,
+        SKRect contentRect,
+        Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, PdfFontRegistryBuilder, Task<RenderOutput>> elementRenderer,
+        PdfFontRegistryBuilder fontRegistry)
+    {
+        // Siempre usar el layout tradicional (en orden)
+        System.Diagnostics.Debug.WriteLine("[LAYOUT-STRATEGY] Usando estrategia tradicional recursiva (orden de aparición)");
+        return await RenderPdfContentPageAsLayoutAsync(canvas, pageDef, contentRect, elementRenderer, fontRegistry);
+    }
 
     public async Task<RenderOutput> RenderGridAsLayoutAsync(SKCanvas canvas, PdfGrid grid, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
     {
-        bool isMeasurePhase = canvas.DeviceClipBounds.Width == 1 && canvas.DeviceClipBounds.Height == 1;
+        System.Diagnostics.Debug.WriteLine($"[GRID-RENDER] Iniciando render de grid con {grid.GetChildren.Count} hijos");
+        var allChildren = grid.GetChildren;
+        var availableRect = SKRect.Create(0, 0, parentRect.Width, parentRect.Height);
+        var childMeasures = await MeasureAndPrerenderChildren(allChildren, availableRect, pageDef, elementRenderer);
         var layoutCalculator = new GridVirtualLayoutCalculator();
         var layoutResult = await layoutCalculator.MeasureAsync(grid, pageDef, elementRenderer);
         float[] colWidths = layoutResult.ColumnWidths;
         float[] rowHeights = layoutResult.RowHeights;
-        var colDefs = grid.ColumnDefinitionsList;
-        var rowDefs = grid.RowDefinitionsList;
-        float gridWidth = colWidths.Sum();
-        float gridHeight = rowHeights.Sum();
-        float totalHorizontal = (float)grid.GetMargin.Left + (float)grid.GetMargin.Right + (float)grid.GetPadding.Left + (float)grid.GetPadding.Right;
-        float left;
-        if (isMeasurePhase)
-        {
-            if (parentRect.Width > gridWidth)
-            {
-                if (grid.GetHorizontalOptions == LayoutAlignment.Center)
-                {
-                    left = parentRect.Left + (parentRect.Width - gridWidth) / 2f;
-                }
-                else if (grid.GetHorizontalOptions == LayoutAlignment.End)
-                {
-                    left = parentRect.Left + (parentRect.Width - gridWidth);
-                }
-                else
-                {
-                    left = parentRect.Left;
-                }
-            }
-            else
-            {
-                left = parentRect.Left;
-            }
-            left += (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
-            _gridLeftPositions[grid] = left;
-        }
-        else
-        {
-            if (!_gridLeftPositions.TryGetValue(grid, out left))
-            {
-                left = parentRect.Left + (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
-            }
-        }
+        float gridWidth = colWidths.Sum() + grid.GetSpacing * (colWidths.Length - 1);
+        float gridHeight = rowHeights.Sum() + grid.GetSpacing * (rowHeights.Length - 1);
+        float left = parentRect.Left + (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
         float top = startY + (float)grid.GetMargin.Top + (float)grid.GetPadding.Top;
         if (grid.GetBackgroundColor is not null)
         {
@@ -68,157 +62,73 @@ internal class LayoutRenderer
             float x = left;
             for (int c = 0; c < colWidths.Length; c++)
             {
-                var child = grid.GetChildren.FirstOrDefault(e => e.GridRow == r && e.GridColumn == c);
-                if (child == null) { x += colWidths[c]; continue; }
+                // Dibujar todos los elementos de la celda superpuestos
+                var childrenInCell = grid.GetChildren.Where(e => e.GridRow == r && e.GridColumn == c).ToList();
+                if (childrenInCell.Count == 0) { x += colWidths[c] + grid.GetSpacing; continue; }
                 float cellWidth = colWidths[c];
                 float cellHeight = rowHeights[r];
-                var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
-                var measure = await elementRenderer(dummyCanvas, child, pageDef, new SKRect(0, 0, cellWidth, cellHeight), 0);
-                float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? cellWidth : measure.WidthDrawnThisCall;
-                float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? cellHeight : measure.VisualHeightDrawn;
-                float offsetX = child.GetHorizontalOptions switch
+                foreach (var child in childrenInCell)
                 {
-                    LayoutAlignment.Center => (cellWidth - childWidth) / 2f,
-                    LayoutAlignment.End => cellWidth - childWidth,
-                    _ => 0f
-                };
-                float offsetY = child.GetVerticalOptions switch
-                {
-                    LayoutAlignment.Center => (cellHeight - childHeight) / 2f,
-                    LayoutAlignment.End => cellHeight - childHeight,
-                    _ => 0f
-                };
-                var childRect = SKRect.Create(x + offsetX, y + offsetY, childWidth, childHeight);
-                await elementRenderer(canvas, child, pageDef, childRect, childRect.Top);
-                x += colWidths[c];
+                    var measure = childMeasures[child];
+                    float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? cellWidth : measure.WidthDrawnThisCall;
+                    float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? cellHeight : measure.VisualHeightDrawn;
+                    float offsetX = child.GetHorizontalOptions switch
+                    {
+                        LayoutAlignment.Center => (cellWidth - childWidth) / 2f,
+                        LayoutAlignment.End => cellWidth - childWidth,
+                        _ => 0f
+                    };
+                    float offsetY = child.GetVerticalOptions switch
+                    {
+                        LayoutAlignment.Center => (cellHeight - childHeight) / 2f,
+                        LayoutAlignment.End => cellHeight - childHeight,
+                        _ => 0f
+                    };
+                    var childRect = SKRect.Create(x + offsetX, y + offsetY, childWidth, childHeight);
+                    await elementRenderer(canvas, child, pageDef, childRect, childRect.Top);
+                }
+                x += colWidths[c] + grid.GetSpacing;
             }
-            y += rowHeights[r];
+            y += rowHeights[r] + grid.GetSpacing;
         }
         float totalHeight = gridHeight + (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
         float totalWidth = gridWidth + (float)grid.GetPadding.HorizontalThickness + (float)grid.GetMargin.HorizontalThickness;
-        if (!isMeasurePhase)
-        {
-            _gridLeftPositions.Remove(grid);
-        }
+        System.Diagnostics.Debug.WriteLine($"[GRID-RENDER] Grid dibujado. totalWidth={totalWidth}, totalHeight={totalHeight}, colWidths=[{string.Join(",", colWidths)}], rowHeights=[{string.Join(",", rowHeights)}]");
         return new RenderOutput(totalHeight, totalWidth, null, false);
-    }
-
-    private async Task<float[]> CalculateColumnWidths(PdfGrid grid, PdfPageData pageDef, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
-    {
-        var colDefs = grid.ColumnDefinitionsList;
-        var widths = new float[colDefs.Count];
-
-        using var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
-
-        for (int i = 0; i < colDefs.Count; i++)
-        {
-            var colDef = colDefs[i];
-            if (colDef.GridUnitType == GridUnitType.Absolute)
-            {
-                widths[i] = (float)colDef.Value;
-            }
-            else if (colDef.GridUnitType == GridUnitType.Auto)
-            {
-                var childrenInColumn = grid.GetChildren.Where(c => c.GridColumn == i && c.GridColumnSpan == 1);
-                float maxWidth = 0;
-                foreach (var child in childrenInColumn)
-                {
-                    var result = await elementRenderer(dummyCanvas, child, pageDef, new SKRect(0, 0, float.MaxValue, float.MaxValue), 0);
-                    maxWidth = Math.Max(maxWidth, result.WidthDrawnThisCall);
-                }
-                widths[i] = maxWidth;
-            }
-        }
-        return widths;
-    }
-
-    private async Task<float[]> CalculateRowHeights(PdfGrid grid, float[] colWidths, PdfPageData pageDef, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
-    {
-        var rowDefs = grid.RowDefinitionsList;
-        var heights = new float[rowDefs.Count];
-
-        using var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
-
-        for (int i = 0; i < rowDefs.Count; i++)
-        {
-            var rowDef = rowDefs[i];
-            if (rowDef.GridUnitType == GridUnitType.Absolute)
-            {
-                heights[i] = (float)rowDef.Value;
-            }
-            else if (rowDef.GridUnitType == GridUnitType.Auto)
-            {
-                var childrenInRow = grid.GetChildren.Where(c => c.GridRow == i && c.GridRowSpan == 1);
-                float maxHeight = 0;
-                foreach (var child in childrenInRow)
-                {
-                    float availableWidth = 0;
-                    for (int j = 0; j < child.GridColumnSpan; j++)
-                    {
-                        if (child.GridColumn + j < colWidths.Length)
-                        {
-                            availableWidth += colWidths[child.GridColumn + j];
-                        }
-                    }
-                    if (child.GridColumnSpan > 1)
-                    {
-                        availableWidth += grid.GetSpacing * (child.GridColumnSpan - 1);
-                    }
-
-                    var result = await elementRenderer(dummyCanvas, child, pageDef, new SKRect(0, 0, availableWidth, float.MaxValue), 0);
-                    maxHeight = Math.Max(maxHeight, result.VisualHeightDrawn);
-                }
-                heights[i] = maxHeight;
-            }
-        }
-        return heights;
     }
 
     public async Task<RenderOutput> RenderVerticalStackLayoutAsync(SKCanvas canvas, PdfVerticalStackLayout vsl, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
     {
+        var allChildren = vsl.GetChildren;
+        var availableRect = SKRect.Create(0, 0, parentRect.Width, parentRect.Height);
+        var childMeasures = await MeasureAndPrerenderChildren(allChildren, availableRect, pageDef, elementRenderer);
         float leftMargin = (float)vsl.GetMargin.Left;
         float rightMargin = (float)vsl.GetMargin.Right;
         SKRect vslMarginRect = SKRect.Create(parentRect.Left + leftMargin, startY, parentRect.Width - leftMargin - rightMargin, parentRect.Bottom - startY);
-
         if (vsl.GetWidthRequest.HasValue && vsl.GetWidthRequest > 0)
         {
             vslMarginRect.Right = vslMarginRect.Left + (float)vsl.GetWidthRequest.Value;
         }
-
         if (vslMarginRect.Width <= 0 || vslMarginRect.Height <= 0)
         {
             return new RenderOutput(0, 0, null, false);
         }
-
         SKRect vslPaddedContentRect = new(
             0, 0,
             vslMarginRect.Width - (float)vsl.GetPadding.HorizontalThickness,
             vslMarginRect.Height - (float)vsl.GetPadding.VerticalThickness
         );
-
         float currentYinVsl = 0;
         float totalContentHeightDrawn = 0;
         float totalContentWidthDrawn = 0;
-        float previousElementBottom = 0;
-        int elementIndex = 0;
-
         var childrenToRender = new Queue<PdfElement>(vsl.GetChildren);
         var remainingChildrenForNextPage = new List<PdfElement>();
         bool requiresNewPage = false;
-
         while (childrenToRender.Count != 0)
         {
             var child = childrenToRender.Dequeue();
-            var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
-            var measure = await elementRenderer(dummyCanvas, child, pageDef, SKRect.Create(0, 0, vslPaddedContentRect.Width, vslPaddedContentRect.Height - currentYinVsl), 0);
-            float childWidth;
-            if (child.GetHorizontalOptions == LayoutAlignment.Fill)
-                childWidth = vslPaddedContentRect.Width;
-            else if (child.GetHorizontalOptions == LayoutAlignment.Center)
-                childWidth = measure.WidthDrawnThisCall;
-            else
-                childWidth = measure.WidthDrawnThisCall;
-
+            var measure = childMeasures[child];
+            float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? vslPaddedContentRect.Width : measure.WidthDrawnThisCall;
             float childHeight = child.GetHeightRequest.HasValue ? (float)child.GetHeightRequest.Value : (measure.VisualHeightDrawn > 0 ? measure.VisualHeightDrawn : measure.HeightDrawnThisCall);
             float offsetX = child.GetHorizontalOptions switch
             {
@@ -227,50 +137,29 @@ internal class LayoutRenderer
                 _ => 0f
             };
             var childAvailableRect = SKRect.Create(vslMarginRect.Left + (float)vsl.GetPadding.Left + offsetX, startY + (float)vsl.GetPadding.Top + currentYinVsl, childWidth, childHeight);
-            var result = await elementRenderer(canvas, child, pageDef, childAvailableRect, childAvailableRect.Top);
-
-            float heightToAdvance = result.VisualHeightDrawn > 0 ? result.VisualHeightDrawn : result.HeightDrawnThisCall;
+            await elementRenderer(canvas, child, pageDef, childAvailableRect, childAvailableRect.Top);
+            float heightToAdvance = measure.VisualHeightDrawn > 0 ? measure.VisualHeightDrawn : measure.HeightDrawnThisCall;
             if (heightToAdvance > 0)
             {
-                previousElementBottom = childAvailableRect.Top + heightToAdvance;
-                elementIndex++;
                 currentYinVsl += heightToAdvance;
                 totalContentHeightDrawn += heightToAdvance;
-                totalContentWidthDrawn = Math.Max(totalContentWidthDrawn, result.WidthDrawnThisCall);
+                totalContentWidthDrawn = Math.Max(totalContentWidthDrawn, measure.WidthDrawnThisCall);
             }
-
-            if (result.RequiresNewPage || result.RemainingElement is not null)
-            {
-                requiresNewPage = true;
-                if (result.RemainingElement is not null) remainingChildrenForNextPage.Add(result.RemainingElement);
-                remainingChildrenForNextPage.AddRange(childrenToRender);
-                break;
-            }
-
             if (childrenToRender.Count != 0)
             {
-                if (currentYinVsl + vsl.GetSpacing > vslPaddedContentRect.Height + 0.01f)
-                {
-                    requiresNewPage = true;
-                    remainingChildrenForNextPage.AddRange(childrenToRender);
-                    break;
-                }
                 currentYinVsl += vsl.GetSpacing;
                 totalContentHeightDrawn += vsl.GetSpacing;
             }
         }
-
         float visualContentHeight = totalContentHeightDrawn;
         float finalLayoutHeight = vsl.GetHeightRequest.HasValue && vsl.GetHeightRequest > 0 ?
             (float)vsl.GetHeightRequest.Value :
             visualContentHeight + (float)vsl.GetPadding.VerticalThickness;
         float naturalLayoutWidth = totalContentWidthDrawn + (float)vsl.GetPadding.HorizontalThickness;
-
         if (totalContentHeightDrawn > 0)
         {
             float finalContainerWidth = vsl.GetHorizontalOptions is LayoutAlignment.Fill ? vslMarginRect.Width : naturalLayoutWidth;
             if (vsl.GetWidthRequest.HasValue && vsl.GetWidthRequest > 0) finalContainerWidth = (float)vsl.GetWidthRequest.Value;
-
             float offsetX = vsl.GetHorizontalOptions switch
             {
                 LayoutAlignment.Center => (vslMarginRect.Width - finalContainerWidth) / 2,
@@ -278,7 +167,6 @@ internal class LayoutRenderer
                 _ => 0,
             };
             float finalX = vslMarginRect.Left + offsetX;
-
             if (vsl.GetBackgroundColor is not null)
             {
                 using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(vsl.GetBackgroundColor), Style = SKPaintStyle.Fill };
@@ -286,139 +174,95 @@ internal class LayoutRenderer
                 canvas.DrawRect(bgRect, bgPaint);
             }
         }
-
-        PdfVerticalStackLayout? continuation = null;
-        if (remainingChildrenForNextPage.Count != 0)
-        {
-            continuation = new PdfVerticalStackLayout(remainingChildrenForNextPage, vsl);
-        }
-
         float consumedWidth = vsl.GetWidthRequest.HasValue && vsl.GetWidthRequest > 0 ? (float)vsl.GetWidthRequest.Value : naturalLayoutWidth;
-        return new RenderOutput(finalLayoutHeight, consumedWidth, continuation, requiresNewPage, visualContentHeight);
+        return new RenderOutput(finalLayoutHeight, consumedWidth, null, requiresNewPage, visualContentHeight);
     }
 
     public async Task<RenderOutput> RenderHorizontalStackLayoutAsync(SKCanvas canvas, PdfHorizontalStackLayout hsl, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
     {
+        var allChildren = hsl.GetChildren;
+        var availableRect = SKRect.Create(0, 0, parentRect.Width, parentRect.Height);
+        var childMeasures = await MeasureAndPrerenderChildren(allChildren, availableRect, pageDef, elementRenderer);
         float leftMargin = (float)hsl.GetMargin.Left;
         float rightMargin = (float)hsl.GetMargin.Right;
         SKRect hslMarginRect = SKRect.Create(parentRect.Left + leftMargin, startY, parentRect.Width - leftMargin - rightMargin, parentRect.Bottom - startY);
-
         if (hsl.GetWidthRequest.HasValue && hsl.GetWidthRequest > 0)
         {
             hslMarginRect.Right = hslMarginRect.Left + (float)hsl.GetWidthRequest.Value;
         }
-
         if (hslMarginRect.Width <= 0 || hslMarginRect.Height <= 0)
         {
             return new RenderOutput(0, 0, null, false);
         }
-
         SKRect hslPaddedContentRect = new(
             0, 0,
             hslMarginRect.Width - (float)hsl.GetPadding.HorizontalThickness,
             hslMarginRect.Height - (float)hsl.GetPadding.VerticalThickness
         );
-
-        using var recorder = new SKPictureRecorder();
-        using SKCanvas recordingCanvas = recorder.BeginRecording(hslPaddedContentRect);
-
         float currentXinHsl = 0;
         float maxChildContentHeight = 0;
-
         var childrenToRender = new Queue<PdfElement>(hsl.GetChildren);
-        var remainingChildrenForNextPage = new List<PdfElement>();
-        bool requiresNewPage = false;
-
         while (childrenToRender.Count != 0)
         {
             var child = childrenToRender.Dequeue();
-
-            if (currentXinHsl > 0 && (currentXinHsl + 1) > hslPaddedContentRect.Width)
+            var measure = childMeasures[child];
+            float childWidth = child.GetWidthRequest.HasValue ? (float)child.GetWidthRequest.Value : measure.WidthDrawnThisCall;
+            float childHeight = child.GetHeightRequest.HasValue ? (float)child.GetHeightRequest.Value : (measure.VisualHeightDrawn > 0 ? measure.VisualHeightDrawn : measure.HeightDrawnThisCall);
+            var childAvailableRect = SKRect.Create(currentXinHsl, 0, childWidth, hslPaddedContentRect.Height);
+            await elementRenderer(canvas, child, pageDef, childAvailableRect, 0);
+            if (childHeight > 0)
             {
-                requiresNewPage = true;
-                remainingChildrenForNextPage.Add(child);
-                remainingChildrenForNextPage.AddRange(childrenToRender);
-                break;
+                maxChildContentHeight = Math.Max(maxChildContentHeight, childHeight);
+                currentXinHsl += childWidth;
             }
-
-            var childAvailableRect = SKRect.Create(currentXinHsl, 0, hslPaddedContentRect.Width - currentXinHsl, hslPaddedContentRect.Height);
-            var result = await elementRenderer(recordingCanvas, child, pageDef, childAvailableRect, 0);
-
-            if (result.HeightDrawnThisCall > 0)
-            {
-                maxChildContentHeight = Math.Max(maxChildContentHeight, result.VisualHeightDrawn);
-                currentXinHsl += result.WidthDrawnThisCall;
-            }
-            else if (child.GetWidthRequest.HasValue)
-            {
-                currentXinHsl += (float)child.GetWidthRequest.Value;
-            }
-
-
             if (childrenToRender.Count != 0)
             {
                 currentXinHsl += hsl.GetSpacing;
             }
         }
-
         float naturalContentWidth = currentXinHsl;
-
-        using SKPicture picture = recorder.EndRecording();
-
         float layoutContentHeight = maxChildContentHeight;
-
         float finalVisualHeight = hsl.GetHeightRequest.HasValue && hsl.GetHeightRequest > 0 ?
             (float)hsl.GetHeightRequest.Value :
             layoutContentHeight + (float)hsl.GetPadding.VerticalThickness;
-
-        if (finalVisualHeight > hslMarginRect.Height && finalVisualHeight > 0)
+        float naturalLayoutWidth = naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness;
+        float finalContainerWidth = hsl.GetHorizontalOptions == LayoutAlignment.Fill ? hslMarginRect.Width : naturalLayoutWidth;
+        if (hsl.GetWidthRequest.HasValue && hsl.GetWidthRequest > 0) finalContainerWidth = (float)hsl.GetWidthRequest.Value;
+        float offsetX = hsl.GetHorizontalOptions switch
         {
-            return new RenderOutput(0, 0, hsl, true);
-        }
-
-        if (layoutContentHeight > 0 || hsl.GetChildren.Any(c => c.GetHeightRequest.HasValue))
+            LayoutAlignment.Center => (hslMarginRect.Width - finalContainerWidth) / 2,
+            LayoutAlignment.End => hslMarginRect.Width - finalContainerWidth,
+            _ => 0
+        };
+        float finalX = hslMarginRect.Left + offsetX;
+        float availableContentHeight = finalVisualHeight - (float)hsl.GetPadding.VerticalThickness;
+        float contentOffsetY = hsl.GetVerticalOptions switch
         {
-            float naturalLayoutWidth = naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness;
-            float finalContainerWidth = hsl.GetHorizontalOptions == LayoutAlignment.Fill ? hslMarginRect.Width : naturalLayoutWidth;
-            if (hsl.GetWidthRequest.HasValue && hsl.GetWidthRequest > 0) finalContainerWidth = (float)hsl.GetWidthRequest.Value;
-
-            float offsetX = hsl.GetHorizontalOptions switch
-            {
-                LayoutAlignment.Center => (hslMarginRect.Width - finalContainerWidth) / 2,
-                LayoutAlignment.End => hslMarginRect.Width - finalContainerWidth,
-                _ => 0
-            };
-            float finalX = hslMarginRect.Left + offsetX;
-
-            float availableContentHeight = finalVisualHeight - (float)hsl.GetPadding.VerticalThickness;
-            float contentOffsetY = 0;
-            contentOffsetY = hsl.GetVerticalOptions switch
-            {
-                LayoutAlignment.Center => (availableContentHeight - layoutContentHeight) / 2,
-                LayoutAlignment.End => availableContentHeight - layoutContentHeight,
-                _ => 0,
-            };
-            if (hsl.GetBackgroundColor is not null)
-            {
-                using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(hsl.GetBackgroundColor), Style = SKPaintStyle.Fill };
-                SKRect bgRect = SKRect.Create(finalX, startY, finalContainerWidth, finalVisualHeight);
-                canvas.DrawRect(bgRect, bgPaint);
-            }
-
-            canvas.Save();
-            canvas.Translate(finalX + (float)hsl.GetPadding.Left, startY + (float)hsl.GetPadding.Top + contentOffsetY);
-            canvas.DrawPicture(picture);
-            canvas.Restore();
-        }
-
-        PdfHorizontalStackLayout? continuation = null;
-        if (remainingChildrenForNextPage.Count != 0)
+            LayoutAlignment.Center => (availableContentHeight - layoutContentHeight) / 2,
+            LayoutAlignment.End => availableContentHeight - layoutContentHeight,
+            _ => 0,
+        };
+        if (hsl.GetBackgroundColor is not null)
         {
-            continuation = new PdfHorizontalStackLayout(remainingChildrenForNextPage, hsl);
+            using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(hsl.GetBackgroundColor), Style = SKPaintStyle.Fill };
+            SKRect bgRect = SKRect.Create(finalX, startY, finalContainerWidth, finalVisualHeight);
+            canvas.DrawRect(bgRect, bgPaint);
         }
-
-        float consumedWidth = hsl.GetWidthRequest.HasValue && hsl.GetWidthRequest > 0 ? (float)hsl.GetWidthRequest.Value : naturalContentWidth + (float)hsl.GetPadding.HorizontalThickness;
-        return new RenderOutput(finalVisualHeight, consumedWidth, continuation, requiresNewPage, layoutContentHeight);
+        canvas.Save();
+        canvas.Translate(finalX + (float)hsl.GetPadding.Left, startY + (float)hsl.GetPadding.Top + contentOffsetY);
+        float renderX = 0;
+        foreach (var child in hsl.GetChildren)
+        {
+            var measure = childMeasures[child];
+            float childWidth = child.GetWidthRequest.HasValue ? (float)child.GetWidthRequest.Value : measure.WidthDrawnThisCall;
+            float childHeight = child.GetHeightRequest.HasValue ? (float)child.GetHeightRequest.Value : (measure.VisualHeightDrawn > 0 ? measure.VisualHeightDrawn : measure.HeightDrawnThisCall);
+            var childRect = SKRect.Create(renderX, 0, childWidth, childHeight);
+            await elementRenderer(canvas, child, pageDef, childRect, 0);
+            renderX += childWidth + hsl.GetSpacing;
+        }
+        canvas.Restore();
+        float consumedWidth = hsl.GetWidthRequest.HasValue && hsl.GetWidthRequest > 0 ? (float)hsl.GetWidthRequest.Value : naturalLayoutWidth;
+        return new RenderOutput(finalVisualHeight, consumedWidth, null, false, layoutContentHeight);
     }
 
     public async Task<RenderOutput> RenderPdfContentPageAsLayoutAsync(
@@ -449,5 +293,78 @@ internal class LayoutRenderer
         }
         float totalHeight = currentY - contentRect.Top;
         return new RenderOutput(totalHeight, maxWidth, null, false, totalHeight);
+    }
+
+    public async Task RenderPdfContentPageWithPaginationAsync(
+        SKDocument pdfDoc,
+        PdfPageData pageDef,
+        SKSize pageSize,
+        PdfFontRegistryBuilder fontRegistry,
+        Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, PdfFontRegistryBuilder, Task<RenderOutput>> elementRenderer)
+    {
+        var pageMargins = pageDef.Margins;
+        var contentRect = new SKRect(
+            (float)pageMargins.Left,
+            (float)pageMargins.Top,
+            pageSize.Width - (float)pageMargins.Right,
+            pageSize.Height - (float)pageMargins.Bottom
+        );
+        float currentY = contentRect.Top;
+        float maxWidth = 0;
+        int elementIndex = 0;
+        var elements = pageDef.Elements;
+        int totalElements = elements.Count;
+        int pageNumber = 1;
+        while (elementIndex < totalElements)
+        {
+            using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
+            canvas.Clear(pageDef.BackgroundColor is not null
+                ? SkiaUtils.ConvertToSkColor(pageDef.BackgroundColor)
+                : SKColors.White);
+            currentY = contentRect.Top;
+            maxWidth = 0;
+            while (elementIndex < totalElements)
+            {
+                var element = elements[elementIndex];
+                var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
+                var measure = await elementRenderer(dummyCanvas, element, pageDef, contentRect, currentY, fontRegistry);
+                float elementHeight = element.GetHeightRequest.HasValue ? (float)element.GetHeightRequest.Value : (measure.VisualHeightDrawn > 0 ? measure.VisualHeightDrawn : measure.HeightDrawnThisCall);
+                float elementWidth = element.GetWidthRequest.HasValue ? (float)element.GetWidthRequest.Value : measure.WidthDrawnThisCall;
+                float offsetX = element.GetHorizontalOptions switch
+                {
+                    LayoutAlignment.Center => (contentRect.Width - elementWidth) / 2f,
+                    LayoutAlignment.End => contentRect.Width - elementWidth,
+                    _ => 0f
+                };
+                var elementRect = SKRect.Create(contentRect.Left + offsetX, currentY, elementWidth, elementHeight);
+                if (currentY + elementHeight > contentRect.Bottom + 0.01f)
+                {
+                    if (measure.RemainingElement is not null)
+                    {
+                        await elementRenderer(canvas, element, pageDef, elementRect, currentY, fontRegistry);
+                        elements = [.. elements.Take(elementIndex), measure.RemainingElement, .. elements.Skip(elementIndex + 1)];
+                        totalElements = elements.Count;
+                        elementIndex++;
+                        break;
+                    }
+                    else if (currentY == contentRect.Top)
+                    {
+                        await elementRenderer(canvas, element, pageDef, elementRect, currentY, fontRegistry);
+                        elementIndex++;
+                        break;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                await elementRenderer(canvas, element, pageDef, elementRect, currentY, fontRegistry);
+                currentY += elementHeight + pageDef.PageDefaultSpacing;
+                maxWidth = Math.Max(maxWidth, elementWidth);
+                elementIndex++;
+            }
+            pdfDoc.EndPage();
+            pageNumber++;
+        }
     }
 }

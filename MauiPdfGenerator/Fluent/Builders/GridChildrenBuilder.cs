@@ -2,6 +2,7 @@
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Models.Layouts;
+using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -16,33 +17,34 @@ internal class GridChildrenBuilder : IGridChildrenBuilder
         _fontRegistry = fontRegistry;
     }
 
-    private PdfElement AddElement(PdfElement element)
+    private IGridCellChild<TElement> AddElement<TElement>(TElement element) where TElement : PdfElement
     {
+        // Solo agrega el elemento real al grid
         _grid.Add(element);
-        return element;
+        return new GridCellChild<TElement>(element);
     }
 
-    public PdfParagraph Paragraph(string text) => (PdfParagraph)AddElement(new PdfParagraph(text, _fontRegistry));
-    public PdfImage PdfImage(Stream stream) => (PdfImage)AddElement(new PdfImage(stream));
-    public PdfHorizontalLine HorizontalLine() => (PdfHorizontalLine)AddElement(new PdfHorizontalLine());
+    public IGridCellChild<PdfParagraph> Paragraph(string text) => AddElement(new PdfParagraph(text, _fontRegistry));
+    public IGridCellChild<PdfImage> PdfImage(Stream stream) => AddElement(new PdfImage(stream));
+    public IGridCellChild<PdfHorizontalLine> HorizontalLine() => AddElement(new PdfHorizontalLine());
 
-    public PdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content)
+    public IGridCellChild<PdfVerticalStackLayout> VerticalStackLayout(Action<IStackLayoutBuilder> content)
     {
         var stack = new PdfVerticalStackLayout(_fontRegistry);
         var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
         content(builder);
-        return (PdfVerticalStackLayout)AddElement(stack);
+        return AddElement(stack);
     }
 
-    public PdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content)
+    public IGridCellChild<PdfHorizontalStackLayout> HorizontalStackLayout(Action<IStackLayoutBuilder> content)
     {
         var stack = new PdfHorizontalStackLayout(_fontRegistry);
         var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
         content(builder);
-        return (PdfHorizontalStackLayout)AddElement(stack);
+        return AddElement(stack);
     }
 
-    public PdfGrid Grid(Action<IPageContentBuilder> content)
+    public IGridCellChild<PdfGrid> Grid(Action<IPageContentBuilder> content)
     {
         var grid = new PdfGrid(_fontRegistry);
         var builder = new PageContentBuilder(_fontRegistry);
@@ -51,6 +53,6 @@ internal class GridChildrenBuilder : IGridChildrenBuilder
         {
             grid.Add(item);
         }
-        return (PdfGrid)AddElement(grid);
+        return AddElement(grid);
     }
 }

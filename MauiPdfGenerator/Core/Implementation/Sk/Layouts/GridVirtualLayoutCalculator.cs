@@ -8,20 +8,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
-using System.Diagnostics;
 using MauiPdfGenerator.Fluent.Models.Layouts;
 using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
-/// <summary>
-/// Calcula virtualmente el layout de un grid (ancho de columnas, alto de filas) antes del renderizado real.
-/// </summary>
 internal class GridVirtualLayoutCalculator
 {
     public record struct GridLayoutResult(float[] ColumnWidths, float[] RowHeights);
-
-    // Estructura para representar la información de cada celda
     private record CellInfo(PdfElement Element, int Row, int Column, GridUnitType RowType, double RowValue, GridUnitType ColType, double ColValue);
 
     public async Task<GridLayoutResult> MeasureAsync(
@@ -29,6 +23,8 @@ internal class GridVirtualLayoutCalculator
         PdfPageData pageDef,
         Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
     {
+        System.Diagnostics.Debug.WriteLine($"[GRID-PRERENDER] Grid con {grid.GetChildren.Count} hijos, filas: {grid.RowDefinitionsList.Count}, columnas: {grid.ColumnDefinitionsList.Count}");
+
         var colDefs = grid.ColumnDefinitionsList;
         var rowDefs = grid.RowDefinitionsList;
         int colCount = colDefs.Count;
@@ -38,12 +34,10 @@ internal class GridVirtualLayoutCalculator
 
         using var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
 
-        // Obtener tamaño de página
         var pageSize = Core.Implementation.Sk.SkiaUtils.GetSkPageSize(pageDef.Size, pageDef.Orientation);
         float pageWidth = pageSize.Width - (float)pageDef.Margins.HorizontalThickness;
         float pageHeight = pageSize.Height - (float)pageDef.Margins.VerticalThickness;
 
-        // 1. Organizar la información de cada celda
         var cellInfos = new List<CellInfo>();
         foreach (var child in grid.GetChildren.Where(e => e.GridRowSpan == 1 && e.GridColumnSpan == 1))
         {
@@ -62,7 +56,6 @@ internal class GridVirtualLayoutCalculator
             ));
         }
 
-        // 2. Calcular anchos de columnas absolutas y contar autos
         float totalAbsoluteColWidth = 0;
         int autoColCount = 0;
         for (int c = 0; c < colCount; c++)
@@ -80,7 +73,6 @@ internal class GridVirtualLayoutCalculator
         }
         float availableWidthForAutoCols = Math.Max(0, pageWidth - totalAbsoluteColWidth);
 
-        // 3. Medir celdas y calcular anchos de columnas auto
         var cellMeasures = new RenderOutput[rowCount, colCount];
         float[] maxAutoColWidths = new float[colCount];
         for (int c = 0; c < colCount; c++)
@@ -96,11 +88,9 @@ internal class GridVirtualLayoutCalculator
                     {
                         float availableWidth = availableWidthForAutoCols;
                         float availableHeight = cell.RowType == GridUnitType.Absolute ? (float)cell.RowValue : pageHeight;
-                        // Ajuste MAUI-like: respetar HorizontalOptions/VerticalOptions
                         var element = cell.Element;
                         float widthForMeasure = element.GetHorizontalOptions == LayoutAlignment.Fill ? availableWidth : float.MaxValue;
                         float heightForMeasure = element.GetVerticalOptions == LayoutAlignment.Fill ? availableHeight : float.MaxValue;
-                        // Validación especial para imágenes en auto/auto
                         if (element is PdfImage img && cell.ColType == GridUnitType.Auto && cell.RowType == GridUnitType.Auto)
                         {
                             if (!img.GetWidthRequest.HasValue && !img.GetHeightRequest.HasValue)
@@ -111,14 +101,11 @@ internal class GridVirtualLayoutCalculator
                         var result = await elementRenderer(dummyCanvas, element, pageDef, new SKRect(0, 0, widthForMeasure, heightForMeasure), 0);
                         cellMeasures[r, c] = result;
                         maxWidth = Math.Max(maxWidth, result.WidthDrawnThisCall);
-                        // Mensaje informativo: ancho ocupado por el elemento en la celda
-                        System.Diagnostics.Debug.WriteLine($"[INFO] Elemento tipo {element.GetType().Name} en celda [{r},{c}] ocupa ancho: {result.WidthDrawnThisCall}");
                     }
                 }
                 maxAutoColWidths[c] = maxWidth;
             }
         }
-        // Repartir el espacio disponible entre columnas auto según su requerimiento, pero sin exceder el total disponible
         float totalAutoColWidth = maxAutoColWidths.Sum();
         for (int c = 0; c < colCount; c++)
         {
@@ -131,8 +118,22 @@ internal class GridVirtualLayoutCalculator
             }
         }
 
-        // 4. Calcular altos de filas absolutas y contar autos
+        float totalStarColValue = 0;
+        for (int c = 0; c < colCount; c++)
+        {
+            if (colDefs[c].GridUnitType == GridUnitType.Star)
+                totalStarColValue += (float)colDefs[c].Value;
+        }
+        float usedWidth = totalAbsoluteColWidth + totalAutoColWidth;
+        float availableWidthForStarCols = Math.Min(pageWidth - usedWidth, Math.Max(0, pageWidth - usedWidth));
+        for (int c = 0; c < colCount; c++)
+        {
+            if (colDefs[c].GridUnitType == GridUnitType.Star && totalStarColValue > 0)
+                colWidths[c] = availableWidthForStarCols * ((float)colDefs[c].Value / totalStarColValue);
+        }
+
         float totalAbsoluteRowHeight = 0;
+        float totalStarRowValue = 0;
         int autoRowCount = 0;
         for (int r = 0; r < rowCount; r++)
         {
@@ -146,10 +147,13 @@ internal class GridVirtualLayoutCalculator
             {
                 autoRowCount++;
             }
+            else if (rowDef.GridUnitType == GridUnitType.Star)
+            {
+                totalStarRowValue += (float)rowDef.Value;
+            }
         }
         float availableHeightForAutoRows = Math.Max(0, pageHeight - totalAbsoluteRowHeight);
 
-        // 5. Medir celdas y calcular altos de filas auto
         float[] maxAutoRowHeights = new float[rowCount];
         for (int r = 0; r < rowCount; r++)
         {
@@ -157,18 +161,19 @@ internal class GridVirtualLayoutCalculator
             if (rowDef.GridUnitType == GridUnitType.Auto)
             {
                 float maxHeight = 0;
+                bool hasContent = false;
                 for (int c = 0; c < colCount; c++)
                 {
                     var cell = cellInfos.FirstOrDefault(ci => ci.Row == r && ci.Column == c);
                     if (cell != null)
                     {
+                        hasContent = true;
                         float availableWidth = colDefs[c].GridUnitType == GridUnitType.Absolute ? (float)colDefs[c].Value : colWidths[c];
-                        float availableHeight = availableHeightForAutoRows;
-                        // Ajuste MAUI-like: respetar HorizontalOptions/VerticalOptions
+                        // CORRECCIÓN: Usar availableHeightForAutoRows en vez de float.MaxValue
+                        float availableHeight = availableHeightForAutoRows > 0 ? availableHeightForAutoRows : pageHeight;
                         var element = cell.Element;
                         float widthForMeasure = element.GetHorizontalOptions == LayoutAlignment.Fill ? availableWidth : float.MaxValue;
-                        float heightForMeasure = element.GetVerticalOptions == LayoutAlignment.Fill ? availableHeight : float.MaxValue;
-                        // Validación especial para imágenes en auto/auto
+                        float heightForMeasure = element.GetVerticalOptions == LayoutAlignment.Fill ? availableHeight : availableHeight;
                         if (element is PdfImage img && cell.ColType == GridUnitType.Auto && cell.RowType == GridUnitType.Auto)
                         {
                             if (!img.GetWidthRequest.HasValue && !img.GetHeightRequest.HasValue)
@@ -185,21 +190,38 @@ internal class GridVirtualLayoutCalculator
                         maxHeight = Math.Max(maxHeight, result.VisualHeightDrawn);
                     }
                 }
+                if (hasContent && maxHeight <= 0)
+                    maxHeight = 1;
                 maxAutoRowHeights[r] = maxHeight;
             }
         }
-        // Repartir el espacio disponible entre filas auto según su requerimiento, pero sin exceder el total disponible
-        float totalAutoRowHeight = maxAutoRowHeights.Sum();
-        for (int r = 0; r < rowCount; r++)
-        {
-            if (rowDefs[r].GridUnitType == GridUnitType.Auto)
+        bool allRowsAuto = rowDefs.All(rd => rd.GridUnitType == GridUnitType.Auto);
+        if (allRowsAuto) {
+            for (int r = 0; r < rowCount; r++)
+                rowHeights[r] = maxAutoRowHeights[r];
+        } else {
+            float totalAutoRowHeight = maxAutoRowHeights.Sum();
+            for (int r = 0; r < rowCount; r++)
             {
-                if (totalAutoRowHeight > 0)
-                    rowHeights[r] = Math.Min(maxAutoRowHeights[r], availableHeightForAutoRows * (maxAutoRowHeights[r] / totalAutoRowHeight));
-                else
-                    rowHeights[r] = availableHeightForAutoRows / autoRowCount;
+                if (rowDefs[r].GridUnitType == GridUnitType.Auto)
+                {
+                    if (totalAutoRowHeight > 0)
+                        rowHeights[r] = Math.Min(maxAutoRowHeights[r], availableHeightForAutoRows * (maxAutoRowHeights[r] / totalAutoRowHeight));
+                    else
+                        rowHeights[r] = availableHeightForAutoRows / autoRowCount;
+                }
             }
         }
+
+        float usedHeight = totalAbsoluteRowHeight + maxAutoRowHeights.Sum();
+        float availableHeightForStarRows = Math.Min(pageHeight - usedHeight, Math.Max(0, pageHeight - usedHeight));
+        for (int r = 0; r < rowCount; r++)
+        {
+            if (rowDefs[r].GridUnitType == GridUnitType.Star && totalStarRowValue > 0)
+                rowHeights[r] = availableHeightForStarRows * ((float)rowDefs[r].Value / totalStarRowValue);
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[GRID-POSTRENDER] Grid layout: colWidths=[{string.Join(",", colWidths)}], rowHeights=[{string.Join(",", rowHeights)}]");
 
         return new GridLayoutResult(colWidths, rowHeights);
     }

@@ -1,41 +1,32 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using Microsoft.Maui.Graphics;
+using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Models.Elements;
 
 namespace MauiPdfGenerator.Fluent.Models.Layouts;
 
-internal class GridCellChild : IGridCellChild
+internal class GridCellChild<TElement> : IGridCellChild<TElement> where TElement : PdfElement
 {
-    internal PdfElement GetChild { get; }
-    internal int GetRow { get; private set; } = 0;
-    internal int GetColumn { get; private set; } = 0;
-    internal int GetRowSpan { get; private set; } = 1;
-    internal int GetColumnSpan { get; private set; } = 1;
-    internal bool IsPositionExplicit { get; private set; } = false;
+    public TElement Element { get; }
 
-    public GridCellChild(PdfElement element)
+    public GridCellChild(TElement element)
     {
-        GetChild = element;
+        Element = element;
     }
 
-    public IGridCellChild Row(int row)
+    public IGridCellChild<TElement> Row(int row) { Element.Row(row); return this; }
+    public IGridCellChild<TElement> Column(int column) { Element.Column(column); return this; }
+    public IGridCellChild<TElement> RowSpan(int span) { Element.RowSpan(span); return this; }
+    public IGridCellChild<TElement> ColumnSpan(int span) { Element.ColumnSpan(span); return this; }
+
+    public IGridCellChild<TElement> BackgroundColor(Color? color) { Element.BackgroundColor(color); return this; }
+    public IGridCellChild<TElement> HorizontalOptions(LayoutAlignment alignment) { Element.HorizontalOptions(alignment); return this; }
+    public IGridCellChild<TElement> VerticalOptions(LayoutAlignment alignment) { Element.VerticalOptions(alignment); return this; }
+
+    // Métodos de estilo específicos para tipos
+    public IGridCellChild<TElement> TextColor(Color color)
     {
-        GetRow = row >= 0 ? row : 0;
-        IsPositionExplicit = true;
-        return this;
-    }
-    public IGridCellChild Column(int column)
-    {
-        GetColumn = column >= 0 ? column : 0;
-        IsPositionExplicit = true;
-        return this;
-    }
-    public IGridCellChild RowSpan(int span)
-    {
-        GetRowSpan = span > 1 ? span : 1;
-        return this;
-    }
-    public IGridCellChild ColumnSpan(int span)
-    {
-        GetColumnSpan = span > 1 ? span : 1;
+        if (Element is PdfParagraph p) p.TextColor(color);
         return this;
     }
 }

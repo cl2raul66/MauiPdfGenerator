@@ -29,8 +29,8 @@ internal class TextRenderer
         FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes;
         
         // Determinar alineación horizontal efectiva
-        TextAlignment horizontalAlignment = paragraph.CurrentHorizontalAlignment;
-        if (horizontalAlignment == PdfParagraph.DefaultHorizontalAlignment)
+        TextAlignment horizontalAlignment = paragraph.CurrentHorizontalTextAlignment;
+        if (horizontalAlignment == PdfParagraph.DefaultHorizontalTextAlignment)
         {
             // Mapear HorizontalOptions si no se especificó HorizontalAlignment explícitamente
             horizontalAlignment = paragraph.GetHorizontalOptions switch
@@ -134,6 +134,10 @@ internal class TextRenderer
             {
                 linesThatFit = availableHeightForDrawing >= fontLineSpacing && allLines.Count != 0 ? 1 : 0;
             }
+            else if (availableHeightForDrawing > 1000000f) // Si el alto disponible es irrealmente grande, caben todas las líneas
+            {
+                linesThatFit = allLines.Count;
+            }
             else
             {
                 linesThatFit = (int)Math.Floor(availableHeightForDrawing / fontLineSpacing);
@@ -157,6 +161,9 @@ internal class TextRenderer
         float heightDrawnThisCall = paragraph.GetHeightRequest.HasValue ?
             (float)paragraph.GetHeightRequest.Value + (float)paragraph.GetPadding.VerticalThickness :
             visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
+
+        // DEPURACIÓN: Mostrar información de medición
+        Debug.WriteLine($"[TextRenderer] Medición de párrafo: '{(textToRender.Length > 40 ? textToRender.Substring(0, 40) + "..." : textToRender)}'\n  Ancho disponible: {availableWidthForTextLayout}\n  Alto disponible: {availableHeightForDrawing}\n  Líneas calculadas: {allLines.Count}\n  Líneas que caben: {linesThatFit}\n  Altura visual: {visualHeightDrawn}\n  Altura devuelta: {heightDrawnThisCall}");
 
         // Dibuja el fondo si está definido (ajustado a la altura real)
         if (paragraph.GetBackgroundColor is not null)

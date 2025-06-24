@@ -1,7 +1,5 @@
 ﻿using MauiPdfGenerator.Fluent.Builders;
 using System.Diagnostics;
-using Microsoft.Maui.Graphics;
-using MauiPdfGenerator.Fluent.Enums;
 
 namespace MauiPdfGenerator.Fluent.Models.Elements;
 
@@ -9,8 +7,8 @@ public class PdfParagraph : PdfElement
 {
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
-    public const TextAlignment DefaultHorizontalAlignment = TextAlignment.Start;
-    public const TextAlignment DefaultVerticalAlignment = TextAlignment.Start;
+    public const TextAlignment DefaultHorizontalTextAlignment = TextAlignment.Start;
+    public const TextAlignment DefaultVerticalTextAlignment = TextAlignment.Start;
     public const FontAttributes DefaultFontAttributes = Microsoft.Maui.Controls.FontAttributes.None;
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
     public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
@@ -20,8 +18,8 @@ public class PdfParagraph : PdfElement
     internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
     internal float CurrentFontSize { get; private set; }
     internal Color? CurrentTextColor { get; private set; }
-    internal TextAlignment CurrentHorizontalAlignment { get; private set; }
-    internal TextAlignment CurrentVerticalAlignment { get; private set; }
+    internal TextAlignment CurrentHorizontalTextAlignment { get; private set; }
+    internal TextAlignment CurrentVerticalTextAlignment { get; private set; }
     internal FontAttributes? CurrentFontAttributes { get; private set; }
     internal LineBreakMode? CurrentLineBreakMode { get; private set; }
     internal TextDecorations? CurrentTextDecorations { get; private set; }
@@ -39,8 +37,8 @@ public class PdfParagraph : PdfElement
         CurrentFontFamily = null;
         CurrentFontSize = 0;
         CurrentTextColor = null;
-        CurrentHorizontalAlignment = DefaultHorizontalAlignment;
-        CurrentVerticalAlignment = DefaultVerticalAlignment;
+        CurrentHorizontalTextAlignment = DefaultHorizontalTextAlignment;
+        CurrentVerticalTextAlignment = DefaultVerticalTextAlignment;
         CurrentFontAttributes = null;
         CurrentLineBreakMode = null;
         CurrentTextDecorations = null;
@@ -56,13 +54,13 @@ public class PdfParagraph : PdfElement
         this.ResolvedFontRegistration = originalStyleSource.ResolvedFontRegistration;
         this.CurrentFontSize = originalStyleSource.CurrentFontSize;
         this.CurrentTextColor = originalStyleSource.CurrentTextColor;
-        this.CurrentHorizontalAlignment = originalStyleSource.CurrentHorizontalAlignment;
-        this.CurrentVerticalAlignment = originalStyleSource.CurrentVerticalAlignment;
+        this.CurrentHorizontalTextAlignment = originalStyleSource.CurrentHorizontalTextAlignment;
+        this.CurrentVerticalTextAlignment = originalStyleSource.CurrentVerticalTextAlignment;
         this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
         this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
         this.CurrentTextDecorations = originalStyleSource.CurrentTextDecorations;
         this.CurrentTextTransform = originalStyleSource.CurrentTextTransform;
-        this.Margin(originalStyleSource.GetMargin);
+        this.Margin(originalStyleSource.GetMargin.Left, originalStyleSource.GetMargin.Top, originalStyleSource.GetMargin.Right, originalStyleSource.GetMargin.Bottom);
         this.IsContinuation = true;
     }
 
@@ -78,16 +76,6 @@ public class PdfParagraph : PdfElement
     public new PdfParagraph HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
     public new PdfParagraph VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
     public new PdfParagraph BackgroundColor(Color? color) { base.BackgroundColor(color); return this; }
-
-    public new PdfParagraph Row(int row) { base.Row(row); return this; }
-    public new PdfParagraph Column(int column) { base.Column(column); return this; }
-    public new PdfParagraph RowSpan(int span) { base.RowSpan(span); return this; }
-    public new PdfParagraph ColumnSpan(int span) { base.ColumnSpan(span); return this; }
-
-    public PdfParagraph RowGeneric(int row) { base.Row<PdfParagraph>(row); return this; }
-    public PdfParagraph ColumnGeneric(int column) { base.Column<PdfParagraph>(column); return this; }
-    public PdfParagraph RowSpanGeneric(int span) { base.RowSpan<PdfParagraph>(span); return this; }
-    public PdfParagraph ColumnSpanGeneric(int span) { base.ColumnSpan<PdfParagraph>(span); return this; }
 
     public PdfParagraph FontFamily(PdfFontIdentifier? family)
     {
@@ -122,15 +110,15 @@ public class PdfParagraph : PdfElement
         return this;
     }
 
-    public PdfParagraph HorizontalAlignment(TextAlignment alignment)
+    public PdfParagraph HorizontalTextAlignment(TextAlignment alignment)
     {
-        CurrentHorizontalAlignment = alignment;
+        CurrentHorizontalTextAlignment = alignment;
         return this;
     }
 
-    public PdfParagraph VerticalAlignment(TextAlignment alignment)
+    public PdfParagraph VerticalTextAlignment(TextAlignment alignment)
     {
-        CurrentVerticalAlignment = alignment;
+        CurrentVerticalTextAlignment = alignment;
         return this;
     }
 

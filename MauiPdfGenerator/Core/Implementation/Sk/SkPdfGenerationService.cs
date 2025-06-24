@@ -36,36 +36,18 @@ internal class SkPdfGenerationService : IPdfGenerationService
             foreach (var originalPageDefinition in documentData.Pages)
             {
                 SKSize pageSize = SkiaUtils.GetSkPageSize(originalPageDefinition.Size, originalPageDefinition.Orientation);
-                using SKCanvas canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
-
-                canvas.Clear(originalPageDefinition.BackgroundColor is not null
-                    ? SkiaUtils.ConvertToSkColor(originalPageDefinition.BackgroundColor)
-                    : SKColors.White);
-
                 var pageMargins = originalPageDefinition.Margins;
-                var currentPageContentRect = new SKRect(
+                var contentRect = new SKRect(
                     (float)pageMargins.Left,
                     (float)pageMargins.Top,
                     pageSize.Width - (float)pageMargins.Right,
                     pageSize.Height - (float)pageMargins.Bottom
                 );
-
-                if (currentPageContentRect.Width <= 0 || currentPageContentRect.Height <= 0)
-                {
-                    pdfDoc.EndPage();
-                    continue;
-                }
-
-                // Nuevo: Renderizado vertical de los elementos directos de la página
-                var layoutRenderer = new LayoutRenderer();
-                await layoutRenderer.RenderPdfContentPageAsLayoutAsync(
-                    canvas,
-                    originalPageDefinition,
-                    currentPageContentRect,
-                    async (c, e, p, r, y, f) => await _renderElements.Render(c, e, p, r, y, f),
-                    fontRegistry
-                );
-
+                using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
+                canvas.Clear(originalPageDefinition.BackgroundColor is not null
+                    ? SkiaUtils.ConvertToSkColor(originalPageDefinition.BackgroundColor)
+                    : SKColors.White);
+                await _renderElements.RenderPageAuto(canvas, originalPageDefinition, contentRect, fontRegistry);
                 pdfDoc.EndPage();
             }
 

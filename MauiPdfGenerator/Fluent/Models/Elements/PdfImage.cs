@@ -17,6 +17,13 @@ public partial class PdfImage : PdfElement
             throw new ArgumentException("El Stream proporcionado para la imagen debe ser legible (CanRead debe ser true).", nameof(stream));
         }
         ImageStream = stream;
+        // Si no hay WidthRequest ni HeightRequest, establecer Fill según orientación
+        if (!GetWidthRequest.HasValue && !GetHeightRequest.HasValue)
+        {
+            // Por defecto, Fill horizontal (para retrato o cuadrado)
+            HorizontalOptions(LayoutAlignment.Fill);
+            // Si en el futuro se detecta orientación paisaje, se podría usar VerticalOptions(LayoutAlignment.Fill)
+        }
     }
 
     public new PdfImage Margin(double uniformMargin) { base.Margin(uniformMargin); return this; }

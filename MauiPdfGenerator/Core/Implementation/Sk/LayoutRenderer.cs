@@ -23,7 +23,6 @@ internal class LayoutRenderer
         return result;
     }
 
-    // Estrategia automática: decide si usar layout por fases o tradicional
     public async Task<RenderOutput> RenderPdfContentPageAutoAsync(
         SKCanvas canvas,
         PdfPageData pageDef,
@@ -31,14 +30,11 @@ internal class LayoutRenderer
         Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, PdfFontRegistryBuilder, Task<RenderOutput>> elementRenderer,
         PdfFontRegistryBuilder fontRegistry)
     {
-        // Siempre usar el layout tradicional (en orden)
-        System.Diagnostics.Debug.WriteLine("[LAYOUT-STRATEGY] Usando estrategia tradicional recursiva (orden de aparición)");
         return await RenderPdfContentPageAsLayoutAsync(canvas, pageDef, contentRect, elementRenderer, fontRegistry);
     }
 
     public async Task<RenderOutput> RenderGridAsLayoutAsync(SKCanvas canvas, PdfGrid grid, PdfPageData pageDef, SKRect parentRect, float startY, Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
     {
-        System.Diagnostics.Debug.WriteLine($"[GRID-RENDER] Iniciando render de grid con {grid.GetChildren.Count} hijos");
         var allChildren = grid.GetChildren;
         var availableRect = SKRect.Create(0, 0, parentRect.Width, parentRect.Height);
         var childMeasures = await MeasureAndPrerenderChildren(allChildren, availableRect, pageDef, elementRenderer);
@@ -62,7 +58,6 @@ internal class LayoutRenderer
             float x = left;
             for (int c = 0; c < colWidths.Length; c++)
             {
-                // Dibujar todos los elementos de la celda superpuestos
                 var childrenInCell = grid.GetChildren.Where(e => e.GridRow == r && e.GridColumn == c).ToList();
                 if (childrenInCell.Count == 0) { x += colWidths[c] + grid.GetSpacing; continue; }
                 float cellWidth = colWidths[c];
@@ -93,7 +88,6 @@ internal class LayoutRenderer
         }
         float totalHeight = gridHeight + (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
         float totalWidth = gridWidth + (float)grid.GetPadding.HorizontalThickness + (float)grid.GetMargin.HorizontalThickness;
-        System.Diagnostics.Debug.WriteLine($"[GRID-RENDER] Grid dibujado. totalWidth={totalWidth}, totalHeight={totalHeight}, colWidths=[{string.Join(",", colWidths)}], rowHeights=[{string.Join(",", rowHeights)}]");
         return new RenderOutput(totalHeight, totalWidth, null, false);
     }
 
@@ -309,62 +303,63 @@ internal class LayoutRenderer
             pageSize.Width - (float)pageMargins.Right,
             pageSize.Height - (float)pageMargins.Bottom
         );
-        float currentY = contentRect.Top;
-        float maxWidth = 0;
-        int elementIndex = 0;
-        var elements = pageDef.Elements;
-        int totalElements = elements.Count;
         int pageNumber = 1;
-        while (elementIndex < totalElements)
+        int elementIndex = 0;
+        var elements = pageDef.Elements.ToList();
+        while (elementIndex < elements.Count)
         {
             using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
             canvas.Clear(pageDef.BackgroundColor is not null
                 ? SkiaUtils.ConvertToSkColor(pageDef.BackgroundColor)
                 : SKColors.White);
-            currentY = contentRect.Top;
-            maxWidth = 0;
-            while (elementIndex < totalElements)
+            float currentY = contentRect.Top;
+            float maxWidth = 0;
+            while (elementIndex < elements.Count)
             {
                 var element = elements[elementIndex];
                 var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
                 var measure = await elementRenderer(dummyCanvas, element, pageDef, contentRect, currentY, fontRegistry);
                 float elementHeight = element.GetHeightRequest.HasValue ? (float)element.GetHeightRequest.Value : (measure.VisualHeightDrawn > 0 ? measure.VisualHeightDrawn : measure.HeightDrawnThisCall);
                 float elementWidth = element.GetWidthRequest.HasValue ? (float)element.GetWidthRequest.Value : measure.WidthDrawnThisCall;
-                float offsetX = element.GetHorizontalOptions switch
+                float spacing = (elementIndex < elements.Count - 1) ? pageDef.PageDefaultSpacing : 0f;
+                if (currentY + elementHeight + spacing > contentRect.Bottom + 0.01f)
                 {
-                    LayoutAlignment.Center => (contentRect.Width - elementWidth) / 2f,
-                    LayoutAlignment.End => contentRect.Width - elementWidth,
-                    _ => 0f
-                };
-                var elementRect = SKRect.Create(contentRect.Left + offsetX, currentY, elementWidth, elementHeight);
-                if (currentY + elementHeight > contentRect.Bottom + 0.01f)
-                {
+                    // Si el elemento no cabe, pero es divisible (tiene RemainingElement), renderiza la parte que cabe y deja el resto para la siguiente página
                     if (measure.RemainingElement is not null)
                     {
+                        // Renderiza la parte que cabe
+                        var elementRect = SKRect.Create(contentRect.Left, currentY, elementWidth, elementHeight);
                         await elementRenderer(canvas, element, pageDef, elementRect, currentY, fontRegistry);
-                        elements = [.. elements.Take(elementIndex), measure.RemainingElement, .. elements.Skip(elementIndex + 1)];
-                        totalElements = elements.Count;
-                        elementIndex++;
-                        break;
+                        // Sustituye el elemento actual por el fragmento restante
+                        elements[elementIndex] = measure.RemainingElement;
+                        break; // Salta a la siguiente página
                     }
                     else if (currentY == contentRect.Top)
                     {
+                        // Si el elemento es indivisible y no cabe ni siquiera en una página vacía, lo renderiza igual (para evitar bucle infinito)
+                        var elementRect = SKRect.Create(contentRect.Left, currentY, elementWidth, elementHeight);
                         await elementRenderer(canvas, element, pageDef, elementRect, currentY, fontRegistry);
                         elementIndex++;
                         break;
                     }
                     else
                     {
+                        // Salta a la siguiente página sin avanzar el índice
                         break;
                     }
                 }
-                await elementRenderer(canvas, element, pageDef, elementRect, currentY, fontRegistry);
-                currentY += elementHeight + pageDef.PageDefaultSpacing;
-                maxWidth = Math.Max(maxWidth, elementWidth);
-                elementIndex++;
+                else
+                {
+                    var elementRect = SKRect.Create(contentRect.Left, currentY, elementWidth, elementHeight);
+                    await elementRenderer(canvas, element, pageDef, elementRect, currentY, fontRegistry);
+                    currentY += elementHeight + spacing;
+                    maxWidth = Math.Max(maxWidth, elementWidth);
+                    elementIndex++;
+                }
             }
-            pdfDoc.EndPage();
+            System.Diagnostics.Debug.WriteLine($"[PDF-PAGINATE] Página física: {pageNumber} Tamaño: {pageSize.Width}x{pageSize.Height} Área render: [{contentRect.Left},{contentRect.Top},{contentRect.Width},{contentRect.Height}]");
             pageNumber++;
+            pdfDoc.EndPage();
         }
     }
 }

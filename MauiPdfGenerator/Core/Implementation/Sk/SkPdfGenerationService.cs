@@ -1,9 +1,7 @@
 ﻿using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Builders;
 using SkiaSharp;
-using System.Diagnostics;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk;
 

@@ -73,7 +73,7 @@ public partial class MainPage : ContentPage
 
                             
                             children.PdfImage(new MemoryStream(imageData)).Row(1).Column(1).BackgroundColor(Colors.LightCyan);
-                            children.Paragraph($"[G4] Grid (1,1)\nImagen\nRow: 1\nColumn: 1\nHorizontalOptions: predeterminado (Start)\nVerticalOptions: predeterminado (Start)\nMargin: predeterminado (0)\nPadding: predeterminado (0)");
+                            children.Paragraph($"[G4] Grid (1,1)\nImagen\nRow: 1\nColumn: 1\nHorizontalOptions: predeterminado (Start)\nVerticalOptions: predeterminado (Start)\nMargin: predeterminado (0)\nPadding: predeterminado (0)").Column(1).Row(1);
 
                         });
 
@@ -82,6 +82,7 @@ public partial class MainPage : ContentPage
                     c.HorizontalLine();
                     c.Paragraph($"[IMG] Imagen fuera de grid\nHorizontalOptions: Center (personalizado)\nVerticalOptions: predeterminado (Start)\nMargin: predeterminado (0)\nPadding: predeterminado (0)\nHeightRequest: 64");
                     c.PdfImage(new MemoryStream(imageData)).Aspect(Aspect.AspectFit).HeightRequest(64).HorizontalOptions(LayoutAlignment.Center);
+                    c.Paragraph($"[P4] Texto: Otro texto para el final");
                 }).Build()
             .SaveAsync(targetFilePath);
 

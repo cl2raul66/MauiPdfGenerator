@@ -41,7 +41,6 @@ internal class ElementsRender
         };
     }
 
-    // Nuevo método para renderizar la página usando la estrategia automática
     internal async Task<RenderOutput> RenderPageAuto(SKCanvas canvas, PdfPageData pageDef, SKRect contentRect, PdfFontRegistryBuilder fontRegistry)
     {
         return await _layoutRenderer.RenderPdfContentPageAutoAsync(canvas, pageDef, contentRect, Render, fontRegistry);

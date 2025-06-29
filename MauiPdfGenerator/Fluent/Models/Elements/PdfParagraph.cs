@@ -14,7 +14,7 @@ public class PdfParagraph : PdfElement
     public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
     public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None;
 
-    internal string Text { get; }
+    internal string Text { get; } 
     internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
     internal float CurrentFontSize { get; private set; }
     internal Color? CurrentTextColor { get; private set; }

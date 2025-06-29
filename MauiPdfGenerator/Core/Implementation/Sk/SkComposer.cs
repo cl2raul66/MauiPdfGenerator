@@ -1,13 +1,15 @@
 ﻿using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Builders;
+using MauiPdfGenerator.Fluent.Models;
 using SkiaSharp;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk;
 
-internal class SkPdfGenerationService : IPdfGenerationService
+internal class SkComposer : IPdfCoreGenerator
 {
-    private readonly ElementsRender _renderElements = new();
+    private readonly RenderPages _pageRenderer = new();
 
     public async Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry)
     {
@@ -31,22 +33,23 @@ internal class SkPdfGenerationService : IPdfGenerationService
             using var stream = new SKFileWStream(filePath);
             using var pdfDoc = SKDocument.CreatePdf(stream, metadata) ?? throw new PdfGenerationException("SkiaSharp failed to create the PDF document stream.");
 
-            foreach (var originalPageDefinition in documentData.Pages)
+            foreach (var pageDefinition in documentData.Pages)
             {
-                SKSize pageSize = SkiaUtils.GetSkPageSize(originalPageDefinition.Size, originalPageDefinition.Orientation);
-                var pageMargins = originalPageDefinition.Margins;
-                var contentRect = new SKRect(
-                    (float)pageMargins.Left,
-                    (float)pageMargins.Top,
-                    pageSize.Width - (float)pageMargins.Right,
-                    pageSize.Height - (float)pageMargins.Bottom
-                );
-                using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
-                canvas.Clear(originalPageDefinition.BackgroundColor is not null
-                    ? SkiaUtils.ConvertToSkColor(originalPageDefinition.BackgroundColor)
-                    : SKColors.White);
-                await _renderElements.RenderPageAuto(canvas, originalPageDefinition, contentRect, fontRegistry);
-                pdfDoc.EndPage();
+                var layoutState = new Dictionary<PdfElement, object>();
+
+                // Fase de Medición: Obtener el plan de renderizado
+                var pageBlocks = await _pageRenderer.MeasureAsync(pageDefinition, fontRegistry, layoutState);
+
+                // Fase de Renderizado: Ejecutar el plan
+                foreach (var block in pageBlocks)
+                {
+                    SKSize pageSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
+                    using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
+
+                    await _pageRenderer.RenderAsync(canvas, pageDefinition, block.Value, fontRegistry, layoutState);
+
+                    pdfDoc.EndPage();
+                }
             }
 
             pdfDoc.Close();

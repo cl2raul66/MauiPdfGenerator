@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Core.Implementation.Sk.Elements;
+using MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
@@ -12,37 +13,38 @@ internal class ElementsRender
 {
     private readonly TextRenderer _textRenderer = new();
     private readonly ImageRenderer _imageRenderer = new();
-    private readonly LayoutRenderer _layoutRenderer = new();
     private readonly HorizontalLineRender _horizontalLineRenderer = new();
-    private PdfFontRegistryBuilder? _currentFontRegistry;
+    private readonly PdfGridRender _gridRender = new();
+    private readonly PdfVerticalStackLayoutRender _vStackRender = new();
+    private readonly PdfHorizontalStackLayoutRender _hStackRender = new();
 
-    internal async Task<RenderOutput> Render(SKCanvas canvas, PdfElement element, PdfPageData pageDef, SKRect availableRect, float currentY, PdfFontRegistryBuilder fontRegistry)
+    internal async Task<RenderOutput> Render(SKCanvas canvas, PdfElement element, PdfPageData pageDef, SKRect availableRect, float currentY, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
     {
-        _currentFontRegistry = fontRegistry;
-        return await RenderToOutput(canvas,element, pageDef, availableRect, currentY);
-    }
-
-    internal async Task<RenderOutput> RenderToOutput(SKCanvas canvas, PdfElement element, PdfPageData pageDef, SKRect availableRect, float currentY)
-    {
-        // Debug: Log tipo, posición y detalles del elemento
-        string tipo = element.GetType().Name;
-        string texto = (element is PdfParagraph p) ? p.Text : (element is PdfImage ? "[PdfImage]" : "");
-        System.Diagnostics.Debug.WriteLine($"[RenderToOutput] Dibujando elemento tipo {tipo} en [{availableRect.Left},{availableRect.Top}] tamaño [{availableRect.Width}x{availableRect.Height}] texto: {texto}");
-
         return element switch
         {
-            PdfParagraph para => await _textRenderer.RenderAsync(canvas, para, pageDef, availableRect, currentY, _currentFontRegistry),
+            PdfParagraph para => await _textRenderer.RenderAsync(canvas, para, pageDef, availableRect, currentY, fontRegistry),
             PdfImage img => await _imageRenderer.RenderAsync(canvas, img, pageDef, availableRect, currentY),
-            PdfHorizontalLine line => _horizontalLineRenderer.Render(canvas, line, availableRect, currentY),
-            PdfGrid grid => await _layoutRenderer.RenderGridAsLayoutAsync(canvas, grid, pageDef, availableRect, currentY, RenderToOutput),
-            PdfVerticalStackLayout vsl => await _layoutRenderer.RenderVerticalStackLayoutAsync(canvas, vsl, pageDef, availableRect, currentY, RenderToOutput),
-            PdfHorizontalStackLayout hsl => await _layoutRenderer.RenderHorizontalStackLayoutAsync(canvas, hsl, pageDef, availableRect, currentY, RenderToOutput),
-            _ => new RenderOutput(0, 0, null, false),
+            PdfHorizontalLine line => await _horizontalLineRenderer.RenderAsync(canvas, line, availableRect, currentY),
+            PdfGrid grid => await _gridRender.RenderAsync(canvas, grid, pageDef, this, availableRect, currentY, layoutState, fontRegistry),
+            PdfVerticalStackLayout vsl => await _vStackRender.RenderAsync(canvas, vsl, pageDef, this, availableRect, currentY, layoutState, fontRegistry),
+            PdfHorizontalStackLayout hsl => await _hStackRender.RenderAsync(canvas, hsl, pageDef, this, availableRect, currentY, layoutState, fontRegistry),
+            _ => throw new NotImplementedException($"Render not implemented for element type {element.GetType().Name}")
         };
     }
 
-    internal async Task<RenderOutput> RenderPageAuto(SKCanvas canvas, PdfPageData pageDef, SKRect contentRect, PdfFontRegistryBuilder fontRegistry)
+    internal async Task<MeasureOutput> Measure(PdfElement element, PdfPageData pageDef, SKRect availableRect, float currentY, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
     {
-        return await _layoutRenderer.RenderPdfContentPageAutoAsync(canvas, pageDef, contentRect, Render, fontRegistry);
+        var contentRect = new SKRect(availableRect.Left, currentY, availableRect.Right, availableRect.Bottom);
+
+        return element switch
+        {
+            PdfParagraph para => await _textRenderer.MeasureAsync(para, pageDef, contentRect, currentY, fontRegistry),
+            PdfImage img => await _imageRenderer.MeasureAsync(img, pageDef, contentRect, currentY),
+            PdfHorizontalLine line => await _horizontalLineRenderer.MeasureAsync(line, contentRect),
+            PdfGrid grid => await _gridRender.MeasureAsync(grid, pageDef, this, contentRect, layoutState, fontRegistry),
+            PdfVerticalStackLayout vsl => await _vStackRender.MeasureAsync(vsl, pageDef, this, contentRect, layoutState, fontRegistry),
+            PdfHorizontalStackLayout hsl => await _hStackRender.MeasureAsync(hsl, pageDef, this, contentRect, layoutState, fontRegistry),
+            _ => throw new NotImplementedException($"Measure not implemented for element type {element.GetType().Name}")
+        };
     }
 }

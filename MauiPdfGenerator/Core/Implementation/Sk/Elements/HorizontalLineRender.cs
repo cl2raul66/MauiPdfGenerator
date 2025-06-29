@@ -6,7 +6,22 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
 internal class HorizontalLineRender
 {
-    internal RenderOutput Render(SKCanvas canvas, PdfHorizontalLine line, SKRect contentRect, float currentY)
+    public Task<MeasureOutput> MeasureAsync(PdfHorizontalLine line, SKRect contentRect)
+    {
+        float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
+        float lineContentWidth = contentRect.Width - (float)line.GetMargin.HorizontalThickness;
+
+        float heightRequired = thickness;
+        float visualHeight = thickness;
+        float widthRequired = lineContentWidth;
+
+        bool requiresNewPage = thickness > contentRect.Height;
+
+        var measureOutput = new MeasureOutput(heightRequired, visualHeight, widthRequired, [], null, requiresNewPage, 0, 0, 0, 0, null);
+        return Task.FromResult(measureOutput);
+    }
+
+    public Task<RenderOutput> RenderAsync(SKCanvas canvas, PdfHorizontalLine line, SKRect contentRect, float currentY)
     {
         float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
         Color color = line.CurrentColor ?? PdfHorizontalLine.DefaultColor;
@@ -15,13 +30,9 @@ internal class HorizontalLineRender
         float lineContentX = contentRect.Left + (float)line.GetMargin.Left;
         float lineContentWidth = contentRect.Width - (float)line.GetMargin.Left - (float)line.GetMargin.Right;
 
-        if (lineContentWidth <= 0) return new RenderOutput(thickness, 0, null, false);
-
-        float availableHeightForLineContent = contentRect.Bottom - currentY - (float)line.GetMargin.Bottom;
-
-        if (thickness > availableHeightForLineContent)
+        if (lineContentWidth <= 0)
         {
-            return new RenderOutput(thickness, lineContentWidth, null, true);
+            return Task.FromResult(new RenderOutput(thickness, 0, null, false));
         }
 
         using var paint = new SKPaint
@@ -36,12 +47,9 @@ internal class HorizontalLineRender
         float endX = lineContentX + lineContentWidth;
         float lineDrawY = currentY + thickness / 2f;
 
-        if (lineDrawY - thickness / 2f < contentRect.Top - 0.01f || lineDrawY + thickness / 2f > contentRect.Bottom + 0.01f)
-        {
-            return new RenderOutput(thickness, lineContentWidth, null, true);
-        }
-
         canvas.DrawLine(startX, lineDrawY, endX, lineDrawY, paint);
-        return new RenderOutput(thickness, lineContentWidth, null, false);
+
+        var renderOutput = new RenderOutput(thickness, lineContentWidth, null, false);
+        return Task.FromResult(renderOutput);
     }
 }

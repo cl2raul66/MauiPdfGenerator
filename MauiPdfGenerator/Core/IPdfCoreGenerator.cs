@@ -3,7 +3,7 @@ using MauiPdfGenerator.Fluent.Builders;
 
 namespace MauiPdfGenerator.Core;
 
-internal interface IPdfGenerationService
+internal interface IPdfCoreGenerator
 {
     Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry);
 }

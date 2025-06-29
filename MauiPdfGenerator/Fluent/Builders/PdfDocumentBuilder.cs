@@ -15,14 +15,14 @@ internal class PdfDocumentBuilder : IPdfDocument
     private string? _filePath;
     private readonly PdfConfigurationBuilder _configurationBuilder;
     private readonly List<IPdfPageBuilder> _pages;
-    private readonly IPdfGenerationService _pdfGenerationService;
+    private readonly IPdfCoreGenerator _pdfGenerationService;
 
     public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, string? defaultPath = null)
     {
         _filePath = defaultPath;
         _pages = [];
         _configurationBuilder = new PdfConfigurationBuilder(fontRegistry);
-        _pdfGenerationService = new SkPdfGenerationService();
+        _pdfGenerationService = new SkComposer();
     }
 
     public IPdfDocument Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)

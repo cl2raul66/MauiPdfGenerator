@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Core.Models;
+﻿using MauiPdfGenerator.Core.Implementation.Sk.Elements;
+using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Layouts;
@@ -6,18 +7,14 @@ using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
-internal class PdfGridRender
+internal class PdfGridRender : IElementRenderer
 {
     private readonly GridVirtualLayoutCalculator _layoutCalculator = new();
 
-    public async Task<MeasureOutput> MeasureAsync(PdfGrid grid, PdfPageData pageDef, ElementsRender elementsRender, SKRect availableRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public async Task<LayoutInfo> MeasureAsync(PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect availableRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
     {
-        var layoutResult = await _layoutCalculator.MeasureAsync(grid, pageDef,
-            async (canvas, element, page, rect, y) =>
-            {
-                var measure = await elementsRender.Measure(element, page, rect, y, layoutState, fontRegistry);
-                return new RenderOutput(measure.HeightRequired, measure.WidthRequired, measure.RemainingElement, measure.RequiresNewPage, measure.VisualHeight);
-            });
+        var grid = (PdfGrid)element;
+        var layoutResult = await _layoutCalculator.MeasureAsync(grid, rendererFactory, pageDef, layoutState, fontRegistry);
 
         float totalWidth = layoutResult.ColumnWidths.Sum() + grid.GetSpacing * (layoutResult.ColumnWidths.Length > 0 ? layoutResult.ColumnWidths.Length - 1 : 0);
         float totalHeight = layoutResult.RowHeights.Sum() + grid.GetSpacing * (layoutResult.RowHeights.Length > 0 ? layoutResult.RowHeights.Length - 1 : 0);
@@ -27,11 +24,12 @@ internal class PdfGridRender
 
         layoutState[grid] = layoutResult;
 
-        return new MeasureOutput(totalHeight, totalHeight, totalWidth, [], null, false, 0, 0, 0, 0, null);
+        return new LayoutInfo(grid, totalWidth, totalHeight);
     }
 
-    public async Task<RenderOutput> RenderAsync(SKCanvas canvas, PdfGrid grid, PdfPageData pageDef, ElementsRender elementsRender, SKRect availableRect, float currentY, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public async Task RenderAsync(SKCanvas canvas, PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect renderRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
     {
+        var grid = (PdfGrid)element;
         if (!layoutState.TryGetValue(grid, out var state) || state is not GridVirtualLayoutCalculator.GridLayoutResult layoutResult)
         {
             throw new InvalidOperationException("Grid layout state was not calculated before rendering.");
@@ -39,16 +37,20 @@ internal class PdfGridRender
 
         float[] colWidths = layoutResult.ColumnWidths;
         float[] rowHeights = layoutResult.RowHeights;
-        float gridWidth = colWidths.Sum() + grid.GetSpacing * (colWidths.Length > 1 ? colWidths.Length - 1 : 0);
-        float gridHeight = rowHeights.Sum() + grid.GetSpacing * (rowHeights.Length > 1 ? rowHeights.Length - 1 : 0);
+        float gridContentWidth = colWidths.Sum() + grid.GetSpacing * (colWidths.Length > 1 ? colWidths.Length - 1 : 0);
+        float gridContentHeight = rowHeights.Sum() + grid.GetSpacing * (rowHeights.Length > 1 ? rowHeights.Length - 1 : 0);
 
-        float left = availableRect.Left + (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
-        float top = currentY + (float)grid.GetMargin.Top + (float)grid.GetPadding.Top;
+        float left = renderRect.Left + (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
+        float top = renderRect.Top + (float)grid.GetMargin.Top + (float)grid.GetPadding.Top;
 
         if (grid.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(grid.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            SKRect bgRect = SKRect.Create(left - (float)grid.GetPadding.Left, top - (float)grid.GetPadding.Top, gridWidth + (float)grid.GetPadding.HorizontalThickness, gridHeight + (float)grid.GetPadding.VerticalThickness);
+            SKRect bgRect = SKRect.Create(
+                renderRect.Left + (float)grid.GetMargin.Left,
+                renderRect.Top + (float)grid.GetMargin.Top,
+                gridContentWidth + (float)grid.GetPadding.HorizontalThickness,
+                gridContentHeight + (float)grid.GetPadding.VerticalThickness);
             canvas.DrawRect(bgRect, bgPaint);
         }
 
@@ -66,10 +68,11 @@ internal class PdfGridRender
 
                     foreach (var child in childrenInCell)
                     {
-                        var measure = await elementsRender.Measure(child, pageDef, SKRect.Create(0, 0, cellWidth, cellHeight), 0, layoutState, fontRegistry);
+                        var childRenderer = rendererFactory.GetRenderer(child);
+                        var measure = await childRenderer.MeasureAsync(child, rendererFactory, pageDef, SKRect.Create(0, 0, cellWidth, cellHeight), layoutState, fontRegistry);
 
-                        float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? cellWidth : measure.WidthRequired;
-                        float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? cellHeight : measure.VisualHeight;
+                        float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? cellWidth : measure.Width;
+                        float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? cellHeight : measure.Height;
 
                         float offsetX = child.GetHorizontalOptions switch
                         {
@@ -86,17 +89,12 @@ internal class PdfGridRender
                         };
 
                         var childRect = SKRect.Create(x + offsetX, y + offsetY, childWidth, childHeight);
-                        await elementsRender.Render(canvas, child, pageDef, childRect, childRect.Top, layoutState, fontRegistry);
+                        await childRenderer.RenderAsync(canvas, child, rendererFactory, pageDef, childRect, layoutState, fontRegistry);
                     }
                 }
                 x += colWidths[c] + grid.GetSpacing;
             }
             y += rowHeights[r] + grid.GetSpacing;
         }
-
-        float totalHeight = gridHeight + (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
-        float totalWidth = gridWidth + (float)grid.GetPadding.HorizontalThickness + (float)grid.GetMargin.HorizontalThickness;
-
-        return new RenderOutput(totalHeight, totalWidth, null, false, totalHeight);
     }
 }

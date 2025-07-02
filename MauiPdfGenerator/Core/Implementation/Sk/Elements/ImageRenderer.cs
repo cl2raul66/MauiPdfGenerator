@@ -1,16 +1,19 @@
 ﻿using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Fluent.Builders;
+using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
-internal class ImageRenderer
+internal class ImageRenderer : IElementRenderer
 {
-    public Task<MeasureOutput> MeasureAsync(PdfImage image, PdfPageData pageDefinition, SKRect contentRect, float currentY)
+    public Task<LayoutInfo> MeasureAsync(PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect availableRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
     {
+        var image = (PdfImage)element;
         ArgumentNullException.ThrowIfNull(image);
-        ArgumentNullException.ThrowIfNull(pageDefinition);
+        ArgumentNullException.ThrowIfNull(pageDef);
 
         SKImage? skImage = null;
         try
@@ -24,59 +27,39 @@ internal class ImageRenderer
         catch (Exception ex)
         {
             var error = new PdfGenerationException($"Failed to decode image stream: {ex.Message}", ex);
-            float phHeight = DrawImageError(null, 0, 0, contentRect.Width, contentRect.Height);
-            float phWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(contentRect.Width, 100f);
-            float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : phHeight) + (float)image.GetPadding.VerticalThickness;
-            float totalWidth = phWidth + (float)image.GetPadding.HorizontalThickness;
-            return Task.FromResult(new MeasureOutput(totalHeight, phHeight, totalWidth, [], null, false, 0, 0, 0, 0, error));
+            float phHeight = 50f + (float)image.GetMargin.VerticalThickness + (float)image.GetPadding.VerticalThickness;
+            float phWidth = (image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableRect.Width, 100f)) + (float)image.GetMargin.HorizontalThickness + (float)image.GetPadding.HorizontalThickness;
+            return Task.FromResult(new LayoutInfo(element, phWidth, phHeight, null, error));
         }
 
         if (skImage is null)
         {
-            float phHeight = DrawImageError(null, 0, 0, contentRect.Width, contentRect.Height);
-            float phWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(contentRect.Width, 100f);
-            float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : phHeight) + (float)image.GetPadding.VerticalThickness;
-            float totalWidth = phWidth + (float)image.GetPadding.HorizontalThickness;
             var error = new PdfGenerationException("Image stream was not readable or resulted in a null image.");
-            return Task.FromResult(new MeasureOutput(totalHeight, phHeight, totalWidth, [], null, false, 0, 0, 0, 0, error));
+            float phHeight = 50f + (float)image.GetMargin.VerticalThickness + (float)image.GetPadding.VerticalThickness;
+            float phWidth = (image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableRect.Width, 100f)) + (float)image.GetMargin.HorizontalThickness + (float)image.GetPadding.HorizontalThickness;
+            return Task.FromResult(new LayoutInfo(element, phWidth, phHeight, null, error));
         }
 
         using (skImage)
         {
-            float availableWidth = contentRect.Width;
-            float availableHeight = contentRect.Height;
+            float availableContentWidth = availableRect.Width - (float)image.GetMargin.HorizontalThickness - (float)image.GetPadding.HorizontalThickness;
+            float availableContentHeight = availableRect.Height - (float)image.GetMargin.VerticalThickness - (float)image.GetPadding.VerticalThickness;
 
             SKRect targetRect = CalculateTargetRectInternal(skImage, image.CurrentAspect,
                                                         0, 0,
-                                                        availableWidth, availableHeight,
+                                                        availableContentWidth, availableContentHeight,
                                                         image.GetWidthRequest, image.GetHeightRequest);
 
-            if (targetRect.Height > 0 && targetRect.Width > 0 && targetRect.Height <= availableHeight + 0.01f)
-            {
-                float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : targetRect.Height) + (float)image.GetPadding.VerticalThickness;
-                float totalWidth = (image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : targetRect.Width) + (float)image.GetPadding.HorizontalThickness;
-                return Task.FromResult(new MeasureOutput(totalHeight, targetRect.Height, totalWidth, [], null, false, 0, 0, 0, 0, null));
-            }
+            float totalHeight = targetRect.Height + (float)image.GetPadding.VerticalThickness + (float)image.GetMargin.VerticalThickness;
+            float totalWidth = targetRect.Width + (float)image.GetPadding.HorizontalThickness + (float)image.GetMargin.HorizontalThickness;
 
-            SKSize newPagePhysicalSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
-            float newPageAvailHeight = newPagePhysicalSize.Height - (float)pageDefinition.Margins.VerticalThickness - (float)image.GetMargin.VerticalThickness - (float)image.GetPadding.VerticalThickness;
-
-            if (targetRect.Height > newPageAvailHeight)
-            {
-                float phHeight = DrawImageError(null, 0, 0, availableWidth, availableHeight, "[Imagen Demasiado Grande]");
-                float phWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableWidth, 100f);
-                float totalHeight = (image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : phHeight) + (float)image.GetPadding.VerticalThickness;
-                float totalWidth = phWidth + (float)image.GetPadding.HorizontalThickness;
-                var error = new PdfGenerationException("Image is too large to fit on a new page.");
-                return Task.FromResult(new MeasureOutput(totalHeight, phHeight, totalWidth, [], null, false, 0, 0, 0, 0, error));
-            }
-
-            return Task.FromResult(new MeasureOutput(0, 0, 0, [], image, true, 0, 0, 0, 0, null));
+            return Task.FromResult(new LayoutInfo(element, totalWidth, totalHeight));
         }
     }
 
-    public Task<RenderOutput> RenderAsync(SKCanvas canvas, PdfImage image, PdfPageData pageDefinition, SKRect contentRect, float currentY)
+    public Task RenderAsync(SKCanvas canvas, PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect renderRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
     {
+        var image = (PdfImage)element;
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(image);
 
@@ -94,38 +77,32 @@ internal class ImageRenderer
             skImage = null;
         }
 
+        var contentRect = new SKRect(
+            renderRect.Left + (float)image.GetMargin.Left + (float)image.GetPadding.Left,
+            renderRect.Top + (float)image.GetMargin.Top + (float)image.GetPadding.Top,
+            renderRect.Right - (float)image.GetMargin.Right - (float)image.GetPadding.Right,
+            renderRect.Bottom - (float)image.GetMargin.Bottom - (float)image.GetPadding.Bottom
+        );
+
         if (skImage is null)
         {
-            float phHeight = DrawImageError(canvas, contentRect.Left, contentRect.Top, contentRect.Width, contentRect.Height, "[Image Error]");
-            float phWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(contentRect.Width, 100f);
-            return Task.FromResult(new RenderOutput(phHeight, phWidth, null, false, phHeight));
+            DrawImageError(canvas, contentRect.Left, contentRect.Top, contentRect.Width, contentRect.Height, "[Image Error]");
+            return Task.CompletedTask;
         }
 
         using (skImage)
         {
-            SKRect targetRect = CalculateTargetRectInternal(skImage, image.CurrentAspect, contentRect.Left, contentRect.Top, contentRect.Width, contentRect.Height,image.GetWidthRequest, image.GetHeightRequest);
-
-            float extraX = (contentRect.Width - targetRect.Width) / 2f;
-            float extraY = (contentRect.Height - targetRect.Height) / 2f;
-            SKRect centeredRect = SKRect.Create(
-                contentRect.Left + Math.Max(0, extraX),
-                contentRect.Top + Math.Max(0, extraY),
-                targetRect.Width,
-                targetRect.Height
-            );
+            SKRect targetRect = CalculateTargetRectInternal(skImage, image.CurrentAspect, contentRect.Left, contentRect.Top, contentRect.Width, contentRect.Height, image.GetWidthRequest, image.GetHeightRequest);
 
             if (image.GetBackgroundColor is not null)
             {
                 using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(image.GetBackgroundColor), Style = SKPaintStyle.Fill };
-                canvas.DrawRect(centeredRect, bgPaint);
+                canvas.DrawRect(targetRect, bgPaint);
             }
 
-            canvas.DrawImage(skImage, centeredRect);
-
-            float visualHeight = centeredRect.Height;
-            float consumedWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : centeredRect.Width;
-            return Task.FromResult(new RenderOutput(visualHeight, consumedWidth, null, false, visualHeight));
+            canvas.DrawImage(skImage, targetRect);
         }
+        return Task.CompletedTask;
     }
 
     private float DrawImageError(SKCanvas? canvas, float x, float y, float availableWidth, float availableHeight, string message = "[Image Error]")

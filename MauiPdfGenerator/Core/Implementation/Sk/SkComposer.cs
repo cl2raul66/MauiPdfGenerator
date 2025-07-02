@@ -1,15 +1,15 @@
 ﻿using MauiPdfGenerator.Core.Exceptions;
+using MauiPdfGenerator.Core.Implementation.Sk.Pages;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
 using SkiaSharp;
-using System.Diagnostics;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal class SkComposer : IPdfCoreGenerator
 {
-    private readonly RenderPages _pageRenderer = new();
+    private readonly PageRendererFactory _rendererFactory = new();
 
     public async Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry)
     {
@@ -33,20 +33,20 @@ internal class SkComposer : IPdfCoreGenerator
             using var stream = new SKFileWStream(filePath);
             using var pdfDoc = SKDocument.CreatePdf(stream, metadata) ?? throw new PdfGenerationException("SkiaSharp failed to create the PDF document stream.");
 
+            var layoutState = new Dictionary<PdfElement, object>();
+
             foreach (var pageDefinition in documentData.Pages)
             {
-                var layoutState = new Dictionary<PdfElement, object>();
+                IPageRenderer pageRenderer = _rendererFactory.GetRenderer(pageDefinition);
 
-                // Fase de Medición: Obtener el plan de renderizado
-                var pageBlocks = await _pageRenderer.MeasureAsync(pageDefinition, fontRegistry, layoutState);
+                var pageBlocks = await pageRenderer.LayoutAsync(pageDefinition, fontRegistry, layoutState);
 
-                // Fase de Renderizado: Ejecutar el plan
                 foreach (var block in pageBlocks)
                 {
                     SKSize pageSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
                     using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
 
-                    await _pageRenderer.RenderAsync(canvas, pageDefinition, block.Value, fontRegistry, layoutState);
+                    await pageRenderer.RenderPageBlockAsync(canvas, pageDefinition, block, fontRegistry, layoutState);
 
                     pdfDoc.EndPage();
                 }

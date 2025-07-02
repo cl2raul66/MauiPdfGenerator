@@ -36,7 +36,63 @@ public partial class MainPage : ContentPage
                 .ContentPage()
                 .Content(c =>
                 {
-                    c.Paragraph("[P1] Texto simple, alineado al centro.");                    
+                    c.Paragraph("[P1] Texto simple, con propiedades predeterminadas");
+                    c.Paragraph("[P2] Texto simple, con HorizontalOptions Center")
+                        .HorizontalOptions(LayoutAlignment.Center);
+                    c.Paragraph("[P3] Texto simple, con HorizontalOptions Fill")
+                        .HorizontalOptions(LayoutAlignment.Fill);
+                    c.Paragraph("[P4] Texto simple, con HorizontalOptions End")
+                        .HorizontalOptions(LayoutAlignment.End);
+                    c.Paragraph("[P5] Texto simple, con HorizontalOptions Start")
+                        .HorizontalOptions(LayoutAlignment.Start);
+                    c.Paragraph("[P6] Texto simple, con TextColor Blue")
+                        .TextColor(Colors.Blue);
+                    c.Paragraph("[P7] Texto simple, con TextTransform None")
+                        .TextTransform(TextTransform.None);
+                    c.Paragraph("[P8] Texto simple, con TextTransform Default")
+                        .TextTransform(TextTransform.Default);
+                    c.Paragraph("[P9] Texto simple, con TextTransform Lowercase")
+                        .TextTransform(TextTransform.Lowercase);
+                    c.Paragraph("[P10] Texto simple, con TextTransform Uppercase")
+                        .TextTransform(TextTransform.Uppercase);
+                    c.Paragraph("[P11] Texto simple, con FontAttributes None")
+                        .FontAttributes(FontAttributes.None);
+                    c.Paragraph("[P12] Texto simple, con FontAttributes Italic")
+                        .FontAttributes(FontAttributes.Italic);
+                    c.Paragraph("[P13] Texto simple, con FontAttributes Bold")
+                        .FontAttributes(FontAttributes.Bold);
+                    c.Paragraph("[P14] Texto simple, con FontAttributes Italic and Bold")
+                        .FontAttributes(FontAttributes.Italic | FontAttributes.Bold);
+                    c.Paragraph("[P15] Texto simple, con FontSize 22")
+                        .FontSize(22);
+                    c.Paragraph("[P16] Texto simple, con FontFamily OpenSansRegular")
+                        .FontFamily(PdfFonts.OpenSansRegular);
+                    c.Paragraph("[P17] Texto simple, con FontFamily OpenSansSemibold")
+                        .FontFamily(PdfFonts.OpenSansSemibold);
+                    c.Paragraph("[P18] Texto simple, con FontFamily Comic")
+                        .FontFamily(PdfFonts.Comic);
+                    c.Paragraph("[P19] Texto simple, con HeightRequest 42, BackgroundColor LightBlue, VerticalOptions Center")
+                        .HeightRequest(42)
+                        .BackgroundColor(Colors.LightBlue)
+                        .VerticalOptions(LayoutAlignment.Center);
+                    c.Paragraph("Siguiente texto [P20] con LineBreakMode WordWrap");
+                    c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
+                        .LineBreakMode(LineBreakMode.WordWrap);
+                    c.Paragraph("Siguiente texto [P21] con LineBreakMode NoWrap");
+                    c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
+                        .LineBreakMode(LineBreakMode.NoWrap);
+                    c.Paragraph("Siguiente texto [P22] con LineBreakMode CharacterWrap");
+                    c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
+                        .LineBreakMode(LineBreakMode.CharacterWrap);
+                    c.Paragraph("Siguiente texto [P23] con LineBreakMode HeadTruncation");
+                    c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
+                        .LineBreakMode(LineBreakMode.HeadTruncation);
+                    c.Paragraph("Siguiente texto [P24] con LineBreakMode MiddleTruncation");
+                    c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
+                        .LineBreakMode(LineBreakMode.MiddleTruncation);
+                    c.Paragraph("Siguiente texto [P25] con LineBreakMode TailTruncation");
+                    c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
+                        .LineBreakMode(LineBreakMode.TailTruncation);
                 }).Build()
             .SaveAsync(targetFilePath);
 

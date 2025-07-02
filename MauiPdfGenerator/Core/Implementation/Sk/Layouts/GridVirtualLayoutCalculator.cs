@@ -1,15 +1,10 @@
-using Microsoft.Maui.Controls;
-using Microsoft.Maui;
-using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Core.Implementation.Sk.Elements;
 using MauiPdfGenerator.Core.Models;
-using SkiaSharp;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
-using MauiPdfGenerator.Fluent.Models.Layouts;
+using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Fluent.Models.Layouts;
+using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
@@ -20,8 +15,10 @@ internal class GridVirtualLayoutCalculator
 
     public async Task<GridLayoutResult> MeasureAsync(
         PdfGrid grid,
+        ElementRendererFactory rendererFactory,
         PdfPageData pageDef,
-        Func<SKCanvas, PdfElement, PdfPageData, SKRect, float, Task<RenderOutput>> elementRenderer)
+        Dictionary<PdfElement, object> layoutState,
+        PdfFontRegistryBuilder fontRegistry)
     {
         System.Diagnostics.Debug.WriteLine($"[GRID-PRERENDER] Grid con {grid.GetChildren.Count} hijos, filas: {grid.RowDefinitionsList.Count}, columnas: {grid.ColumnDefinitionsList.Count}");
 
@@ -31,8 +28,6 @@ internal class GridVirtualLayoutCalculator
         int rowCount = rowDefs.Count;
         float[] colWidths = new float[colCount];
         float[] rowHeights = new float[rowCount];
-
-        using var dummyCanvas = new SKCanvas(new SKBitmap(1, 1));
 
         var pageSize = Core.Implementation.Sk.SkiaUtils.GetSkPageSize(pageDef.Size, pageDef.Orientation);
         float pageWidth = pageSize.Width - (float)pageDef.Margins.HorizontalThickness;
@@ -73,7 +68,7 @@ internal class GridVirtualLayoutCalculator
         }
         float availableWidthForAutoCols = Math.Max(0, pageWidth - totalAbsoluteColWidth);
 
-        var cellMeasures = new RenderOutput[rowCount, colCount];
+        var cellMeasures = new LayoutInfo[rowCount, colCount];
         float[] maxAutoColWidths = new float[colCount];
         for (int c = 0; c < colCount; c++)
         {
@@ -98,9 +93,10 @@ internal class GridVirtualLayoutCalculator
                                 throw new InvalidOperationException($"La imagen en la celda [{cell.Row},{cell.Column}] con columnas y filas auto debe tener WidthRequest o HeightRequest definido.");
                             }
                         }
-                        var result = await elementRenderer(dummyCanvas, element, pageDef, new SKRect(0, 0, widthForMeasure, heightForMeasure), 0);
+                        var renderer = rendererFactory.GetRenderer(element);
+                        var result = await renderer.MeasureAsync(element, rendererFactory, pageDef, new SKRect(0, 0, widthForMeasure, heightForMeasure), layoutState, fontRegistry);
                         cellMeasures[r, c] = result;
-                        maxWidth = Math.Max(maxWidth, result.WidthDrawnThisCall);
+                        maxWidth = Math.Max(maxWidth, result.Width);
                     }
                 }
                 maxAutoColWidths[c] = maxWidth;
@@ -169,7 +165,6 @@ internal class GridVirtualLayoutCalculator
                     {
                         hasContent = true;
                         float availableWidth = colDefs[c].GridUnitType == GridUnitType.Absolute ? (float)colDefs[c].Value : colWidths[c];
-                        // CORRECCIÓN: Usar availableHeightForAutoRows en vez de float.MaxValue
                         float availableHeight = availableHeightForAutoRows > 0 ? availableHeightForAutoRows : pageHeight;
                         var element = cell.Element;
                         float widthForMeasure = element.GetHorizontalOptions == LayoutAlignment.Fill ? availableWidth : float.MaxValue;
@@ -182,12 +177,13 @@ internal class GridVirtualLayoutCalculator
                             }
                         }
                         var result = cellMeasures[r, c];
-                        if (result.Equals(default(RenderOutput)))
+                        if (result.Equals(default(LayoutInfo)))
                         {
-                            result = await elementRenderer(dummyCanvas, element, pageDef, new SKRect(0, 0, widthForMeasure, heightForMeasure), 0);
+                            var renderer = rendererFactory.GetRenderer(element);
+                            result = await renderer.MeasureAsync(element, rendererFactory, pageDef, new SKRect(0, 0, widthForMeasure, heightForMeasure), layoutState, fontRegistry);
                             cellMeasures[r, c] = result;
                         }
-                        maxHeight = Math.Max(maxHeight, result.VisualHeightDrawn);
+                        maxHeight = Math.Max(maxHeight, result.Height);
                     }
                 }
                 if (hasContent && maxHeight <= 0)
@@ -196,10 +192,13 @@ internal class GridVirtualLayoutCalculator
             }
         }
         bool allRowsAuto = rowDefs.All(rd => rd.GridUnitType == GridUnitType.Auto);
-        if (allRowsAuto) {
+        if (allRowsAuto)
+        {
             for (int r = 0; r < rowCount; r++)
                 rowHeights[r] = maxAutoRowHeights[r];
-        } else {
+        }
+        else
+        {
             float totalAutoRowHeight = maxAutoRowHeights.Sum();
             for (int r = 0; r < rowCount; r++)
             {

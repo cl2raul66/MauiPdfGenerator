@@ -14,7 +14,7 @@ public class PdfParagraph : PdfElement
     public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
     public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None;
 
-    internal string Text { get; } 
+    internal string Text { get; }
     internal PdfFontIdentifier? CurrentFontFamily { get; private set; }
     internal float CurrentFontSize { get; private set; }
     internal Color? CurrentTextColor { get; private set; }
@@ -100,7 +100,9 @@ public class PdfParagraph : PdfElement
 
     public PdfParagraph FontSize(float size)
     {
-        CurrentFontSize = size > 0 ? size : 0;
+        if (size <= 0)
+            throw new ArgumentOutOfRangeException(nameof(size), "Font size must be a positive value.");
+        CurrentFontSize = size;
         return this;
     }
 

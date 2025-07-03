@@ -6,7 +6,7 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -16,13 +16,15 @@ internal class PdfDocumentBuilder : IPdfDocument
     private readonly PdfConfigurationBuilder _configurationBuilder;
     private readonly List<IPdfPageBuilder> _pages;
     private readonly IPdfCoreGenerator _pdfGenerationService;
+    private readonly ILogger _logger;
 
-    public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, string? defaultPath = null)
+    public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, ILoggerFactory loggerFactory, string? defaultPath = null)
     {
         _filePath = defaultPath;
         _pages = [];
         _configurationBuilder = new PdfConfigurationBuilder(fontRegistry);
         _pdfGenerationService = new SkComposer();
+        _logger = loggerFactory.CreateLogger<IPdfDocument>();
     }
 
     public IPdfDocument Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)
@@ -72,13 +74,13 @@ internal class PdfDocumentBuilder : IPdfDocument
                     contentPageBuilder.GetPageDefaultTextColor(),
                     contentPageBuilder.GetPageDefaultFontAttributes(),
                     contentPageBuilder.GetPageDefaultTextDecorations(),
-                    contentPageBuilder.GetPageDefaultTextTransform() 
+                    contentPageBuilder.GetPageDefaultTextTransform()
                 );
                 pageDataList.Add(pageData);
             }
             else
             {
-                Debug.WriteLine($"Warning: Unknown page builder type found: {pageBuilder.GetType().FullName}. Skipping page.");
+                _logger.LogWarning("Unknown page builder type found: {PageBuilderType}. Skipping page.", pageBuilder.GetType().FullName);
             }
         }
 
@@ -97,16 +99,16 @@ internal class PdfDocumentBuilder : IPdfDocument
 
         try
         {
-            await _pdfGenerationService.GenerateAsync(documentData, path, _configurationBuilder.FontRegistry);
+            await _pdfGenerationService.GenerateAsync(documentData, path, _configurationBuilder.FontRegistry, _logger);
         }
         catch (PdfGenerationException genEx)
         {
-            Debug.WriteLine($"PDF generation error: {genEx.Message}");
+            _logger.LogError(genEx, "A known PDF generation error occurred.");
             throw;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Unexpected error while saving PDF: {ex.Message}");
+            _logger.LogError(ex, "An unexpected error occurred while saving the PDF.");
             throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
         }
     }

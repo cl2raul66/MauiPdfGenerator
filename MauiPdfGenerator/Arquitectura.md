@@ -1,5 +1,4 @@
-﻿
-### **Análisis Arquitectónico**
+﻿### **Análisis Arquitectónico**
 
 #### **1. Las Fronteras: `Fluent`, `Core` y `Common`**
 
@@ -19,29 +18,35 @@ Aquí has tocado el punto clave de la decisión de diseño actual:
 
 La arquitectura actual es pragmática: evita una capa de abstracción que, por ahora, no aportaría ningún valor y solo añadiría complejidad.
 
-#### **3. Estrategias para la Evolución Futura del Modelo**
+### **Evolución y Mejoras Implementadas**
 
-Tu visión sobre cómo evolucionar es, de nuevo, la correcta. Si en el futuro el `Core` necesita información que no tiene sentido exponer en la API `Fluent`, tenemos varias opciones, tal y como has delineado:
+Basado en un análisis arquitectónico avanzado, se han implementado las siguientes mejoras estructurales para aumentar la robustez, mantenibilidad y profesionalidad de la biblioteca, sin caer en la sobre-ingeniería.
 
-*   **Opción 1: Mapeo a Modelos del Core (DTOs)**
-    *   **Cuándo usarlo:** Si el `Core` necesita una representación de los elementos muy diferente a la del `Fluent`. Por ejemplo, si un futuro motor de renderizado requiere que los datos estén en una estructura aplanada o con referencias numéricas en lugar de objetos.
-    *   **Implementación:**
-        1.  Crearíamos un nuevo conjunto de modelos en `Core.Models` (ej. `CoreParagraph`, `CoreImage`).
-        2.  En el `PdfDocumentBuilder` o en el `SkComposer`, justo antes de empezar la generación, se ejecutaría un proceso de mapeo que convierte el árbol de `Fluent.Models.PdfElement` a un árbol de `Core.Models.CoreElement`.
-    *   **Ventaja:** Desacoplamiento máximo. `Fluent` y `Core` podrían evolucionar sus modelos internos de forma completamente independiente.
-    *   **Desventaja:** Mayor complejidad y sobrecarga de procesamiento por el mapeo.
+#### **1. Formalización del Contexto de Generación (`PdfGenerationContext`)**
 
-*   **Opción 2: Herencia y Especialización**
-    *   **Cuándo usarlo:** Si el `Core` solo necesita añadir unos pocos datos o comportamientos específicos sin cambiar la estructura fundamental del modelo.
-    *   **Implementación:**
-        1.  El modelo base (`PdfElement`) se movería a `Common`.
-        2.  `Fluent` usaría una implementación (ej. `FluentParagraph` que hereda de `Common.PdfParagraph`).
-        3.  El `Core` podría trabajar con la base `Common.PdfParagraph` o incluso crear su propia especialización (`CoreParagraph`) si fuera necesario.
-    *   **Ventaja:** Reutilización de código y una evolución más gradual.
-    *   **Desventaja:** Puede crear jerarquías de clases complejas si no se gestiona con cuidado.
+*   **Problema Anterior:** Múltiples parámetros de estado (datos de la página, estado del layout, registro de fuentes) se pasaban individualmente a través de toda la pila de llamadas de renderizado, resultando en firmas de métodos largas y acopladas.
+*   **Solución Implementada:** Se ha introducido la clase `PdfGenerationContext`. Este "Context Object" encapsula todo el estado relevante para la generación de una página. Ahora, los métodos de renderizado reciben una única referencia a este contexto.
+*   **Beneficios:**
+    *   **Código Limpio:** Las firmas de los métodos son más simples y estables.
+    *   **Extensibilidad:** Añadir nuevo estado global (ej. configuración de caché) en el futuro solo requiere modificar la clase `PdfGenerationContext`, sin alterar las firmas de todos los renderers.
+    *   **Cohesión:** Todo el estado relacionado con la generación está agrupado lógicamente.
 
-*   **Opción 3: Métodos de Extensión o Factorías (El Enfoque Actual)**
-    *   **Cuándo usarlo:** Cuando la diferencia es mínima y se puede gestionar con lógica simple. Es una forma de "decorar" el modelo existente con la funcionalidad que necesita el `Core`.
-    *   **Implementación:** Es lo que estamos haciendo. El `Core` recibe el modelo `Fluent` y utiliza sus propios `Renderers` (que actúan como factorías de lógica) para interpretar el modelo y generar el resultado.
-    *   **Ventaja:** La más simple y directa para el estado actual del proyecto.
-    *   **Desventaja:** Si las necesidades del `Core` divergen mucho, esta opción puede llevar a un `Core` con demasiada lógica de "interpretación", lo que indicaría que es hora de pasar a la Opción 1 o 2.
+#### **2. Integración de Logging Profesional (`Microsoft.Extensions.Logging`)**
+
+*   **Problema Anterior:** El diagnóstico se realizaba mediante `Debug.WriteLine`, que es limitado, no configurable y solo útil en modo Debug.
+*   **Solución Implementada:** Se ha integrado el sistema de logging estándar de .NET. Se inyecta un `ILogger` a través del `PdfGenerationContext`.
+*   **Beneficios:**
+    *   **Diagnóstico Profesional:** Permite el uso de niveles de log (Information, Warning, Error), lo que facilita filtrar y entender los problemas.
+    *   **Configurable:** Los consumidores de la biblioteca pueden configurar dónde se escriben los logs (consola, ficheros, etc.).
+    *   **Producción-Ready:** Es fundamental para diagnosticar problemas en entornos de producción.
+
+#### **3. Adición de Validación Temprana ("Fail-Fast")**
+
+*   **Problema Anterior:** Valores inválidos en la API fluida (ej. `Spacing(-10)`) no causaban un error hasta la fase de renderizado en el `Core`, dificultando la depuración.
+*   **Solución Implementada:** Se han añadido validaciones (`ArgumentOutOfRangeException`) directamente en los métodos de la API `Fluent`.
+*   **Beneficios:**
+    *   **Mejor Experiencia de Desarrollador (DX):** El desarrollador que usa la biblioteca recibe feedback inmediato y claro si utiliza un valor incorrecto.
+    *   **Robustez:** Se previene que estados inválidos se propaguen al motor de renderizado.
+
+Estas mejoras estratégicas fortalecen la base arquitectónica de la biblioteca, preparándola para una evolución futura más estable y mantenible.
+--- END OF FILE Arquitectura.md ---

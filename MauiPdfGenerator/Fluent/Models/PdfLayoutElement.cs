@@ -72,7 +72,9 @@ public abstract class PdfLayoutElement : PdfElement
 
     public PdfLayoutElement Spacing(float value)
     {
-        GetSpacing = value >= 0 ? value : 0;
+        if (value < 0)
+            throw new ArgumentOutOfRangeException(nameof(value), "Spacing must be a non-negative value.");
+        GetSpacing = value;
         return this;
     }
 

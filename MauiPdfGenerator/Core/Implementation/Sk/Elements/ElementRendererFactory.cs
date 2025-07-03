@@ -1,5 +1,4 @@
 ﻿using MauiPdfGenerator.Core.Implementation.Sk.Layouts;
-using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Models.Layouts;
 
@@ -22,7 +21,7 @@ internal class ElementRendererFactory
         };
     }
 
-    public IElementRenderer GetRenderer(PdfElement element)
+    public IElementRenderer GetRenderer(object element)
     {
         ArgumentNullException.ThrowIfNull(element);
         if (_renderers.TryGetValue(element.GetType(), out var renderer))

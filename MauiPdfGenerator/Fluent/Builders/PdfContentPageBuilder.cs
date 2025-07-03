@@ -3,8 +3,8 @@ using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
-using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Fluent.Models.Elements;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -56,9 +56,9 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
 
         if (defaultsBuilder.FontSize.HasValue)
         {
-            _pageDefaultFontSize = defaultsBuilder.FontSize.Value > 0
-                ? defaultsBuilder.FontSize.Value
-                : PdfParagraph.DefaultFontSize;
+            if (defaultsBuilder.FontSize.Value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(defaultsBuilder.FontSize), "Default font size must be positive.");
+            _pageDefaultFontSize = defaultsBuilder.FontSize.Value;
         }
         _pageDefaultFontAttributes = defaultsBuilder.FontAttribute;
         return this;
@@ -117,7 +117,9 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     }
     public IPdfContentPage Spacing(float value)
     {
-        _pageSpacing = value >= 0 ? value : 0;
+        if (value < 0)
+            throw new ArgumentOutOfRangeException(nameof(value), "Spacing must be a non-negative value.");
+        _pageSpacing = value;
         return this;
     }
     public IPdfContentPage DefaultTextColor(Color color)
@@ -144,7 +146,6 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     public Color GetPageDefaultTextColor() => _pageDefaultTextColor;
     public FontAttributes GetPageDefaultFontAttributes() => _pageDefaultFontAttributes;
 
-    // Implementación explícita de IPdfPage<IPdfContentPage>
     IPdfContentPage IPdfPage<IPdfContentPage>.PageSize(PageSizeType pageSizeType) => PageSize(pageSizeType);
     IPdfContentPage IPdfPage<IPdfContentPage>.PageOrientation(PageOrientationType pageOrientationType) => PageOrientation(pageOrientationType);
     IPdfContentPage IPdfPage<IPdfContentPage>.Margins(float uniformMargin) => Margins(uniformMargin);

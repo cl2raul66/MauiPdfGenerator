@@ -1,6 +1,4 @@
-﻿using MauiPdfGenerator.Core.Implementation.Sk.Elements;
-using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Builders;
+﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Models;
 using SkiaSharp;
 
@@ -9,15 +7,15 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
 internal class PdfContentPageRenderer : IPageRenderer
 {
     private readonly PageLayoutEngine _layoutEngine = new();
-    private readonly ElementRendererFactory _rendererFactory = new();
 
-    public async Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(PdfPageData pageDef, PdfFontRegistryBuilder fontRegistry, Dictionary<PdfElement, object> layoutState)
+    public async Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(PdfGenerationContext context)
     {
-        return await _layoutEngine.LayoutAsync(pageDef.Elements, pageDef, layoutState, fontRegistry);
+        return await _layoutEngine.LayoutAsync(context);
     }
 
-    public async Task RenderPageBlockAsync(SKCanvas canvas, PdfPageData pageDef, IReadOnlyList<LayoutInfo> pageBlock, PdfFontRegistryBuilder fontRegistry, Dictionary<PdfElement, object> layoutState)
+    public async Task RenderPageBlockAsync(SKCanvas canvas, IReadOnlyList<LayoutInfo> pageBlock, PdfGenerationContext context)
     {
+        var pageDef = context.PageData;
         canvas.Clear(pageDef.BackgroundColor is not null ? SkiaUtils.ConvertToSkColor(pageDef.BackgroundColor) : SKColors.White);
 
         SKSize pageSize = SkiaUtils.GetSkPageSize(pageDef.Size, pageDef.Orientation);
@@ -34,8 +32,8 @@ internal class PdfContentPageRenderer : IPageRenderer
         for (int i = 0; i < pageBlock.Count; i++)
         {
             var layoutInfo = pageBlock[i];
-            var element = layoutInfo.Element;
-            var renderer = _rendererFactory.GetRenderer(element);
+            var element = (PdfElement)layoutInfo.Element;
+            var renderer = context.RendererFactory.GetRenderer(element);
 
             float offsetX = element.GetHorizontalOptions switch
             {
@@ -45,7 +43,8 @@ internal class PdfContentPageRenderer : IPageRenderer
             };
 
             var renderRect = SKRect.Create(contentRect.Left + offsetX, currentY, layoutInfo.Width, layoutInfo.Height);
-            await renderer.RenderAsync(canvas, element, _rendererFactory, pageDef, renderRect, layoutState, fontRegistry);
+            var elementContext = context with { Element = element };
+            await renderer.RenderAsync(canvas, renderRect, elementContext);
 
             currentY += layoutInfo.Height;
             if (i < pageBlock.Count - 1)

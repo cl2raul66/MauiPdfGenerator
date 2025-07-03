@@ -4,6 +4,7 @@ using MauiPdfGenerator.Core.Integration;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Enums;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace MauiPdfGenerator;
 
@@ -11,8 +12,8 @@ public static class MauiPdfGeneratorExtensions
 {
     public static MauiAppBuilder UseMauiPdfGenerator(this MauiAppBuilder builder)
     {
-        if(builder.Services.Any(sd => sd.ServiceType == typeof(PdfFontConfigurationContext)))
-{
+        if (builder.Services.Any(sd => sd.ServiceType == typeof(PdfFontConfigurationContext)))
+        {
             return builder;
         }
 
@@ -22,7 +23,12 @@ public static class MauiPdfGeneratorExtensions
         var configContext = new PdfFontConfigurationContext(fontRegistry);
         builder.Services.AddSingleton(configContext);
 
-        builder.Services.AddSingleton<IPdfDocumentFactory, PdfDocumentFactory>();
+        builder.Services.AddSingleton<IPdfDocumentFactory>(sp =>
+            new PdfDocumentFactory(
+                sp.GetRequiredService<PdfFontRegistryBuilder>(),
+                sp.GetRequiredService<ILoggerFactory>()
+            )
+        );
 
         return builder;
     }

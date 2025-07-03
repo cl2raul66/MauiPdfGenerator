@@ -1,12 +1,10 @@
-﻿using MauiPdfGenerator.Core.Exceptions;
-using MauiPdfGenerator.Fluent.Models;
+﻿using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Core.Models;
 
 internal readonly record struct LayoutInfo(
-    PdfElement Element,
+    object Element,
     float Width,
     float Height,
-    PdfElement? RemainingElement = null,
-    PdfGenerationException? Error = null
+    PdfElement? RemainingElement = null
 );

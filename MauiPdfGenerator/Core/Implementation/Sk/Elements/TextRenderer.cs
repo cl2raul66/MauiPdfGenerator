@@ -1,7 +1,7 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
@@ -16,13 +16,16 @@ internal class TextRenderer : IElementRenderer
         SKPaint Paint,
         float LineSpacing,
         TextAlignment HorizontalAlignment,
-        TextDecorations TextDecorations
+        TextDecorations TextDecorations,
+        float TotalTextHeight
     );
 
-    public async Task<LayoutInfo> MeasureAsync(PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect availableRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        var paragraph = (PdfParagraph)element;
-        var (font, paint, textToRender, horizontalAlignment, lineBreakMode, textDecorations, textTransform) = await GetTextPropertiesAsync(paragraph, pageDef, fontRegistry);
+        if (context.Element is not PdfParagraph paragraph)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraph)} or is null.");
+
+        var (font, paint, textToRender, horizontalAlignment, lineBreakMode, textDecorations, textTransform) = await GetTextPropertiesAsync(paragraph, context);
 
         float availableWidthForElement = paragraph.GetWidthRequest.HasValue ?
             (float)paragraph.GetWidthRequest.Value :
@@ -59,19 +62,19 @@ internal class TextRenderer : IElementRenderer
         List<string> linesToDrawThisCall = allLines.Take(linesThatFit).ToList();
         List<string> remainingLinesList = allLines.Skip(linesThatFit).ToList();
 
-        float visualHeightDrawn = 0;
+        float totalTextHeight = 0;
         if (linesToDrawThisCall.Any())
         {
             SKFontMetrics fontMetrics = font.Metrics;
             float visualLineHeight = fontMetrics.Descent - fontMetrics.Ascent;
-            visualHeightDrawn = (linesToDrawThisCall.Count - 1) * fontLineSpacing + visualLineHeight;
+            totalTextHeight = (linesToDrawThisCall.Count - 1) * fontLineSpacing + visualLineHeight;
         }
 
-        float heightDrawn = paragraph.GetHeightRequest.HasValue ?
+        float heightOfBox = paragraph.GetHeightRequest.HasValue ?
             (float)paragraph.GetHeightRequest.Value :
-            visualHeightDrawn + (float)paragraph.GetPadding.VerticalThickness;
+            totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
 
-        float totalHeight = heightDrawn + (float)paragraph.GetMargin.VerticalThickness;
+        float totalHeightWithMargin = heightOfBox + (float)paragraph.GetMargin.VerticalThickness;
 
         PdfParagraph? remainingParagraph = null;
         if (remainingLinesList.Any())
@@ -86,35 +89,52 @@ internal class TextRenderer : IElementRenderer
             remainingParagraph = paragraph;
         }
 
-        float measuredContentWidth;
+        float widthOfBox;
         if (paragraph.GetWidthRequest.HasValue)
         {
-            measuredContentWidth = (float)paragraph.GetWidthRequest.Value;
+            widthOfBox = (float)paragraph.GetWidthRequest.Value;
         }
         else if (paragraph.GetHorizontalOptions == LayoutAlignment.Fill)
         {
-            measuredContentWidth = availableWidthForElement;
+            widthOfBox = availableWidthForElement;
         }
         else
         {
-            measuredContentWidth = linesToDrawThisCall.Any() ? linesToDrawThisCall.Max(line => font.MeasureText(line)) : 0;
+            float textWidth = linesToDrawThisCall.Any() ? linesToDrawThisCall.Max(line => font.MeasureText(line)) : 0;
+            widthOfBox = textWidth + (float)paragraph.GetPadding.HorizontalThickness;
         }
-        float totalWidth = measuredContentWidth + (float)paragraph.GetMargin.HorizontalThickness;
+        float totalWidthWithMargin = widthOfBox + (float)paragraph.GetMargin.HorizontalThickness;
 
-        layoutState[element] = new TextLayoutCache(linesToDrawThisCall, font, paint, fontLineSpacing, horizontalAlignment, textDecorations);
+        context.LayoutState[paragraph] = new TextLayoutCache(linesToDrawThisCall, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight);
 
-        return new LayoutInfo(element, totalWidth, totalHeight, remainingParagraph);
+        return new LayoutInfo(paragraph, totalWidthWithMargin, totalHeightWithMargin, remainingParagraph);
     }
 
-    public Task RenderAsync(SKCanvas canvas, PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect renderRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        if (!layoutState.TryGetValue(element, out var cachedState) || cachedState is not TextLayoutCache textCache)
+        if (context.Element is not PdfParagraph paragraph)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraph)} or is null.");
+
+        if (!context.LayoutState.TryGetValue(paragraph, out var cachedState) || cachedState is not TextLayoutCache textCache)
         {
-            throw new InvalidOperationException("Text layout cache not found. MeasureAsync must be called before RenderAsync for a paragraph.");
+            context.Logger.LogError("Text layout cache not found for element. MeasureAsync was likely not called or failed.");
+            return Task.CompletedTask;
         }
 
-        var paragraph = (PdfParagraph)element;
-        var (linesToDraw, font, paint, fontLineSpacing, horizontalAlignment, textDecorations) = textCache;
+        var (linesToDraw, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight) = textCache;
+
+        var elementRect = new SKRect(
+            renderRect.Left + (float)paragraph.GetMargin.Left,
+            renderRect.Top + (float)paragraph.GetMargin.Top,
+            renderRect.Right - (float)paragraph.GetMargin.Right,
+            renderRect.Bottom - (float)paragraph.GetMargin.Bottom
+        );
+
+        if (paragraph.GetBackgroundColor is not null)
+        {
+            using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(paragraph.GetBackgroundColor), Style = SKPaintStyle.Fill };
+            canvas.DrawRect(elementRect, bgPaint);
+        }
 
         if (!linesToDraw.Any())
         {
@@ -124,13 +144,20 @@ internal class TextRenderer : IElementRenderer
         }
 
         var contentRect = new SKRect(
-            renderRect.Left + (float)paragraph.GetMargin.Left + (float)paragraph.GetPadding.Left,
-            renderRect.Top + (float)paragraph.GetMargin.Top + (float)paragraph.GetPadding.Top,
-            renderRect.Right - (float)paragraph.GetMargin.Right - (float)paragraph.GetPadding.Right,
-            renderRect.Bottom - (float)paragraph.GetMargin.Bottom - (float)paragraph.GetPadding.Bottom
+            elementRect.Left + (float)paragraph.GetPadding.Left,
+            elementRect.Top + (float)paragraph.GetPadding.Top,
+            elementRect.Right - (float)paragraph.GetPadding.Right,
+            elementRect.Bottom - (float)paragraph.GetPadding.Bottom
         );
 
-        float lineY = contentRect.Top;
+        float verticalOffset = paragraph.GetVerticalOptions switch
+        {
+            LayoutAlignment.Center => (contentRect.Height - totalTextHeight) / 2f,
+            LayoutAlignment.End => contentRect.Height - totalTextHeight,
+            _ => 0f
+        };
+
+        float lineY = contentRect.Top + verticalOffset;
 
         foreach (string line in linesToDraw)
         {
@@ -191,8 +218,11 @@ internal class TextRenderer : IElementRenderer
         }
     }
 
-    private async Task<(SKFont font, SKPaint paint, string textToRender, TextAlignment horizontalAlignment, LineBreakMode lineBreakMode, TextDecorations textDecorations, TextTransform textTransform)> GetTextPropertiesAsync(PdfParagraph paragraph, PdfPageData pageDefinition, PdfFontRegistryBuilder fontRegistry)
+    private async Task<(SKFont font, SKPaint paint, string textToRender, TextAlignment horizontalAlignment, LineBreakMode lineBreakMode, TextDecorations textDecorations, TextTransform textTransform)> GetTextPropertiesAsync(PdfParagraph paragraph, PdfGenerationContext context)
     {
+        var pageDefinition = context.PageData;
+        var fontRegistry = context.FontRegistry;
+
         PdfFontIdentifier? fontIdentifierToUse = paragraph.CurrentFontFamily
                                                ?? pageDefinition.PageDefaultFontFamily
                                                ?? fontRegistry.GetUserConfiguredDefaultFontIdentifier()

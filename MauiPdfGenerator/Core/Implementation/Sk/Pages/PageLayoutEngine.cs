@@ -1,26 +1,19 @@
-﻿using MauiPdfGenerator.Core.Implementation.Sk.Elements;
-using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Builders;
+﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Models;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
 
 internal class PageLayoutEngine
 {
-    private readonly ElementRendererFactory _rendererFactory = new();
-
-    public async Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(
-        IReadOnlyList<PdfElement> elements,
-        PdfPageData pageDef,
-        Dictionary<PdfElement, object> layoutState,
-        PdfFontRegistryBuilder fontRegistry)
+    public async Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(PdfGenerationContext context)
     {
         var pageBlocks = new List<IReadOnlyList<LayoutInfo>>();
-        var elementsToProcess = new Queue<PdfElement>(elements);
+        var elementsToProcess = new Queue<PdfElement>(context.PageData.Elements);
 
-        SKSize pageSize = SkiaUtils.GetSkPageSize(pageDef.Size, pageDef.Orientation);
-        var pageMargins = pageDef.Margins;
+        SKSize pageSize = SkiaUtils.GetSkPageSize(context.PageData.Size, context.PageData.Orientation);
+        var pageMargins = context.PageData.Margins;
         var contentRect = new SKRect(
             (float)pageMargins.Left, (float)pageMargins.Top,
             pageSize.Width - (float)pageMargins.Right, pageSize.Height - (float)pageMargins.Bottom
@@ -34,16 +27,11 @@ internal class PageLayoutEngine
             while (elementsToProcess.Count > 0)
             {
                 var element = elementsToProcess.Peek();
-                var renderer = _rendererFactory.GetRenderer(element);
+                var renderer = context.RendererFactory.GetRenderer(element);
                 var availableRectForMeasure = new SKRect(contentRect.Left, currentY, contentRect.Right, contentRect.Bottom);
+                var elementContext = context with { Element = element };
 
-                var layoutInfo = await renderer.MeasureAsync(element, _rendererFactory, pageDef, availableRectForMeasure, layoutState, fontRegistry);
-
-                if (layoutInfo.Error is not null)
-                {
-                    elementsToProcess.Dequeue();
-                    continue;
-                }
+                var layoutInfo = await renderer.MeasureAsync(elementContext, availableRectForMeasure);
 
                 bool fitsOnPage = layoutInfo.Height <= availableRectForMeasure.Height;
                 bool isFirstElement = currentY == contentRect.Top;
@@ -60,7 +48,7 @@ internal class PageLayoutEngine
 
                 if (elementsToProcess.Count > 0)
                 {
-                    currentY += pageDef.PageDefaultSpacing;
+                    currentY += context.PageData.PageDefaultSpacing;
                 }
 
                 if (layoutInfo.RemainingElement is not null)
@@ -78,9 +66,7 @@ internal class PageLayoutEngine
             else if (elementsToProcess.Count > 0)
             {
                 var element = elementsToProcess.Dequeue();
-                var renderer = _rendererFactory.GetRenderer(element);
-                var layoutInfo = await renderer.MeasureAsync(element, _rendererFactory, pageDef, contentRect, layoutState, fontRegistry);
-                pageBlocks.Add(new List<LayoutInfo> { layoutInfo }.AsReadOnly());
+                context.Logger.LogWarning("An element was too large to fit on a page by itself and was skipped: {ElementType}", element.GetType().Name);
             }
         }
 

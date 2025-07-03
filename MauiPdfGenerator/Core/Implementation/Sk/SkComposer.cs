@@ -1,17 +1,19 @@
 ﻿using MauiPdfGenerator.Core.Exceptions;
+using MauiPdfGenerator.Core.Implementation.Sk.Elements;
 using MauiPdfGenerator.Core.Implementation.Sk.Pages;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Models;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal class SkComposer : IPdfCoreGenerator
 {
-    private readonly PageRendererFactory _rendererFactory = new();
+    private readonly PageRendererFactory _pageRendererFactory = new();
+    private readonly ElementRendererFactory _elementRendererFactory = new();
 
-    public async Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry)
+    public async Task GenerateAsync(PdfDocumentData documentData, string filePath, PdfFontRegistryBuilder fontRegistry, ILogger logger)
     {
         try
         {
@@ -33,20 +35,21 @@ internal class SkComposer : IPdfCoreGenerator
             using var stream = new SKFileWStream(filePath);
             using var pdfDoc = SKDocument.CreatePdf(stream, metadata) ?? throw new PdfGenerationException("SkiaSharp failed to create the PDF document stream.");
 
-            var layoutState = new Dictionary<PdfElement, object>();
+            var layoutState = new Dictionary<object, object>();
 
             foreach (var pageDefinition in documentData.Pages)
             {
-                IPageRenderer pageRenderer = _rendererFactory.GetRenderer(pageDefinition);
+                var context = new PdfGenerationContext(pageDefinition, fontRegistry, layoutState, logger, _elementRendererFactory);
+                IPageRenderer pageRenderer = _pageRendererFactory.GetRenderer(pageDefinition);
 
-                var pageBlocks = await pageRenderer.LayoutAsync(pageDefinition, fontRegistry, layoutState);
+                var pageBlocks = await pageRenderer.LayoutAsync(context);
 
                 foreach (var block in pageBlocks)
                 {
                     SKSize pageSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
                     using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
 
-                    await pageRenderer.RenderPageBlockAsync(canvas, pageDefinition, block, fontRegistry, layoutState);
+                    await pageRenderer.RenderPageBlockAsync(canvas, block, context);
 
                     pdfDoc.EndPage();
                 }
@@ -56,6 +59,7 @@ internal class SkComposer : IPdfCoreGenerator
         }
         catch (Exception ex) when (ex is not PdfGenerationException)
         {
+            logger.LogError(ex, "An unexpected error occurred during PDF generation.");
             throw new PdfGenerationException($"An unexpected error occurred during PDF generation: {ex.Message}", ex);
         }
     }

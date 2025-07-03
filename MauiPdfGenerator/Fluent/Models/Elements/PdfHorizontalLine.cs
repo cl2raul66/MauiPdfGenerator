@@ -25,7 +25,9 @@ public class PdfHorizontalLine : PdfElement
 
     public PdfHorizontalLine Thickness(float value)
     {
-        CurrentThickness = value > 0 ? value : DefaultThickness;
+        if (value <= 0)
+            throw new ArgumentOutOfRangeException(nameof(value), "Thickness must be a positive value.");
+        CurrentThickness = value;
         return this;
     }
 

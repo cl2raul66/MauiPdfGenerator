@@ -1,6 +1,4 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
 using SkiaSharp;
 
@@ -8,32 +6,46 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
 internal class HorizontalLineRender : IElementRenderer
 {
-    public Task<LayoutInfo> MeasureAsync(PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect availableRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        var line = (PdfHorizontalLine)element;
-        float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
-        float width = availableRect.Width;
-        float height = thickness + (float)line.GetMargin.VerticalThickness;
+        if (context.Element is not PdfHorizontalLine line)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLine)} or is null.");
 
-        var layoutInfo = new LayoutInfo(element, width, height);
+        float thickness = line.CurrentThickness;
+
+        float heightOfBox = thickness;
+        float totalHeightWithMargin = heightOfBox + (float)line.GetMargin.VerticalThickness;
+
+        float widthOfBox = availableRect.Width - (float)line.GetMargin.HorizontalThickness;
+        float totalWidthWithMargin = widthOfBox + (float)line.GetMargin.HorizontalThickness;
+
+        var layoutInfo = new LayoutInfo(line, totalWidthWithMargin, totalHeightWithMargin);
         return Task.FromResult(layoutInfo);
     }
 
-    public Task RenderAsync(SKCanvas canvas, PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect renderRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        var line = (PdfHorizontalLine)element;
-        float thickness = line.CurrentThickness > 0 ? line.CurrentThickness : PdfHorizontalLine.DefaultThickness;
+        if (context.Element is not PdfHorizontalLine line)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLine)} or is null.");
+
+        float thickness = line.CurrentThickness;
         Color color = line.CurrentColor ?? PdfHorizontalLine.DefaultColor;
-        if (thickness <= 0) thickness = PdfHorizontalLine.DefaultThickness;
 
-        float lineY = renderRect.Top + (float)line.GetMargin.Top + thickness / 2f;
-        float startX = renderRect.Left + (float)line.GetMargin.Left;
-        float endX = renderRect.Right - (float)line.GetMargin.Right;
+        var elementRect = new SKRect(
+            renderRect.Left + (float)line.GetMargin.Left,
+            renderRect.Top + (float)line.GetMargin.Top,
+            renderRect.Right - (float)line.GetMargin.Right,
+            renderRect.Bottom - (float)line.GetMargin.Bottom
+        );
 
-        if (endX - startX <= 0)
+        if (elementRect.Width <= 0)
         {
             return Task.CompletedTask;
         }
+
+        float lineY = elementRect.MidY;
+        float startX = elementRect.Left;
+        float endX = elementRect.Right;
 
         using var paint = new SKPaint
         {

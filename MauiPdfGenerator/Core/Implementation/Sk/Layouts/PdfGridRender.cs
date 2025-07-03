@@ -1,8 +1,6 @@
-﻿using MauiPdfGenerator.Core.Implementation.Sk.Elements;
-using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Models;
+﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Models.Layouts;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
@@ -11,34 +9,42 @@ internal class PdfGridRender : IElementRenderer
 {
     private readonly GridVirtualLayoutCalculator _layoutCalculator = new();
 
-    public async Task<LayoutInfo> MeasureAsync(PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect availableRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
-    {
-        var grid = (PdfGrid)element;
-        var layoutResult = await _layoutCalculator.MeasureAsync(grid, rendererFactory, pageDef, layoutState, fontRegistry);
+    private record GridRenderCache(GridVirtualLayoutCalculator.GridLayoutResult LayoutResult, Dictionary<object, LayoutInfo> ChildMeasures);
 
-        float totalWidth = layoutResult.ColumnWidths.Sum() + grid.GetSpacing * (layoutResult.ColumnWidths.Length > 0 ? layoutResult.ColumnWidths.Length - 1 : 0);
-        float totalHeight = layoutResult.RowHeights.Sum() + grid.GetSpacing * (layoutResult.RowHeights.Length > 0 ? layoutResult.RowHeights.Length - 1 : 0);
+    public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    {
+        if (context.Element is not PdfGrid grid)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfGrid)} or is null.");
+
+        var (layoutResult, childMeasures) = await _layoutCalculator.MeasureAsync(grid, availableRect, context);
+
+        float totalWidth = layoutResult.ColumnWidths.Sum() + grid.GetSpacing * (layoutResult.ColumnWidths.Length > 1 ? layoutResult.ColumnWidths.Length - 1 : 0);
+        float totalHeight = layoutResult.RowHeights.Sum() + grid.GetSpacing * (layoutResult.RowHeights.Length > 1 ? layoutResult.RowHeights.Length - 1 : 0);
 
         totalWidth += (float)grid.GetPadding.HorizontalThickness + (float)grid.GetMargin.HorizontalThickness;
         totalHeight += (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
 
-        layoutState[grid] = layoutResult;
+        context.LayoutState[grid] = new GridRenderCache(layoutResult, childMeasures);
 
         return new LayoutInfo(grid, totalWidth, totalHeight);
     }
 
-    public async Task RenderAsync(SKCanvas canvas, PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect renderRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public async Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        var grid = (PdfGrid)element;
-        if (!layoutState.TryGetValue(grid, out var state) || state is not GridVirtualLayoutCalculator.GridLayoutResult layoutResult)
+        if (context.Element is not PdfGrid grid)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfGrid)} or is null.");
+
+        if (!context.LayoutState.TryGetValue(grid, out var state) || state is not GridRenderCache cache)
         {
-            throw new InvalidOperationException("Grid layout state was not calculated before rendering.");
+            context.Logger.LogError("Grid layout state was not calculated before rendering. MeasureAsync must be called first.");
+            return;
         }
+
+        var layoutResult = cache.LayoutResult;
+        var childMeasures = cache.ChildMeasures;
 
         float[] colWidths = layoutResult.ColumnWidths;
         float[] rowHeights = layoutResult.RowHeights;
-        float gridContentWidth = colWidths.Sum() + grid.GetSpacing * (colWidths.Length > 1 ? colWidths.Length - 1 : 0);
-        float gridContentHeight = rowHeights.Sum() + grid.GetSpacing * (rowHeights.Length > 1 ? rowHeights.Length - 1 : 0);
 
         float left = renderRect.Left + (float)grid.GetMargin.Left + (float)grid.GetPadding.Left;
         float top = renderRect.Top + (float)grid.GetMargin.Top + (float)grid.GetPadding.Top;
@@ -46,12 +52,7 @@ internal class PdfGridRender : IElementRenderer
         if (grid.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(grid.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            SKRect bgRect = SKRect.Create(
-                renderRect.Left + (float)grid.GetMargin.Left,
-                renderRect.Top + (float)grid.GetMargin.Top,
-                gridContentWidth + (float)grid.GetPadding.HorizontalThickness,
-                gridContentHeight + (float)grid.GetPadding.VerticalThickness);
-            canvas.DrawRect(bgRect, bgPaint);
+            canvas.DrawRect(renderRect, bgPaint);
         }
 
         float y = top;
@@ -68,8 +69,12 @@ internal class PdfGridRender : IElementRenderer
 
                     foreach (var child in childrenInCell)
                     {
-                        var childRenderer = rendererFactory.GetRenderer(child);
-                        var measure = await childRenderer.MeasureAsync(child, rendererFactory, pageDef, SKRect.Create(0, 0, cellWidth, cellHeight), layoutState, fontRegistry);
+                        var childRenderer = context.RendererFactory.GetRenderer(child);
+
+                        if (!childMeasures.TryGetValue(child, out var measure))
+                        {
+                            continue;
+                        }
 
                         float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? cellWidth : measure.Width;
                         float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? cellHeight : measure.Height;
@@ -89,7 +94,8 @@ internal class PdfGridRender : IElementRenderer
                         };
 
                         var childRect = SKRect.Create(x + offsetX, y + offsetY, childWidth, childHeight);
-                        await childRenderer.RenderAsync(canvas, child, rendererFactory, pageDef, childRect, layoutState, fontRegistry);
+                        var childContext = context with { Element = child };
+                        await childRenderer.RenderAsync(canvas, childRect, childContext);
                     }
                 }
                 x += colWidths[c] + grid.GetSpacing;

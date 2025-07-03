@@ -1,8 +1,5 @@
-using MauiPdfGenerator.Core.Implementation.Sk.Elements;
 using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Models.Layouts;
 using SkiaSharp;
 
@@ -11,217 +8,101 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 internal class GridVirtualLayoutCalculator
 {
     public record struct GridLayoutResult(float[] ColumnWidths, float[] RowHeights);
-    private record CellInfo(PdfElement Element, int Row, int Column, GridUnitType RowType, double RowValue, GridUnitType ColType, double ColValue);
+    private record CellInfo(object Element, int Row, int Column, int RowSpan, int ColSpan);
 
-    public async Task<GridLayoutResult> MeasureAsync(
+    public async Task<(GridLayoutResult, Dictionary<object, LayoutInfo>)> MeasureAsync(
         PdfGrid grid,
-        ElementRendererFactory rendererFactory,
-        PdfPageData pageDef,
-        Dictionary<PdfElement, object> layoutState,
-        PdfFontRegistryBuilder fontRegistry)
+        SKRect availableRect,
+        PdfGenerationContext context)
     {
-        System.Diagnostics.Debug.WriteLine($"[GRID-PRERENDER] Grid con {grid.GetChildren.Count} hijos, filas: {grid.RowDefinitionsList.Count}, columnas: {grid.ColumnDefinitionsList.Count}");
-
         var colDefs = grid.ColumnDefinitionsList;
         var rowDefs = grid.RowDefinitionsList;
         int colCount = colDefs.Count;
         int rowCount = rowDefs.Count;
-        float[] colWidths = new float[colCount];
-        float[] rowHeights = new float[rowCount];
 
-        var pageSize = Core.Implementation.Sk.SkiaUtils.GetSkPageSize(pageDef.Size, pageDef.Orientation);
-        float pageWidth = pageSize.Width - (float)pageDef.Margins.HorizontalThickness;
-        float pageHeight = pageSize.Height - (float)pageDef.Margins.VerticalThickness;
-
-        var cellInfos = new List<CellInfo>();
-        foreach (var child in grid.GetChildren.Where(e => e.GridRowSpan == 1 && e.GridColumnSpan == 1))
+        var childMeasures = new Dictionary<object, LayoutInfo>();
+        var cells = new List<CellInfo>();
+        foreach (var child in grid.GetChildren)
         {
-            int r = child.GridRow;
-            int c = child.GridColumn;
-            var rowDef = rowDefs[r];
-            var colDef = colDefs[c];
-            cellInfos.Add(new CellInfo(
-                child,
-                r,
-                c,
-                rowDef.GridUnitType,
-                rowDef.Value,
-                colDef.GridUnitType,
-                colDef.Value
-            ));
+            cells.Add(new CellInfo(child, child.GridRow, child.GridColumn, child.GridRowSpan, child.GridColumnSpan));
+            var renderer = context.RendererFactory.GetRenderer(child);
+            var childContext = context with { Element = child };
+            var measure = await renderer.MeasureAsync(childContext, availableRect);
+            childMeasures[child] = measure;
         }
 
-        float totalAbsoluteColWidth = 0;
-        int autoColCount = 0;
-        for (int c = 0; c < colCount; c++)
+        float[] colWidths = CalculateDimension(colDefs, childMeasures, cells, availableRect.Width, isColumn: true);
+        float[] rowHeights = CalculateDimension(rowDefs, childMeasures, cells, availableRect.Height, isColumn: false);
+
+        return (new GridLayoutResult(colWidths, rowHeights), childMeasures);
+    }
+
+    private float[] CalculateDimension(IReadOnlyList<PdfGridLength> definitions, Dictionary<object, LayoutInfo> childMeasures, List<CellInfo> cells, float availableSize, bool isColumn)
+    {
+        int count = definitions.Count;
+        var result = new float[count];
+        var measured = new bool[count];
+
+        float totalAbsolute = 0;
+        for (int i = 0; i < count; i++)
         {
-            var colDef = colDefs[c];
-            if (colDef.GridUnitType == GridUnitType.Absolute)
+            if (definitions[i].GridUnitType == GridUnitType.Absolute)
             {
-                colWidths[c] = (float)colDef.Value;
-                totalAbsoluteColWidth += (float)colDef.Value;
-            }
-            else if (colDef.GridUnitType == GridUnitType.Auto)
-            {
-                autoColCount++;
+                result[i] = (float)definitions[i].Value;
+                measured[i] = true;
+                totalAbsolute += result[i];
             }
         }
-        float availableWidthForAutoCols = Math.Max(0, pageWidth - totalAbsoluteColWidth);
 
-        var cellMeasures = new LayoutInfo[rowCount, colCount];
-        float[] maxAutoColWidths = new float[colCount];
-        for (int c = 0; c < colCount; c++)
+        float remainingForAutoAndStar = availableSize - totalAbsolute;
+
+        for (int i = 0; i < count; i++)
         {
-            var colDef = colDefs[c];
-            if (colDef.GridUnitType == GridUnitType.Auto)
+            if (definitions[i].GridUnitType == GridUnitType.Auto)
             {
-                float maxWidth = 0;
-                for (int r = 0; r < rowCount; r++)
+                float maxChildSize = 0;
+                var relevantCells = cells.Where(c => (isColumn ? c.Column : c.Row) == i && (isColumn ? c.ColSpan : c.RowSpan) == 1);
+                foreach (var cell in relevantCells)
                 {
-                    var cell = cellInfos.FirstOrDefault(ci => ci.Row == r && ci.Column == c);
-                    if (cell != null)
+                    if (childMeasures.TryGetValue(cell.Element, out var measure))
                     {
-                        float availableWidth = availableWidthForAutoCols;
-                        float availableHeight = cell.RowType == GridUnitType.Absolute ? (float)cell.RowValue : pageHeight;
-                        var element = cell.Element;
-                        float widthForMeasure = element.GetHorizontalOptions == LayoutAlignment.Fill ? availableWidth : float.MaxValue;
-                        float heightForMeasure = element.GetVerticalOptions == LayoutAlignment.Fill ? availableHeight : float.MaxValue;
-                        if (element is PdfImage img && cell.ColType == GridUnitType.Auto && cell.RowType == GridUnitType.Auto)
-                        {
-                            if (!img.GetWidthRequest.HasValue && !img.GetHeightRequest.HasValue)
-                            {
-                                throw new InvalidOperationException($"La imagen en la celda [{cell.Row},{cell.Column}] con columnas y filas auto debe tener WidthRequest o HeightRequest definido.");
-                            }
-                        }
-                        var renderer = rendererFactory.GetRenderer(element);
-                        var result = await renderer.MeasureAsync(element, rendererFactory, pageDef, new SKRect(0, 0, widthForMeasure, heightForMeasure), layoutState, fontRegistry);
-                        cellMeasures[r, c] = result;
-                        maxWidth = Math.Max(maxWidth, result.Width);
+                        maxChildSize = Math.Max(maxChildSize, isColumn ? measure.Width : measure.Height);
                     }
                 }
-                maxAutoColWidths[c] = maxWidth;
-            }
-        }
-        float totalAutoColWidth = maxAutoColWidths.Sum();
-        for (int c = 0; c < colCount; c++)
-        {
-            if (colDefs[c].GridUnitType == GridUnitType.Auto)
-            {
-                if (totalAutoColWidth > 0)
-                    colWidths[c] = Math.Min(maxAutoColWidths[c], availableWidthForAutoCols * (maxAutoColWidths[c] / totalAutoColWidth));
-                else
-                    colWidths[c] = availableWidthForAutoCols / autoColCount;
+                result[i] = maxChildSize;
+                measured[i] = true;
             }
         }
 
-        float totalStarColValue = 0;
-        for (int c = 0; c < colCount; c++)
-        {
-            if (colDefs[c].GridUnitType == GridUnitType.Star)
-                totalStarColValue += (float)colDefs[c].Value;
-        }
-        float usedWidth = totalAbsoluteColWidth + totalAutoColWidth;
-        float availableWidthForStarCols = Math.Min(pageWidth - usedWidth, Math.Max(0, pageWidth - usedWidth));
-        for (int c = 0; c < colCount; c++)
-        {
-            if (colDefs[c].GridUnitType == GridUnitType.Star && totalStarColValue > 0)
-                colWidths[c] = availableWidthForStarCols * ((float)colDefs[c].Value / totalStarColValue);
-        }
+        float totalAuto = result.Where((_, i) => definitions[i].GridUnitType == GridUnitType.Auto).Sum();
+        float totalStarValue = definitions.Where(d => d.GridUnitType == GridUnitType.Star).Sum(d => (float)d.Value);
+        float availableForStar = remainingForAutoAndStar - totalAuto;
 
-        float totalAbsoluteRowHeight = 0;
-        float totalStarRowValue = 0;
-        int autoRowCount = 0;
-        for (int r = 0; r < rowCount; r++)
+        if (totalStarValue > 0 && availableForStar > 0)
         {
-            var rowDef = rowDefs[r];
-            if (rowDef.GridUnitType == GridUnitType.Absolute)
+            for (int i = 0; i < count; i++)
             {
-                rowHeights[r] = (float)rowDef.Value;
-                totalAbsoluteRowHeight += (float)rowDef.Value;
-            }
-            else if (rowDef.GridUnitType == GridUnitType.Auto)
-            {
-                autoRowCount++;
-            }
-            else if (rowDef.GridUnitType == GridUnitType.Star)
-            {
-                totalStarRowValue += (float)rowDef.Value;
-            }
-        }
-        float availableHeightForAutoRows = Math.Max(0, pageHeight - totalAbsoluteRowHeight);
-
-        float[] maxAutoRowHeights = new float[rowCount];
-        for (int r = 0; r < rowCount; r++)
-        {
-            var rowDef = rowDefs[r];
-            if (rowDef.GridUnitType == GridUnitType.Auto)
-            {
-                float maxHeight = 0;
-                bool hasContent = false;
-                for (int c = 0; c < colCount; c++)
+                if (definitions[i].GridUnitType == GridUnitType.Star)
                 {
-                    var cell = cellInfos.FirstOrDefault(ci => ci.Row == r && ci.Column == c);
-                    if (cell != null)
-                    {
-                        hasContent = true;
-                        float availableWidth = colDefs[c].GridUnitType == GridUnitType.Absolute ? (float)colDefs[c].Value : colWidths[c];
-                        float availableHeight = availableHeightForAutoRows > 0 ? availableHeightForAutoRows : pageHeight;
-                        var element = cell.Element;
-                        float widthForMeasure = element.GetHorizontalOptions == LayoutAlignment.Fill ? availableWidth : float.MaxValue;
-                        float heightForMeasure = element.GetVerticalOptions == LayoutAlignment.Fill ? availableHeight : availableHeight;
-                        if (element is PdfImage img && cell.ColType == GridUnitType.Auto && cell.RowType == GridUnitType.Auto)
-                        {
-                            if (!img.GetWidthRequest.HasValue && !img.GetHeightRequest.HasValue)
-                            {
-                                throw new InvalidOperationException($"La imagen en la celda [{cell.Row},{cell.Column}] con columnas y filas auto debe tener WidthRequest o HeightRequest definido.");
-                            }
-                        }
-                        var result = cellMeasures[r, c];
-                        if (result.Equals(default(LayoutInfo)))
-                        {
-                            var renderer = rendererFactory.GetRenderer(element);
-                            result = await renderer.MeasureAsync(element, rendererFactory, pageDef, new SKRect(0, 0, widthForMeasure, heightForMeasure), layoutState, fontRegistry);
-                            cellMeasures[r, c] = result;
-                        }
-                        maxHeight = Math.Max(maxHeight, result.Height);
-                    }
+                    result[i] = availableForStar * ((float)definitions[i].Value / totalStarValue);
+                    measured[i] = true;
                 }
-                if (hasContent && maxHeight <= 0)
-                    maxHeight = 1;
-                maxAutoRowHeights[r] = maxHeight;
             }
-        }
-        bool allRowsAuto = rowDefs.All(rd => rd.GridUnitType == GridUnitType.Auto);
-        if (allRowsAuto)
-        {
-            for (int r = 0; r < rowCount; r++)
-                rowHeights[r] = maxAutoRowHeights[r];
         }
         else
         {
-            float totalAutoRowHeight = maxAutoRowHeights.Sum();
-            for (int r = 0; r < rowCount; r++)
+            var starIndices = definitions.Select((d, i) => new { d, i }).Where(x => x.d.GridUnitType == GridUnitType.Star).ToList();
+            if (starIndices.Any())
             {
-                if (rowDefs[r].GridUnitType == GridUnitType.Auto)
+                float sizePerStar = availableForStar > 0 ? availableForStar / starIndices.Count : 0;
+                foreach (var item in starIndices)
                 {
-                    if (totalAutoRowHeight > 0)
-                        rowHeights[r] = Math.Min(maxAutoRowHeights[r], availableHeightForAutoRows * (maxAutoRowHeights[r] / totalAutoRowHeight));
-                    else
-                        rowHeights[r] = availableHeightForAutoRows / autoRowCount;
+                    result[item.i] = sizePerStar;
+                    measured[item.i] = true;
                 }
             }
         }
 
-        float usedHeight = totalAbsoluteRowHeight + maxAutoRowHeights.Sum();
-        float availableHeightForStarRows = Math.Min(pageHeight - usedHeight, Math.Max(0, pageHeight - usedHeight));
-        for (int r = 0; r < rowCount; r++)
-        {
-            if (rowDefs[r].GridUnitType == GridUnitType.Star && totalStarRowValue > 0)
-                rowHeights[r] = availableHeightForStarRows * ((float)rowDefs[r].Value / totalStarRowValue);
-        }
-
-        System.Diagnostics.Debug.WriteLine($"[GRID-POSTRENDER] Grid layout: colWidths=[{string.Join(",", colWidths)}], rowHeights=[{string.Join(",", rowHeights)}]");
-
-        return new GridLayoutResult(colWidths, rowHeights);
+        return result;
     }
 }

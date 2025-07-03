@@ -1,17 +1,18 @@
-﻿using MauiPdfGenerator.Core.Implementation.Sk.Elements;
-using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Builders;
+﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Layouts;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
 internal class PdfVerticalStackLayoutRender : IElementRenderer
 {
-    public async Task<LayoutInfo> MeasureAsync(PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect availableRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        var vsl = (PdfVerticalStackLayout)element;
+        if (context.Element is not PdfVerticalStackLayout vsl)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayout)} or is null.");
+
         float totalHeight = 0;
         float maxWidth = 0;
         var childMeasures = new List<LayoutInfo>();
@@ -20,8 +21,9 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
 
         foreach (var child in vsl.GetChildren)
         {
-            var renderer = rendererFactory.GetRenderer(child);
-            var measure = await renderer.MeasureAsync(child, rendererFactory, pageDef, SKRect.Create(0, 0, childAvailableWidth, float.PositiveInfinity), layoutState, fontRegistry);
+            var renderer = context.RendererFactory.GetRenderer(child);
+            var childContext = context with { Element = child };
+            var measure = await renderer.MeasureAsync(childContext, SKRect.Create(0, 0, childAvailableWidth, float.PositiveInfinity));
             childMeasures.Add(measure);
             totalHeight += measure.Height;
             maxWidth = Math.Max(maxWidth, measure.Width);
@@ -35,17 +37,20 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         totalHeight += (float)vsl.GetPadding.VerticalThickness + (float)vsl.GetMargin.VerticalThickness;
         maxWidth += (float)vsl.GetPadding.HorizontalThickness + (float)vsl.GetMargin.HorizontalThickness;
 
-        layoutState[vsl] = childMeasures;
+        context.LayoutState[vsl] = childMeasures;
 
         return new LayoutInfo(vsl, maxWidth, totalHeight);
     }
 
-    public async Task RenderAsync(SKCanvas canvas, PdfElement element, ElementRendererFactory rendererFactory, PdfPageData pageDef, SKRect renderRect, Dictionary<PdfElement, object> layoutState, PdfFontRegistryBuilder fontRegistry)
+    public async Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        var vsl = (PdfVerticalStackLayout)element;
-        if (!layoutState.TryGetValue(vsl, out var state) || state is not List<LayoutInfo> childMeasures)
+        if (context.Element is not PdfVerticalStackLayout vsl)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayout)} or is null.");
+
+        if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<LayoutInfo> childMeasures)
         {
-            throw new InvalidOperationException("VerticalStackLayout state was not calculated before rendering.");
+            context.Logger.LogError("VerticalStackLayout state was not calculated before rendering.");
+            return;
         }
 
         float contentWidth = renderRect.Width - (float)vsl.GetMargin.HorizontalThickness - (float)vsl.GetPadding.HorizontalThickness;
@@ -60,9 +65,9 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
 
         for (int i = 0; i < vsl.GetChildren.Count; i++)
         {
-            var child = vsl.GetChildren[i];
+            var child = (PdfElement)vsl.GetChildren[i];
             var measure = childMeasures[i];
-            var renderer = rendererFactory.GetRenderer(child);
+            var renderer = context.RendererFactory.GetRenderer(child);
 
             float childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? contentWidth : measure.Width;
 
@@ -75,8 +80,8 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
 
             float x = renderRect.Left + (float)vsl.GetMargin.Left + (float)vsl.GetPadding.Left + offsetX;
             var childRect = SKRect.Create(x, y, childWidth, measure.Height);
-
-            await renderer.RenderAsync(canvas, child, rendererFactory, pageDef, childRect, layoutState, fontRegistry);
+            var childContext = context with { Element = child };
+            await renderer.RenderAsync(canvas, childRect, childContext);
 
             y += measure.Height;
             if (i < vsl.GetChildren.Count - 1)

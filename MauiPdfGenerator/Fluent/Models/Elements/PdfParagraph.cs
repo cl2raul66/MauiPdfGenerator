@@ -71,7 +71,10 @@ public class PdfParagraph : PdfElement
     public new PdfParagraph Padding(double horizontalPadding, double verticalPadding) { base.Padding(horizontalPadding, verticalPadding); return this; }
     public new PdfParagraph Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin) { base.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this; }
     public new PdfParagraph WidthRequest(double width) { base.WidthRequest(width); return this; }
-    public new PdfParagraph HeightRequest(double height) { base.HeightRequest(height); return this; }
+    public new PdfParagraph HeightRequest(double height)
+    {
+        base.HeightRequest(height); return this;
+    }
 
     public new PdfParagraph HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
     public new PdfParagraph VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }

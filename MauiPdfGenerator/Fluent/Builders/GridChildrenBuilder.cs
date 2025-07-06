@@ -1,8 +1,8 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Models.Elements;
 using MauiPdfGenerator.Fluent.Models.Layouts;
-using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -19,7 +19,6 @@ internal class GridChildrenBuilder : IGridChildrenBuilder
 
     private IGridCellChild<TElement> AddElement<TElement>(TElement element) where TElement : PdfElement
     {
-        // Solo agrega el elemento real al grid
         _grid.Add(element);
         return new GridCellChild<TElement>(element);
     }

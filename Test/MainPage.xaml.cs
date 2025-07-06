@@ -36,6 +36,7 @@ public partial class MainPage : ContentPage
                 .ContentPage()
                 .Content(c =>
                 {
+                    // --- Casos de Uso Básicos ---
                     c.Paragraph("[P1] Texto simple, con propiedades predeterminadas");
                     c.Paragraph("[P2] Texto simple, con HorizontalOptions Center")
                         .HorizontalOptions(LayoutAlignment.Center);
@@ -71,8 +72,8 @@ public partial class MainPage : ContentPage
                         .FontFamily(PdfFonts.OpenSansSemibold);
                     c.Paragraph("[P18] Texto simple, con FontFamily Comic")
                         .FontFamily(PdfFonts.Comic);
-                    c.Paragraph("[P19] Texto simple, con HeightRequest 42, BackgroundColor LightBlue, VerticalOptions Center")
-                        .HeightRequest(42)
+                    c.Paragraph("[P19] Texto simple, con HeightRequest 72, BackgroundColor LightBlue, VerticalOptions Center")
+                        .HeightRequest(72)
                         .BackgroundColor(Colors.LightBlue)
                         .VerticalOptions(LayoutAlignment.Center);
                     c.Paragraph("Siguiente texto [P20] con LineBreakMode WordWrap");
@@ -93,6 +94,39 @@ public partial class MainPage : ContentPage
                     c.Paragraph("Siguiente texto [P25] con LineBreakMode TailTruncation");
                     c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
                         .LineBreakMode(LineBreakMode.TailTruncation);
+
+                    c.Paragraph("--- Casos de Uso Avanzados y Combinados ---").HorizontalOptions(LayoutAlignment.Center).FontSize(16).FontAttributes(FontAttributes.Bold).Margin(0, 20, 0, 10);
+
+                    c.Paragraph("[P26] Caja centrada, texto a la derecha.")
+                        .HorizontalOptions(LayoutAlignment.Center)
+                        .HorizontalTextAlignment(TextAlignment.End)
+                        .BackgroundColor(Colors.LightYellow)
+                        .WidthRequest(300);
+
+                    c.Paragraph("[P27] Este párrafo tiene padding interno.")
+                        .Padding(10, 20)
+                        .BackgroundColor(Colors.LightCoral);
+
+                    c.Paragraph("[P28] Este texto tiene un ancho fijo y será truncado al final si no cabe en el espacio asignado por el WidthRequest que se le ha proporcionado.")
+                        .WidthRequest(250)
+                        .LineBreakMode(LineBreakMode.TailTruncation)
+                        .BackgroundColor(Colors.LightSteelBlue);
+
+                    c.Paragraph("[P29] Estilo Completo: Subrayado, Tachado, Negrita, Itálica y color.")
+                        .FontSize(14)
+                        .TextColor(Colors.DarkViolet)
+                        .FontFamily(PdfFonts.Comic)
+                        .FontAttributes(FontAttributes.Bold | FontAttributes.Italic)
+                        .TextDecorations(TextDecorations.Underline | TextDecorations.Strikethrough);
+
+                    c.Paragraph("[P30] Este párrafo\ntiene saltos de línea\nexplícitos en medio del texto.")
+                        .HorizontalTextAlignment(TextAlignment.Center);
+
+                    c.Paragraph("[P31] Párrafo con texto vacío (siguiente):");
+                    c.Paragraph("");
+
+                    c.Paragraph("[P32] Párrafo con solo espacios (siguiente):");
+                    c.Paragraph("   ");
                 }).Build()
             .SaveAsync(targetFilePath);
 

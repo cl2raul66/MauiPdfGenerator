@@ -1,7 +1,4 @@
-﻿using Microsoft.Maui.Graphics;
-using MauiPdfGenerator.Fluent.Enums;
-
-namespace MauiPdfGenerator.Fluent.Models.Elements;
+﻿namespace MauiPdfGenerator.Fluent.Models.Elements;
 
 public partial class PdfImage : PdfElement
 {
@@ -17,12 +14,9 @@ public partial class PdfImage : PdfElement
             throw new ArgumentException("El Stream proporcionado para la imagen debe ser legible (CanRead debe ser true).", nameof(stream));
         }
         ImageStream = stream;
-        // Si no hay WidthRequest ni HeightRequest, establecer Fill según orientación
         if (!GetWidthRequest.HasValue && !GetHeightRequest.HasValue)
         {
-            // Por defecto, Fill horizontal (para retrato o cuadrado)
-            HorizontalOptions(LayoutAlignment.Fill);
-            // Si en el futuro se detecta orientación paisaje, se podría usar VerticalOptions(LayoutAlignment.Fill)
+            base.HorizontalOptions(LayoutAlignment.Fill);
         }
     }
 
@@ -35,7 +29,6 @@ public partial class PdfImage : PdfElement
     public new PdfImage WidthRequest(double width) { base.WidthRequest(width); return this; }
     public new PdfImage HeightRequest(double height) { base.HeightRequest(height); return this; }
 
-    // New: Fluent API for layout options and background
     public new PdfImage HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
     public new PdfImage VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
     public new PdfImage BackgroundColor(Color? color) { base.BackgroundColor(color); return this; }

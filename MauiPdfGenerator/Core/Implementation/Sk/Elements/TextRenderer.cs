@@ -74,15 +74,11 @@ internal class TextRenderer : IElementRenderer
             (float)paragraph.GetHeightRequest.Value :
             totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
 
-        float totalHeightWithMargin = heightOfBox + (float)paragraph.GetMargin.VerticalThickness;
-
         PdfParagraph? remainingParagraph = null;
         if (remainingLinesList.Any())
         {
-            string remainingOriginalText = string.Join("\n",
-                (paragraph.Text ?? string.Empty).Split('\n').Skip(allLines.Count - remainingLinesList.Count)
-            );
-            remainingParagraph = new PdfParagraph(remainingOriginalText, paragraph);
+            string remainingText = string.Join("\n", remainingLinesList);
+            remainingParagraph = new PdfParagraph(remainingText, paragraph);
         }
         else if (linesThatFit == 0 && allLines.Any() && !paragraph.IsContinuation)
         {
@@ -103,11 +99,10 @@ internal class TextRenderer : IElementRenderer
             float textWidth = linesToDrawThisCall.Any() ? linesToDrawThisCall.Max(line => font.MeasureText(line)) : 0;
             widthOfBox = textWidth + (float)paragraph.GetPadding.HorizontalThickness;
         }
-        float totalWidthWithMargin = widthOfBox + (float)paragraph.GetMargin.HorizontalThickness;
 
         context.LayoutState[paragraph] = new TextLayoutCache(linesToDrawThisCall, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight);
 
-        return new LayoutInfo(paragraph, totalWidthWithMargin, totalHeightWithMargin, remainingParagraph);
+        return new LayoutInfo(paragraph, widthOfBox, heightOfBox, remainingParagraph);
     }
 
     public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
@@ -123,17 +118,10 @@ internal class TextRenderer : IElementRenderer
 
         var (linesToDraw, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight) = textCache;
 
-        var elementRect = new SKRect(
-            renderRect.Left + (float)paragraph.GetMargin.Left,
-            renderRect.Top + (float)paragraph.GetMargin.Top,
-            renderRect.Right - (float)paragraph.GetMargin.Right,
-            renderRect.Bottom - (float)paragraph.GetMargin.Bottom
-        );
-
         if (paragraph.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(paragraph.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            canvas.DrawRect(elementRect, bgPaint);
+            canvas.DrawRect(renderRect, bgPaint);
         }
 
         if (!linesToDraw.Any())
@@ -144,10 +132,10 @@ internal class TextRenderer : IElementRenderer
         }
 
         var contentRect = new SKRect(
-            elementRect.Left + (float)paragraph.GetPadding.Left,
-            elementRect.Top + (float)paragraph.GetPadding.Top,
-            elementRect.Right - (float)paragraph.GetPadding.Right,
-            elementRect.Bottom - (float)paragraph.GetPadding.Bottom
+            renderRect.Left + (float)paragraph.GetPadding.Left,
+            renderRect.Top + (float)paragraph.GetPadding.Top,
+            renderRect.Right - (float)paragraph.GetPadding.Right,
+            renderRect.Bottom - (float)paragraph.GetPadding.Bottom
         );
 
         float verticalOffset = paragraph.GetVerticalOptions switch
@@ -231,16 +219,9 @@ internal class TextRenderer : IElementRenderer
         float fontSize = paragraph.CurrentFontSize > 0 ? paragraph.CurrentFontSize : pageDefinition.PageDefaultFontSize;
         Color textColor = paragraph.CurrentTextColor ?? pageDefinition.PageDefaultTextColor;
         FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes;
+
         TextAlignment horizontalAlignment = paragraph.CurrentHorizontalTextAlignment;
-        if (horizontalAlignment == PdfParagraph.DefaultHorizontalTextAlignment)
-        {
-            horizontalAlignment = paragraph.GetHorizontalOptions switch
-            {
-                LayoutAlignment.Center => TextAlignment.Center,
-                LayoutAlignment.End => TextAlignment.End,
-                _ => TextAlignment.Start
-            };
-        }
+
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraph.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
         TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform;

@@ -30,6 +30,11 @@
                 Clicked="GeneratePdfOnlyImage_Clicked"
                 HorizontalOptions="Fill"
                 Text="Generate PDF file, only image" />
+            <Button
+                x:Name="GeneratePdfWithHorizontalLine"
+                Clicked="GeneratePdfWithHorizontalLine_Clicked"
+                HorizontalOptions="Fill"
+                Text="Generate PDF file, with HorizontalLine" />
         </VerticalStackLayout>
     </ScrollView>
 

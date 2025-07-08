@@ -232,4 +232,112 @@ public partial class MainPage : ContentPage
             await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
         }
     }
+
+    private async void GeneratePdfWithHorizontalLine_Clicked(object sender, EventArgs e)
+    {
+        byte[] imageData;
+        using (var httpClient = new HttpClient())
+        {
+            var uri = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
+            imageData = await httpClient.GetByteArrayAsync(uri);
+        }
+
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        try
+        {
+            var doc = pdfDocFactory.CreateDocument();
+            await doc
+                .Configuration(cfg =>
+                {
+                    cfg.MetaData(data =>
+                    {
+                        data.Title("MauiPdfGenerator sample - Experimental Horizontal Line");
+                    });
+                })
+                .ContentPage()
+                .Content(c =>
+                {
+                    c.Paragraph("--- Casos de Uso de HorizontalLine ---")
+                        .FontSize(16)
+                        .FontAttributes(FontAttributes.Bold)
+                        .HorizontalOptions(LayoutAlignment.Center);
+
+                    // Caso 1: Línea predeterminada
+                    c.Paragraph("1. Línea con valores predeterminados (Thickness=1, Color=Black, HorizontalOptions=Fill)");
+                    c.HorizontalLine();
+
+                    // Caso 2: Grosor personalizado
+                    c.Paragraph("2. Línea con Thickness(5)");
+                    c.HorizontalLine()
+                        .Thickness(5);
+
+                    // Caso 3: Color personalizado
+                    c.Paragraph("3. Línea con Color(Colors.Red)");
+                    c.HorizontalLine()
+                        .Color(Colors.Red);
+
+                    // Caso 4: Grosor y Color combinados
+                    c.Paragraph("4. Línea con Thickness(3) y Color(Colors.Green)");
+                    c.HorizontalLine()
+                        .Thickness(3)
+                        .Color(Colors.Green);
+
+                    // Caso 5: Ancho fijo y alineación
+                    c.Paragraph("5. Línea con WidthRequest(200) y HorizontalOptions(Center)");
+                    c.HorizontalLine()
+                        .WidthRequest(200)
+                        .HorizontalOptions(LayoutAlignment.Center)
+                        .Color(Colors.Orange); // Color para que sea fácil de ver
+
+                    // Caso 6: Alineación a la derecha
+                    c.Paragraph("6. Línea con WidthRequest(100) y HorizontalOptions(End)");
+                    c.HorizontalLine()
+                        .WidthRequest(100)
+                        .HorizontalOptions(LayoutAlignment.End)
+                        .Color(Colors.Purple);
+
+                    // Caso 7: Con margen vertical
+                    c.Paragraph("7. Línea con Margin(0, 20) para crear espacio");
+                    c.HorizontalLine()
+                        .Padding(5)
+                        .BackgroundColor(Colors.LightSalmon)
+                        .Margin(0, 20);
+
+                    // Caso 8: Con margen horizontal (reducirá el ancho de la línea)
+                    c.Paragraph("8. Línea con Margin(50, 0)");
+                    c.HorizontalLine()
+                        .Padding(5)
+                        .BackgroundColor(Colors.LightSalmon)
+                        .Margin(50, 0);
+
+                    // Caso 9: Con padding horizontal (no debería tener efecto visual en la línea)
+                    c.Paragraph("9. Línea con Padding(50, 0) y fondo para ver el cajón");
+                    c.HorizontalLine()
+                        .Padding(50, 5, 10, 10)
+                        .BackgroundColor(Colors.Gray) // Fondo para ver el área del elemento
+                        .Color(Colors.Red);
+
+                    // Caso 10: Combinación completa
+                    c.Paragraph("10. Línea con todas las propiedades personalizadas");
+                    c.HorizontalLine()
+                        .Thickness(4)
+                        .Color(Colors.DarkCyan)
+                        .WidthRequest(300)
+                        .HorizontalOptions(LayoutAlignment.Center)
+                        .Margin(0, 10);
+
+                    c.Paragraph("Fin de los casos de prueba para HorizontalLine.");
+                }).Build()
+            .SaveAsync(targetFilePath);
+
+            await Launcher.OpenAsync(new OpenFileRequest
+            {
+                File = new ReadOnlyFile(targetFilePath)
+            });
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+        }
+    }
 }

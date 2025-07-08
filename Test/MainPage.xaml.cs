@@ -19,7 +19,7 @@ public partial class MainPage : ContentPage
         pdfDocFactory = pdfDocumentFactory;
     }
 
-    private async void GeneratePdf_Clicked(object sender, EventArgs e)
+    private async void GeneratePdfOnlyParagraph_Clicked(object sender, EventArgs e)
     {
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
         try
@@ -127,6 +127,98 @@ public partial class MainPage : ContentPage
 
                     c.Paragraph("[P32] Párrafo con solo espacios (siguiente):");
                     c.Paragraph("   ");
+                }).Build()
+            .SaveAsync(targetFilePath);
+
+            await Launcher.OpenAsync(new OpenFileRequest
+            {
+                File = new ReadOnlyFile(targetFilePath)
+            });
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+        }
+    }
+
+    private async void GeneratePdfOnlyImage_Clicked(object sender, EventArgs e)
+    {
+        byte[] imageData;
+        using (var httpClient = new HttpClient())
+        {
+            var uri = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
+            imageData = await httpClient.GetByteArrayAsync(uri);
+        }
+
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        try
+        {
+            var doc = pdfDocFactory.CreateDocument();
+            await doc
+                .Configuration(cfg =>
+                {
+                    cfg.MetaData(data =>
+                    {
+                        data.Title("MauiPdfGenerator sample - Experimental Images");
+                    });
+                })
+                .ContentPage()
+                .Content(c =>
+                {
+                    c.Paragraph("--- Casos de Uso de Imágenes ---").FontSize(16).FontAttributes(FontAttributes.Bold).HorizontalOptions(LayoutAlignment.Center);
+
+                    // Caso 1: Imagen simple, tamaño intrínseco
+                    c.Paragraph("1. Imagen simple (tamaño intrínseco)");
+                    c.PdfImage(new MemoryStream(imageData));
+
+                    // Caso 2: Imagen con WidthRequest y alineación
+                    c.Paragraph("2. Imagen con WidthRequest(100) y HorizontalOptions(End)");
+                    c.PdfImage(new MemoryStream(imageData))
+                        .WidthRequest(100)
+                        .HorizontalOptions(LayoutAlignment.End);
+
+                    // Caso 3: Aspect.Fill (estirada)
+                    c.Paragraph("3. Aspect(Fill) con tamaño fijo (150x75)");
+                    c.PdfImage(new MemoryStream(imageData))
+                        .WidthRequest(150)
+                        .HeightRequest(75)
+                        .Aspect(Aspect.Fill)
+                        .HorizontalOptions(LayoutAlignment.Center);
+
+                    // Caso 4: Aspect.AspectFill (recortada para llenar)
+                    c.Paragraph("4. Aspect(AspectFill) con tamaño fijo (150x75)");
+                    c.PdfImage(new MemoryStream(imageData))
+                        .WidthRequest(150)
+                        .HeightRequest(75)
+                        .Aspect(Aspect.AspectFill)
+                        .HorizontalOptions(LayoutAlignment.Center)
+                        .BackgroundColor(Colors.LightGray); // Fondo para ver el área
+
+                    // Caso 5: Aspect.AspectFit (ajustada sin recortar)
+                    c.Paragraph("5. Aspect(AspectFit) con tamaño fijo (150x75)");
+                    c.PdfImage(new MemoryStream(imageData))
+                        .WidthRequest(150)
+                        .HeightRequest(75)
+                        .Aspect(Aspect.AspectFit)
+                        .HorizontalOptions(LayoutAlignment.Center)
+                        .BackgroundColor(Colors.LightBlue); // Fondo para ver el área
+
+                    // Caso 6: Con Padding y BackgroundColor
+                    c.Paragraph("6. Imagen con Padding(20) y BackgroundColor");
+                    c.PdfImage(new MemoryStream(imageData))
+                        .WidthRequest(120)
+                        .Padding(20)
+                        .BackgroundColor(Colors.LightCoral)
+                        .HorizontalOptions(LayoutAlignment.Center);
+
+                    // Caso 7: Manejo de error (Stream cerrado)
+                    //c.Paragraph("7. Manejo de error (Stream cerrado)");
+                    //var closedStream = new MemoryStream();
+                    //closedStream.Close();
+                    //c.PdfImage(closedStream)
+                    //    .WidthRequest(200)
+                    //    .HeightRequest(50)
+                    //    .HorizontalOptions(LayoutAlignment.Center);
                 }).Build()
             .SaveAsync(targetFilePath);
 

@@ -7,7 +7,7 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
 internal class ImageRenderer : IElementRenderer
 {
-    private record ImageLayoutCache(SKImage? SkImage);
+    private record ImageLayoutCache(SKImage? SkImage, SKRect RelativeTargetRect);
 
     public Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
@@ -29,33 +29,64 @@ internal class ImageRenderer : IElementRenderer
             skImage = null;
         }
 
-        context.LayoutState[image] = new ImageLayoutCache(skImage);
-
-        float availableContentWidth = availableRect.Width - (float)image.GetMargin.HorizontalThickness;
-        float availableContentHeight = availableRect.Height - (float)image.GetMargin.VerticalThickness;
-
-        float boxWidth, boxHeight;
-
-        if (skImage is null)
+        float boxWidth;
+        if (image.GetWidthRequest.HasValue)
         {
-            boxHeight = 50f + (float)image.GetPadding.VerticalThickness;
-            boxWidth = (image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : Math.Min(availableContentWidth, 100f)) + (float)image.GetPadding.HorizontalThickness;
+            boxWidth = (float)image.GetWidthRequest.Value;
+        }
+        else if (image.GetHorizontalOptions == LayoutAlignment.Fill)
+        {
+            boxWidth = availableRect.Width - (float)image.GetMargin.HorizontalThickness;
         }
         else
         {
-            SKRect targetRect = CalculateTargetRectInternal(skImage, image.CurrentAspect,
-                                                        0, 0,
-                                                        availableContentWidth - (float)image.GetPadding.HorizontalThickness,
-                                                        availableContentHeight - (float)image.GetPadding.VerticalThickness,
-                                                        image.GetWidthRequest, image.GetHeightRequest);
-            boxHeight = targetRect.Height + (float)image.GetPadding.VerticalThickness;
-            boxWidth = targetRect.Width + (float)image.GetPadding.HorizontalThickness;
+            boxWidth = skImage?.Width ?? 100f;
         }
 
-        float totalWidthWithMargin = boxWidth + (float)image.GetMargin.HorizontalThickness;
-        float totalHeightWithMargin = boxHeight + (float)image.GetMargin.VerticalThickness;
+        float boxHeight;
+        if (image.GetHeightRequest.HasValue)
+        {
+            boxHeight = (float)image.GetHeightRequest.Value;
+        }
+        else
+        {
+            float imageContentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
 
-        return Task.FromResult(new LayoutInfo(image, totalWidthWithMargin, totalHeightWithMargin));
+            float proportionalImageHeight = 0;
+            if (skImage != null && skImage.Width > 0 && imageContentWidth > 0)
+            {
+                float aspectRatio = (float)skImage.Height / skImage.Width;
+                proportionalImageHeight = imageContentWidth * aspectRatio;
+            }
+            else
+            {
+                proportionalImageHeight = 50f;
+            }
+
+            boxHeight = proportionalImageHeight + (float)image.GetPadding.VerticalThickness;
+        }
+
+        var contentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
+        var contentHeight = boxHeight - (float)image.GetPadding.VerticalThickness;
+        var contentRect = SKRect.Create(
+            (float)image.GetPadding.Left,
+            (float)image.GetPadding.Top,
+            contentWidth,
+            contentHeight
+        );
+
+        SKRect relativeTargetRect = skImage != null
+            ? CalculateTargetRect(skImage, contentRect, image.CurrentAspect)
+            : SKRect.Empty;
+
+        context.LayoutState[image] = new ImageLayoutCache(skImage, relativeTargetRect);
+
+        var totalWidth = boxWidth + (float)image.GetMargin.HorizontalThickness;
+        var totalHeight = boxHeight + (float)image.GetMargin.VerticalThickness;
+
+        var layoutInfo = new LayoutInfo(image, totalWidth, totalHeight);
+
+        return Task.FromResult(layoutInfo);
     }
 
     public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
@@ -63,16 +94,9 @@ internal class ImageRenderer : IElementRenderer
         if (context.Element is not PdfImage image)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfImage)} or is null.");
 
-        var elementRect = new SKRect(
-            renderRect.Left + (float)image.GetMargin.Left,
-            renderRect.Top + (float)image.GetMargin.Top,
-            renderRect.Right - (float)image.GetMargin.Right,
-            renderRect.Bottom - (float)image.GetMargin.Bottom
-        );
-
         if (!context.LayoutState.TryGetValue(image, out var state) || state is not ImageLayoutCache cache)
         {
-            DrawImageError(canvas, elementRect, "[Image Layout Error]");
+            DrawImageError(canvas, renderRect, "[Image Layout Error]");
             context.Logger.LogError("Image layout cache not found for element. MeasureAsync was likely not called or failed.");
             return Task.CompletedTask;
         }
@@ -80,27 +104,33 @@ internal class ImageRenderer : IElementRenderer
         if (image.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(image.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            canvas.DrawRect(elementRect, bgPaint);
+            canvas.DrawRect(renderRect, bgPaint);
         }
 
         if (cache.SkImage is null)
         {
-            DrawImageError(canvas, elementRect, "[Image Load Error]");
+            DrawImageError(canvas, renderRect, "[Image Load Error]");
             return Task.CompletedTask;
         }
 
         using var skImage = cache.SkImage;
 
-        var contentRect = new SKRect(
-            elementRect.Left + (float)image.GetPadding.Left,
-            elementRect.Top + (float)image.GetPadding.Top,
-            elementRect.Right - (float)image.GetPadding.Right,
-            elementRect.Bottom - (float)image.GetPadding.Bottom
-        );
+        SKRect finalDrawRect = cache.RelativeTargetRect;
+        finalDrawRect.Offset(renderRect.Left, renderRect.Top);
 
-        SKRect targetRect = CalculateTargetRectInternal(skImage, image.CurrentAspect, contentRect.Left, contentRect.Top, contentRect.Width, contentRect.Height, image.GetWidthRequest, image.GetHeightRequest);
+        // LOG: Añadimos un log específico para el caso que nos interesa.
+        if (image.CurrentAspect == Aspect.AspectFill)
+        {
+            context.Logger.LogDebug("[AspectFill] Contenedor (renderRect): {RenderRect}", renderRect);
+            context.Logger.LogDebug("[AspectFill] Imagen a dibujar (finalDrawRect): {FinalDrawRect}", finalDrawRect);
+            context.Logger.LogInformation("[AspectFill] Aplicando RECORTE (Clipping) al tamaño del contenedor ANTES de dibujar la imagen.");
+        }
 
-        canvas.DrawImage(skImage, targetRect);
+        canvas.Save();
+        canvas.ClipRect(renderRect);
+        canvas.DrawImage(skImage, finalDrawRect);
+        canvas.Restore();
+
         return Task.CompletedTask;
     }
 
@@ -127,73 +157,45 @@ internal class ImageRenderer : IElementRenderer
         canvas.Restore();
     }
 
-    private static SKRect CalculateTargetRectInternal(SKImage image, Aspect aspect,
-                                     float drawAtX, float drawAtY,
-                                     float availableContentWidth, float availableContentHeight,
-                                     double? requestedWidth, double? requestedHeight)
+    private static SKRect CalculateTargetRect(SKImage image, SKRect container, Aspect aspect)
     {
-        float imgWidth = image.Width;
-        float imgHeight = image.Height;
-
-        if (imgWidth <= 0 || imgHeight <= 0 || availableContentWidth <= 0 || availableContentHeight <= 0)
+        if (image.Width <= 0 || image.Height <= 0 || container.Width <= 0 || container.Height <= 0 || aspect == Aspect.Fill)
         {
-            return SKRect.Empty;
+            return container;
         }
 
-        float resultWidth, resultHeight;
-        float imageAspectRatio = imgWidth / imgHeight;
+        float imageRatio = image.Width / (float)image.Height;
+        float containerRatio = container.Width / (float)container.Height;
 
-        float containerWidth = requestedWidth.HasValue ? (float)requestedWidth.Value : availableContentWidth;
-        containerWidth = Math.Min(containerWidth, availableContentWidth);
+        float finalWidth = container.Width;
+        float finalHeight = container.Height;
 
-        float containerHeight = requestedHeight.HasValue ? (float)requestedHeight.Value : availableContentHeight;
-        containerHeight = Math.Min(containerHeight, availableContentHeight);
-
-        if (containerWidth <= 0 || containerHeight <= 0) return SKRect.Empty;
-
-        switch (aspect)
+        if (aspect == Aspect.AspectFit)
         {
-            case Aspect.Fill:
-                resultWidth = containerWidth;
-                resultHeight = containerHeight;
-                break;
-            case Aspect.AspectFill:
-                float containerAspectFillRatio = containerWidth / containerHeight;
-                if (imageAspectRatio > containerAspectFillRatio)
-                {
-                    resultHeight = containerHeight;
-                    resultWidth = resultHeight * imageAspectRatio;
-                }
-                else
-                {
-                    resultWidth = containerWidth;
-                    resultHeight = resultWidth / imageAspectRatio;
-                }
-                break;
-            case Aspect.AspectFit:
-            default:
-                float containerAspectFitRatio = containerWidth / containerHeight;
-                if (imageAspectRatio > containerAspectFitRatio)
-                {
-                    resultWidth = containerWidth;
-                    resultHeight = resultWidth / imageAspectRatio;
-                }
-                else
-                {
-                    resultHeight = containerHeight;
-                    resultWidth = resultHeight * imageAspectRatio;
-                }
-                break;
+            if (imageRatio > containerRatio)
+            {
+                finalHeight = container.Width / imageRatio;
+            }
+            else
+            {
+                finalWidth = container.Height * imageRatio;
+            }
+        }
+        else if (aspect == Aspect.AspectFill)
+        {
+            if (imageRatio > containerRatio)
+            {
+                finalWidth = container.Height * imageRatio;
+            }
+            else
+            {
+                finalHeight = container.Width / imageRatio;
+            }
         }
 
-        resultWidth = Math.Min(resultWidth, availableContentWidth);
-        resultHeight = Math.Min(resultHeight, availableContentHeight);
+        float x = container.Left + (container.Width - finalWidth) / 2f;
+        float y = container.Top + (container.Height - finalHeight) / 2f;
 
-        if (resultWidth <= 0 || resultHeight <= 0) return SKRect.Empty;
-
-        float offsetX = (containerWidth - resultWidth) / 2f;
-        float offsetY = 0;
-
-        return SKRect.Create(drawAtX + offsetX, drawAtY + offsetY, resultWidth, resultHeight);
+        return SKRect.Create(x, y, finalWidth, finalHeight);
     }
 }

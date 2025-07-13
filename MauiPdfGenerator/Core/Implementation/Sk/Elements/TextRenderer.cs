@@ -27,82 +27,38 @@ internal class TextRenderer : IElementRenderer
 
         var (font, paint, textToRender, horizontalAlignment, lineBreakMode, textDecorations, textTransform) = await GetTextPropertiesAsync(paragraph, context);
 
-        float availableWidthForElement = paragraph.GetWidthRequest.HasValue ?
-            (float)paragraph.GetWidthRequest.Value :
-            availableRect.Width - (float)paragraph.GetMargin.HorizontalThickness;
+        float availableWidthForText = availableRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness;
 
-        float availableWidthForTextLayout = availableWidthForElement - (float)paragraph.GetPadding.HorizontalThickness;
-        availableWidthForTextLayout = Math.Max(0, availableWidthForTextLayout);
-
-        float availableHeightForElement = paragraph.GetHeightRequest.HasValue ?
-            (float)paragraph.GetHeightRequest.Value :
-            availableRect.Height - (float)paragraph.GetMargin.VerticalThickness;
-
-        float availableHeightForDrawing = availableHeightForElement - (float)paragraph.GetPadding.VerticalThickness;
-
-        List<string> allLines = WrapTextToLines(textToRender, font, availableWidthForTextLayout, lineBreakMode);
+        var allLines = WrapTextToLines(textToRender, font, availableWidthForText, lineBreakMode);
 
         float fontLineSpacing = font.Spacing;
         if (fontLineSpacing <= 0) fontLineSpacing = font.Size * 1.2f;
 
-        int linesThatFit = 0;
-        if (availableHeightForDrawing > 0 && fontLineSpacing > 0)
-        {
-            if (lineBreakMode is LineBreakMode.NoWrap or LineBreakMode.HeadTruncation or LineBreakMode.MiddleTruncation or LineBreakMode.TailTruncation)
-            {
-                linesThatFit = availableHeightForDrawing >= fontLineSpacing && allLines.Count != 0 ? 1 : 0;
-            }
-            else
-            {
-                linesThatFit = (int)Math.Floor(availableHeightForDrawing / fontLineSpacing);
-                linesThatFit = Math.Max(0, Math.Min(linesThatFit, allLines.Count));
-            }
-        }
-
-        List<string> linesToDrawThisCall = allLines.Take(linesThatFit).ToList();
-        List<string> remainingLinesList = allLines.Skip(linesThatFit).ToList();
+        var linesToDrawThisCall = allLines;
 
         float totalTextHeight = 0;
         if (linesToDrawThisCall.Any())
         {
             SKFontMetrics fontMetrics = font.Metrics;
-            float visualLineHeight = fontMetrics.Descent - fontMetrics.Ascent;
-            totalTextHeight = (linesToDrawThisCall.Count - 1) * fontLineSpacing + visualLineHeight;
+            totalTextHeight = (linesToDrawThisCall.Count - 1) * fontLineSpacing + (fontMetrics.Descent - fontMetrics.Ascent);
         }
 
-        float heightOfBox = paragraph.GetHeightRequest.HasValue ?
-            (float)paragraph.GetHeightRequest.Value :
-            totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
+        float contentWidth = linesToDrawThisCall.Any() ? linesToDrawThisCall.Max(line => font.MeasureText(line)) : 0;
 
-        PdfParagraph? remainingParagraph = null;
-        if (remainingLinesList.Any())
-        {
-            string remainingText = string.Join("\n", remainingLinesList);
-            remainingParagraph = new PdfParagraph(remainingText, paragraph);
-        }
-        else if (linesThatFit == 0 && allLines.Any() && !paragraph.IsContinuation)
-        {
-            remainingParagraph = paragraph;
-        }
+        float boxWidth = paragraph.GetWidthRequest.HasValue
+            ? (float)paragraph.GetWidthRequest.Value
+            : contentWidth + (float)paragraph.GetPadding.HorizontalThickness;
 
-        float widthOfBox;
-        if (paragraph.GetWidthRequest.HasValue)
-        {
-            widthOfBox = (float)paragraph.GetWidthRequest.Value;
-        }
-        else if (paragraph.GetHorizontalOptions == LayoutAlignment.Fill)
-        {
-            widthOfBox = availableWidthForElement;
-        }
-        else
-        {
-            float textWidth = linesToDrawThisCall.Any() ? linesToDrawThisCall.Max(line => font.MeasureText(line)) : 0;
-            widthOfBox = textWidth + (float)paragraph.GetPadding.HorizontalThickness;
-        }
+        float boxHeight = paragraph.GetHeightRequest.HasValue
+            ? (float)paragraph.GetHeightRequest.Value
+            : totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
 
         context.LayoutState[paragraph] = new TextLayoutCache(linesToDrawThisCall, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight);
 
-        return new LayoutInfo(paragraph, widthOfBox, heightOfBox, remainingParagraph);
+        var totalWidth = boxWidth + (float)paragraph.GetMargin.HorizontalThickness;
+        var totalHeight = boxHeight + (float)paragraph.GetMargin.VerticalThickness;
+
+        return new LayoutInfo(paragraph, totalWidth, totalHeight);
     }
 
     public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
@@ -118,10 +74,17 @@ internal class TextRenderer : IElementRenderer
 
         var (linesToDraw, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight) = textCache;
 
+        var elementBox = new SKRect(
+            renderRect.Left + (float)paragraph.GetMargin.Left,
+            renderRect.Top + (float)paragraph.GetMargin.Top,
+            renderRect.Right - (float)paragraph.GetMargin.Right,
+            renderRect.Bottom - (float)paragraph.GetMargin.Bottom
+        );
+
         if (paragraph.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(paragraph.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            canvas.DrawRect(renderRect, bgPaint);
+            canvas.DrawRect(elementBox, bgPaint);
         }
 
         if (!linesToDraw.Any())
@@ -132,10 +95,10 @@ internal class TextRenderer : IElementRenderer
         }
 
         var contentRect = new SKRect(
-            renderRect.Left + (float)paragraph.GetPadding.Left,
-            renderRect.Top + (float)paragraph.GetPadding.Top,
-            renderRect.Right - (float)paragraph.GetPadding.Right,
-            renderRect.Bottom - (float)paragraph.GetPadding.Bottom
+            elementBox.Left + (float)paragraph.GetPadding.Left,
+            elementBox.Top + (float)paragraph.GetPadding.Top,
+            elementBox.Right - (float)paragraph.GetPadding.Right,
+            elementBox.Bottom - (float)paragraph.GetPadding.Bottom
         );
 
         float verticalOffset = paragraph.GetVerticalOptions switch

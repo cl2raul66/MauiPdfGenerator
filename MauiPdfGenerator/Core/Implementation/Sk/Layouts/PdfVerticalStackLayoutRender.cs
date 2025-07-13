@@ -17,12 +17,14 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         float maxWidth = 0;
         var childMeasures = new List<LayoutInfo>();
 
-        var childAvailableWidth = availableRect.Width - (float)vsl.GetPadding.HorizontalThickness - (float)vsl.GetMargin.HorizontalThickness;
+        // El ancho disponible para los hijos es el ancho del VSL menos su propio padding.
+        var childAvailableWidth = availableRect.Width - (float)vsl.GetPadding.HorizontalThickness;
 
         foreach (var child in vsl.GetChildren)
         {
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
+            // Pasamos el ancho restringido a los hijos.
             var measure = await renderer.MeasureAsync(childContext, SKRect.Create(0, 0, childAvailableWidth, float.PositiveInfinity));
             childMeasures.Add(measure);
             totalHeight += measure.Height;
@@ -34,12 +36,15 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
             totalHeight += vsl.GetSpacing * (vsl.GetChildren.Count - 1);
         }
 
-        totalHeight += (float)vsl.GetPadding.VerticalThickness + (float)vsl.GetMargin.VerticalThickness;
-        maxWidth += (float)vsl.GetPadding.HorizontalThickness + (float)vsl.GetMargin.HorizontalThickness;
+        float boxWidth = maxWidth + (float)vsl.GetPadding.HorizontalThickness;
+        float boxHeight = totalHeight + (float)vsl.GetPadding.VerticalThickness;
 
         context.LayoutState[vsl] = childMeasures;
 
-        return new LayoutInfo(vsl, maxWidth, totalHeight);
+        var totalWidth = boxWidth + (float)vsl.GetMargin.HorizontalThickness;
+        var totalHeightWithMargin = boxHeight + (float)vsl.GetMargin.VerticalThickness;
+
+        return new LayoutInfo(vsl, totalWidth, totalHeightWithMargin);
     }
 
     public async Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
@@ -53,15 +58,21 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
             return;
         }
 
-        float contentWidth = renderRect.Width - (float)vsl.GetMargin.HorizontalThickness - (float)vsl.GetPadding.HorizontalThickness;
+        var elementBox = new SKRect(
+            renderRect.Left + (float)vsl.GetMargin.Left,
+            renderRect.Top + (float)vsl.GetMargin.Top,
+            renderRect.Right - (float)vsl.GetMargin.Right,
+            renderRect.Bottom - (float)vsl.GetMargin.Bottom
+        );
 
         if (vsl.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(vsl.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            canvas.DrawRect(renderRect, bgPaint);
+            canvas.DrawRect(elementBox, bgPaint);
         }
 
-        float y = renderRect.Top + (float)vsl.GetMargin.Top + (float)vsl.GetPadding.Top;
+        float contentWidth = elementBox.Width - (float)vsl.GetPadding.HorizontalThickness;
+        float currentY = elementBox.Top + (float)vsl.GetPadding.Top;
 
         for (int i = 0; i < vsl.GetChildren.Count; i++)
         {
@@ -78,15 +89,16 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
                 _ => 0f
             };
 
-            float x = renderRect.Left + (float)vsl.GetMargin.Left + (float)vsl.GetPadding.Left + offsetX;
-            var childRect = SKRect.Create(x, y, childWidth, measure.Height);
+            float x = elementBox.Left + (float)vsl.GetPadding.Left + offsetX;
+            var childRect = SKRect.Create(x, currentY, childWidth, measure.Height);
             var childContext = context with { Element = child };
+
             await renderer.RenderAsync(canvas, childRect, childContext);
 
-            y += measure.Height;
+            currentY += measure.Height;
             if (i < vsl.GetChildren.Count - 1)
             {
-                y += vsl.GetSpacing;
+                currentY += vsl.GetSpacing;
             }
         }
     }

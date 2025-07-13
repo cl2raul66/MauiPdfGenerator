@@ -1,22 +1,20 @@
-﻿using MauiPdfGenerator.Fluent.Builders;
+﻿using MauiPdfGenerator.Common;
+using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
-using MauiPdfGenerator.Common;
 
 namespace MauiPdfGenerator.Fluent.Models.Layouts;
 
 public class PdfGrid : PdfLayoutElement, ILayoutElement
 {
-    private readonly PdfFontRegistryBuilder _fontRegistry;
     private List<PdfGridLength>? _rowDefinitions;
     private List<PdfGridLength>? _columnDefinitions;
 
     internal IReadOnlyList<PdfGridLength> RowDefinitionsList => _rowDefinitions ??= [new PdfGridLength(1, GridUnitType.Star)];
     internal IReadOnlyList<PdfGridLength> ColumnDefinitionsList => _columnDefinitions ??= [new PdfGridLength(1, GridUnitType.Star)];
 
-    internal PdfGrid(PdfFontRegistryBuilder fontRegistry)
+    internal PdfGrid(PdfFontRegistryBuilder fontRegistry) : base(fontRegistry)
     {
-        _fontRegistry = fontRegistry;
     }
 
     public PdfGrid RowDefinitions(Action<IGridDefinitionBuilder> config)
@@ -37,11 +35,20 @@ public class PdfGrid : PdfLayoutElement, ILayoutElement
 
     public IGridAfterChildren Children(Action<IGridChildrenBuilder> config)
     {
+        if (_fontRegistry is null)
+        {
+            throw new InvalidOperationException("FontRegistry cannot be null when adding children to a Grid.");
+        }
+
         var builder = new GridChildrenBuilder(this, _fontRegistry);
         config(builder);
         return new GridAfterChildren();
     }
 
+    public new PdfGrid Spacing(float value) { base.Spacing(value); return this; }
+    public new PdfGrid BackgroundColor(Color? color) { base.BackgroundColor(color); return this; }
+    public new PdfGrid HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
+    public new PdfGrid VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
     public new PdfGrid Margin(double uniformMargin) { base.Margin(uniformMargin); return this; }
     public new PdfGrid Margin(double horizontalMargin, double verticalMargin) { base.Margin(horizontalMargin, verticalMargin); return this; }
     public new PdfGrid Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin) { base.Margin(leftMargin, topMargin, rightMargin, bottomMargin); return this; }
@@ -50,12 +57,7 @@ public class PdfGrid : PdfLayoutElement, ILayoutElement
     public new PdfGrid Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin) { base.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this; }
     public new PdfGrid WidthRequest(double width) { base.WidthRequest(width); return this; }
     public new PdfGrid HeightRequest(double height) { base.HeightRequest(height); return this; }
-    public new PdfGrid Spacing(float value) { base.Spacing(value); return this; }
-    public new PdfGrid BackgroundColor(Color? color) { base.BackgroundColor(color); return this; }
-    public new PdfGrid HorizontalOptions(LayoutAlignment layoutAlignment) { base.HorizontalOptions(layoutAlignment); return this; }
-    public new PdfGrid VerticalOptions(LayoutAlignment layoutAlignment) { base.VerticalOptions(layoutAlignment); return this; }
 
-    // ILayoutElement implementation
     IReadOnlyList<object> ILayoutElement.Children => _children.Cast<object>().ToList();
     LayoutType ILayoutElement.LayoutType => LayoutType.Grid;
     Thickness ILayoutElement.Margin => GetMargin;

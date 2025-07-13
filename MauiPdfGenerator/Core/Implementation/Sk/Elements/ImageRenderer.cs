@@ -34,7 +34,7 @@ internal class ImageRenderer : IElementRenderer
         {
             boxWidth = (float)image.GetWidthRequest.Value;
         }
-        else if (image.GetHorizontalOptions == LayoutAlignment.Fill)
+        else if (image.GetHorizontalOptions is LayoutAlignment.Fill)
         {
             boxWidth = availableRect.Width - (float)image.GetMargin.HorizontalThickness;
         }
@@ -119,7 +119,7 @@ internal class ImageRenderer : IElementRenderer
         finalDrawRect.Offset(renderRect.Left, renderRect.Top);
 
         // LOG: Añadimos un log específico para el caso que nos interesa.
-        if (image.CurrentAspect == Aspect.AspectFill)
+        if (image.CurrentAspect is Aspect.AspectFill)
         {
             context.Logger.LogDebug("[AspectFill] Contenedor (renderRect): {RenderRect}", renderRect);
             context.Logger.LogDebug("[AspectFill] Imagen a dibujar (finalDrawRect): {FinalDrawRect}", finalDrawRect);
@@ -159,7 +159,7 @@ internal class ImageRenderer : IElementRenderer
 
     private static SKRect CalculateTargetRect(SKImage image, SKRect container, Aspect aspect)
     {
-        if (image.Width <= 0 || image.Height <= 0 || container.Width <= 0 || container.Height <= 0 || aspect == Aspect.Fill)
+        if (image.Width <= 0 || image.Height <= 0 || container.Width <= 0 || container.Height <= 0 || aspect is Aspect.Fill)
         {
             return container;
         }
@@ -170,7 +170,7 @@ internal class ImageRenderer : IElementRenderer
         float finalWidth = container.Width;
         float finalHeight = container.Height;
 
-        if (aspect == Aspect.AspectFit)
+        if (aspect is Aspect.AspectFit)
         {
             if (imageRatio > containerRatio)
             {
@@ -181,7 +181,7 @@ internal class ImageRenderer : IElementRenderer
                 finalWidth = container.Height * imageRatio;
             }
         }
-        else if (aspect == Aspect.AspectFill)
+        else if (aspect is Aspect.AspectFill)
         {
             if (imageRatio > containerRatio)
             {

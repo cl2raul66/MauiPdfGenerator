@@ -103,8 +103,9 @@ public partial class MainPage : ContentPage
                         .BackgroundColor(Colors.LightYellow)
                         .WidthRequest(300);
 
-                    c.Paragraph("[P27] Este párrafo tiene padding interno.")
+                    c.Paragraph("[P27] Este párrafo tiene padding y margin.")
                         .Padding(10, 20)
+                        .Margin(20, 10)
                         .BackgroundColor(Colors.LightCoral);
 
                     c.Paragraph("[P28] Este texto tiene un ancho fijo y será truncado al final si no cabe en el espacio asignado por el WidthRequest que se le ha proporcionado.")
@@ -208,6 +209,7 @@ public partial class MainPage : ContentPage
                     c.PdfImage(new MemoryStream(imageData))
                         .WidthRequest(120)
                         .Padding(20)
+                        .Margin(16)
                         .BackgroundColor(Colors.LightCoral)
                         .HorizontalOptions(LayoutAlignment.Center);
 
@@ -235,13 +237,6 @@ public partial class MainPage : ContentPage
 
     private async void GeneratePdfWithHorizontalLine_Clicked(object sender, EventArgs e)
     {
-        byte[] imageData;
-        using (var httpClient = new HttpClient())
-        {
-            var uri = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
-            imageData = await httpClient.GetByteArrayAsync(uri);
-        }
-
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
         try
         {
@@ -327,6 +322,70 @@ public partial class MainPage : ContentPage
                         .Margin(0, 10);
 
                     c.Paragraph("Fin de los casos de prueba para HorizontalLine.");
+                }).Build()
+            .SaveAsync(targetFilePath);
+
+            await Launcher.OpenAsync(new OpenFileRequest
+            {
+                File = new ReadOnlyFile(targetFilePath)
+            });
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+        }
+    }
+
+    private async void GeneratePdfWithStackLayout_Clicked(object sender, EventArgs e)
+    {
+        byte[] imageData;
+        using (var httpClient = new HttpClient())
+        {
+            var uri = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
+            imageData = await httpClient.GetByteArrayAsync(uri);
+        }
+
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        try
+        {
+            var doc = pdfDocFactory.CreateDocument();
+            await doc
+                .Configuration(cfg =>
+                {
+                    cfg.MetaData(data =>
+                    {
+                        data.Title("MauiPdfGenerator sample - Experimental Horizontal Line");
+                    });
+                })
+                .ContentPage()
+                .Spacing(16)
+                .Content(c =>
+                {
+                    c.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.Paragraph("texto horizontal 1");
+                        hsl.Paragraph("texto horizontal 2");
+                    });
+
+                    c.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
+                        hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
+                    });
+
+                    c.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.PdfImage(new MemoryStream(imageData));
+                        hsl.PdfImage(new MemoryStream(imageData));
+                    }).WidthRequest(300);
+
+                    c.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.Paragraph("texto horizontal 1").Margin(8f);
+                        hsl.Paragraph("texto horizontal 2").Padding(8).BackgroundColor(Colors.LightPink);
+                    }).Spacing(8).BackgroundColor(Colors.LightGoldenrodYellow);
+
+                    c.HorizontalLine();
                 }).Build()
             .SaveAsync(targetFilePath);
 

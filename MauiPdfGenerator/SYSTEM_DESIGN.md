@@ -1,193 +1,322 @@
 ﻿# Documentación Técnica de la Biblioteca MauiPdfGenerator
 
-## Tabla de Contenidos
+# 1. Principio Rector
 
-**PARTE I: ARQUITECTURA DEL SISTEMA**
-- [1. Principio Rector: Extensión Natural de .NET MAUI](#1-principio-rector-extensión-natural-de-net-maui)
-- [2. Visión General: Las Tres Capas](#2-visión-general-las-tres-capas)
-  - [2.1. Capa `Fluent` (API Pública)](#21-capa-fluent-api-pública)
-  - [2.2. Capa `Core` (Motor de Layout y Renderizado)](#22-capa-core-motor-de-layout-y-renderizado)
-  - [2.3. Capa `Common` (Contratos Compartidos)](#23-capa-common-contratos-compartidos)
-- [3. Filosofía y Principios de Diseño](#3-filosofía-y-principios-de-diseño)
-  - [3.1. Filosofía del Motor `Core`: Robustez y Corrección por Construcción](#31-filosofía-del-motor-core-robustez-y-corrección-por-construcción)
-  - [3.2. Filosofía de la API `Fluent`: Usabilidad, Seguridad y Descubribilidad](#32-filosofía-de-la-api-fluent-usabilidad-seguridad-y-descubribilidad)
-- [4. Catálogo de Patrones Arquitectónicos](#4-catálogo-de-patrones-arquitectónicos)
-  - [4.1. Patrones Globales](#41-patrones-globales)
-  - [4.2. Patrones de la Capa `Fluent`](#42-patrones-de-la-capa-fluent)
-  - [4.3. Patrones de la Capa `Common`](#43-patrones-de-la-capa-common)
-  - [4.4. Patrones de la Capa `Core`](#44-patrones-de-la-capa-core)
+Esta biblioteca está diseñada como una **extensión natural del ecosistema .NET MAUI**, no como una herramienta externa. Su propósito es permitir que los desarrolladores MAUI generen PDFs de forma nativa utilizando conceptos familiares de .NET MAUI. Para aquellos desarrolladores con experiencia en la plataforma, les resultará más cómodo el uso de esta biblioteca ya que su confección es similar a cuando se crea una UI de .NET MAUI, pero orientada a la generación de documentos PDF.
 
-**PARTE II: ARQUITECTURA DEL SISTEMA DE LAYOUT**
-- [5. El Sistema de Layout de Tres Pasadas (Measure/Arrange/Render)](#5-el-sistema-de-layout-de-tres-pasadas-measurearrangerender)
-  - [5.1. Fase 1: La Pasada de Medición (`MeasureAsync`)](#51-fase-1-la-pasada-de-medición-measureasync)
-  - [5.2. Fase 2: La Pasada de Disposición (`ArrangeAsync`)](#52-fase-2-la-pasada-de-disposición-arrangeasync)
-  - [5.3. Fase 3: La Pasada de Renderizado (`RenderAsync`)](#53-fase-3-la-pasada-de-renderizado-renderasync)
-- [6. Principios y Reglas Fundamentales de Layout](#6-principios-y-reglas-fundamentales-de-layout)
-  - [6.1. El Principio de Propagación de Restricciones](#61-el-principio-de-propagación-de-restricciones)
-  - [6.2. La Dualidad de la Medición](#62-la-dualidad-de-la-medición)
-  - [6.3. El Modelo de Caja (Box Model)](#63-el-modelo-de-caja-box-model)
-  - [6.4. Contexto de Layout y Orquestación de Fases](#64-contexto-de-layout-y-orquestación-de-fases)
-- [7. Comportamiento Detallado de Componentes](#7-comportamiento-detallado-de-componentes)
-  - [7.1. Contenedores de Layout](#71-contenedores-de-layout)
-  - [7.2. Elementos Primitivos](#72-elementos-primitivos)
+## Estructura Visual General
 
----
+La interfaz visual de un documento PDF se construye con elementos que mapean conceptualmente a los controles de MAUI:
 
-# PARTE I: ARQUITECTURA DEL SISTEMA
+**MAUI → PDF (Analogía Visual)**
+- **Pages** → Páginas del documento PDF
+- **Layouts** → Estructuras de organización visual en PDF
+- **Views** → Elementos de contenido visual en PDF
 
-## 1. Principio Rector: Extensión Natural de .NET MAUI
+### Páginas
 
-Esta biblioteca está diseñada como una **extensión natural del ecosistema .NET MAUI**, no como una herramienta externa. Su propósito es permitir que los desarrolladores MAUI generen PDFs reutilizando directamente su conocimiento existente de XAML, layouts y patrones de UI.
+Los documentos PDF constan de una o varias páginas. Cada página contiene al menos un diseño. MauiPdfGenerator contiene las siguientes páginas:
 
-**Filosofía de Reutilización Conceptual:** En lugar de inventar abstracciones propias, la biblioteca adapta y extiende los conceptos nativos de MAUI al contexto PDF. Los desarrolladores encuentran `VerticalStackLayout`, `HorizontalStackLayout`, `Grid`, `Margin`, `Padding` y otros elementos familiares, comportándose exactamente como esperan pero generando contenido PDF.
+|Página|Descripción|
+|---|---|
+|PdfContentPage|Muestra un diseño principal y es el tipo de página más común en documentos PDF.|
 
-**Curva de Aprendizaje Mínima:** Un desarrollador que sabe crear interfaces en XAML puede generar PDFs inmediatamente, aplicando los mismos principios de composición, layout y styling que ya domina.
+> **NOTA:** Para el futuro, se agregarán otros tipos de páginas especializadas.
 
-## 2. Visión General: Las Tres Capas
+### Diseños
 
-La arquitectura de la biblioteca está diseñada en torno a una clara **Separación de Capas (SoC)**, cada una con una responsabilidad única y bien definida.
+Los diseños en MauiPdfGenerator se usan para organizar elementos visuales en estructuras jerárquicas dentro del documento PDF. Cada diseño normalmente contiene varios elementos hijos y otros diseños anidados. Las clases de diseño contienen lógica para establecer la posición y el tamaño de los elementos secundarios en el documento PDF.
+
+MauiPdfGenerator contiene los siguientes diseños:
+
+|Diseño|Descripción|
+|---|---|
+|PdfGrid|Coloca sus elementos secundarios en una cuadrícula de filas y columnas dentro del PDF.|
+|PdfHorizontalStackLayout|Coloca los elementos secundarios en una pila horizontal en el documento PDF.|
+|PdfVerticalStackLayout|Coloca los elementos secundarios en una pila vertical en el documento PDF.|
+
+### Elementos Visuales
+
+Los elementos visuales de MauiPdfGenerator son componentes que renderizan contenido específico en el documento PDF, como párrafos, imágenes y figuras geométricas.
+
+MauiPdfGenerator contiene los siguientes elementos visuales:
+
+|Elemento|Descripción|
+|---|---|
+|PdfImage|Renderiza una imagen en el PDF que se puede cargar desde un archivo local, un URI o una secuencia.|
+|PdfParagraph|Renderiza texto plano y enriquecido de una o varias líneas en el documento PDF.|
+|PdfHorizontalLine|Renderiza una línea horizontal en el PDF de un punto inicial a un punto final.|
+
+### Consideraciones de Diseño
+- **Layouts** definen la estructura espacial del contenido en el PDF
+- **Views** proporcionan el contenido visual específico renderizado en el documento
+- **Pages** contienen la composición completa de una página del PDF
+- La interactividad se omite intencionalmente, ya que los archivos PDF generados por MauiPdfGenerator se enfocan en documentos estáticos
+
+### Aplicación Práctica
+
+Al diseñar un PDF basado en controles MAUI:
+
+1. **Planifica las páginas** → Define el número y tipo de páginas del documento PDF
+2. **Diseña los layouts** → Estructura la organización visual del contenido en cada página
+3. **Selecciona los elementos** → Elige los componentes visuales apropiados para el contenido
+4. **Compón la jerarquía** → Organiza la estructura visual completa del documento
+
+Esta analogía permite trasladar conceptos de diseño de aplicaciones MAUI a la composición de documentos PDF, manteniendo la lógica estructural pero adaptándola a un medio de documento estático.
+
+## Alineación y Posicionamiento en PDF
+
+### Conceptos Fundamentales
+
+Cada elemento PDF que deriva de `PdfView` (incluyendo vistas y layouts) tiene propiedades `PdfHorizontalOptions` y `PdfHorizontalOptions` de tipo `LayoutAlignment`. Esta estructura encapsula la alineación preferida de un elemento, determinando su posición y tamaño dentro de su layout padre cuando este contiene espacio no utilizado en la página PDF.
+
+### Alineación de Elementos en Layouts PDF
+
+Los campos de alineación controlan cómo se posicionan los elementos dentro del documento PDF:
+
+- **`Start`**
+  - Alineación horizontal: Posiciona el elemento en el lado izquierdo del layout padre
+  - Alineación vertical: Posiciona el elemento en la parte superior del layout padre
+
+- **`Center`**
+  - Centra el elemento horizontal o verticalmente dentro del layout padre
+
+- **`End`**
+  - Alineación horizontal: Posiciona el elemento en el lado derecho del layout padre
+  - Alineación vertical: Posiciona el elemento en la parte inferior del layout padre
+
+- **`Fill`**
+  - Alineación horizontal: Asegura que el elemento llene el ancho disponible del layout padre
+  - Alineación vertical: Asegura que el elemento llene la altura disponible del layout padre
+
+> **Nota**: El valor predeterminado de las propiedades `PdfHorizontalOptions` y `PdfHorizontalOptions` es `LayoutAlignment.Fill`.
+
+### Comportamiento en PdfStackLayout
+
+Un `PdfStackLayout` solo respeta los campos `Start`, `Center`, `End` y `Fill` en elementos hijos que están en dirección opuesta a la orientación del stack:
+
+- **PdfVerticalStackLayout**: Los elementos hijos pueden establecer sus propiedades `PdfHorizontalOptions`
+- **PdfHorizontalStackLayout**: Los elementos hijos pueden establecer sus propiedades `PdfHorizontalOptions`
+
+> **Importante**: `LayoutAlignment.Fill` generalmente anula las solicitudes de tamaño especificadas usando las propiedades `HeightRequest` y `WidthRequest`.
+
+## Posicionamiento con Margin y Padding
+
+### Propiedades de Espaciado
+
+Las propiedades `Margin` y `Padding` posicionan elementos PDF relativos a elementos adyacentes o hijos:
+
+- **`Margin`**: Representa la distancia entre un elemento PDF y sus elementos adyacentes. Controla la posición de renderizado del elemento y de sus vecinos en el documento.
+- **`Padding`**: Representa la distancia entre un elemento PDF y sus elementos hijos. Separa el elemento de su propio contenido interno.
+
+### Características del Espaciado en PDF
+
+- Los valores de `Margin` son aditivos: dos elementos adyacentes con margen de 20 unidades tendrán una distancia de 40 unidades entre ellos en el PDF
+- Los valores de margin y padding se suman cuando ambos se aplican
+- Ambas propiedades son de tipo `Thickness`
+
+### Estructura Thickness
+
+Tres formas de crear una estructura `Thickness` para elementos PDF:
+
+1. **Valor uniforme único**: Se aplica a los cuatro lados (izquierda, superior, derecha, inferior).
+2. **Valores horizontal y vertical**: El valor horizontal se aplica simétricamente a izquierda y derecha, el vertical a superior e inferior.
+3. **Cuatro valores distintos**: Se aplican específicamente a izquierda, superior, derecha e inferior.
+
+> **Nota**: Los valores de `Thickness` pueden ser negativos, lo que típicamente recorta o superpone el contenido en el PDF.
+
+## Analogía Final: MAUI → PDF
+
+La transición conceptual se establece así:
+
+- **Pages (MAUI)** → **Páginas PDF**: Cada página representa una unidad completa de contenido del documento
+- **Layouts (MAUI)** → **Estructuras organizacionales PDF**: Organizan el contenido dentro de cada página del documento
+- **Views (MAUI)** → **Elementos visuales PDF**: Componentes que renderizan contenido específico en el documento final
+
+Los conceptos de alineación y posicionamiento de MAUI se traducen directamente en la disposición visual del contenido PDF dentro de las estructuras organizacionales de cada página del documento.
+
+## 1.1. PdfContentPage
+
+La `PdfContentPage` es el tipo de página más simple y común en MauiPdfGenerator. Su propósito es mostrar una única vista, que suele ser un layout como `PdfGrid` o `PdfStackLayout`, el cual a su vez contiene otras vistas.
+
+### Estructura y Contenido
+
+Una `PdfContentPage` está diseñada para contener un único elemento hijo. Para construir una interfaz visual compleja, este único elemento debe ser un layout que pueda organizar múltiples vistas hijas.
+
+El contenido de la página se asigna a la propiedad `PdfContent`.
+
+### Propiedades Principales
+
+Además de las propiedades heredadas, `PdfContentPage` define las siguientes propiedades específicas:
+
+| Propiedad | Tipo de Dato | Descripción |
+| :--- | :--- | :--- |
+| `PdfContent` | `PdfView` | Define la vista única que representa el contenido de la página. |
+| `Padding` | `Thickness` | Define el espacio interior entre los bordes de la página y su contenido. |
+
+# 2. Visión General: Las Tres Capas
+
+La arquitectura de la biblioteca está diseñada en torno a una clara **Separación de Capas (SoC)**, cada una con una responsabilidad única y bien definida. Esta separación permite evolución independiente, intercambiabilidad de componentes y mantenimiento del código a largo plazo.
 
 ### 2.1. Capa `Fluent` (API Pública)
-Es la puerta de entrada para el desarrollador. Su única misión es ofrecer una experiencia de desarrollo declarativa, legible y fácil de usar. Está diseñada para ser lo más estable posible, protegiendo a los usuarios de cambios en la implementación interna.
+
+*   **Propósito:** Única puerta de entrada para el desarrollador. Su misión es ofrecer una experiencia de desarrollo declarativa, legible y fácil de usar.
+*   **Responsabilidades:**
+    *   **API Guiada:** Utiliza el patrón Type-State para prevenir errores en tiempo de compilación.
+    *   **Fluidez Contextual:** Métodos encadenables que exponen solo opciones válidas según el contexto.
+    *   **Encapsulación de Complejidad:** Oculta completamente la implementación interna del motor.
+*   **Narrativa de Transformación:** Cuando el desarrollador construye un documento, los objetos de la API Fluent (ej. `PdfParagraph`) actúan como *builders* que acumulan configuración. Al finalizar el proceso (ej. en `SaveAsync`), estos objetos se transforman en sus DTOs equivalentes de la capa `Common` (ej. `PdfParagraphData`). Esta transformación despoja a los objetos de su lógica de construcción, conservando solo la configuración pura para ser procesada por el motor.
 
 ### 2.2. Capa `Core` (Motor de Layout y Renderizado)
-Se subdivide en dos responsabilidades complementarias, siguiendo el Principio de Inversión de Dependencias:
-- **`Core.Integration` (Abstracciones)**: Contiene las interfaces y la lógica de medición/disposición (`MeasureAsync` & `ArrangeAsync`) independiente del motor de renderizado. Define los contratos que cualquier motor debe cumplir e incluye la interfaz `ILayoutMetrics` para obtener métricas de renderizado (ej. tamaño de texto) sin depender de implementaciones específicas.
-- **`Core.Implementation.Sk` (Implementación Concreta)**: Implementa el renderizado específico (`RenderAsync`) usando SkiaSharp y proporciona las métricas de layout concretas a través de `ILayoutMetrics`. Es intercambiable sin afectar la lógica de layout.
+
+El motor se subdivide siguiendo el **Principio de Inversión de Dependencias**, separando abstracciones de implementaciones concretas:
+
+#### Subcapa `Core.Integration` (Abstracciones)
+*   **Propósito:** Contiene la lógica de layout independiente del motor de renderizado.
+*   **Responsabilidades:**
+    *   **Sistema de Layout:** Implementa las fases `MeasureAsync` y `ArrangeAsync`.
+    *   **Contratos de Medición:** Define `ILayoutMetrics` para obtener métricas sin depender de implementaciones.
+    *   **Orquestación:** Coordina la secuencia de pasadas de layout.
+    *   **Lógica de Contenedores:** Algoritmos de distribución para `Grid`, `StackLayout`, etc.
+
+#### Subcapa `Core.Implementation.Sk` (Implementación Concreta)
+*   **Propósito:** Implementa el renderizado específico usando un motor concreto (SkiaSharp).
+*   **Responsabilidades:**
+    *   **Renderizado Final:** Implementa `RenderAsync` usando APIs de SkiaSharp.
+    *   **Métricas Concretas:** Proporciona la implementación real de `ILayoutMetrics`.
+    *   **Gestión de Recursos:** Maneja `SKTypeface`, `SKImage`, etc.
+*   **Principio de Diseño:** Cada implementación es un "plugin" intercambiable que cumple los contratos definidos en `Core.Integration`.
 
 ### 2.3. Capa `Common` (Contratos Compartidos)
-Actúa como el "pegamento" o el lenguaje común que todas las capas utilizan para comunicarse. Contiene las definiciones, interfaces y estructuras de datos compartidas.
 
-## 3. Filosofía y Principios de Diseño
+*   **Propósito:** Define el "lenguaje común" que permite la comunicación entre capas sin crear dependencias directas.
+*   **Contenido Principal:**
+    *   **Contratos de Datos (DTOs):** `PdfDocumentData`, `PdfPageData`, `PdfParagraphData`, etc. Transportan información estructurada y pura.
+    *   **Value Objects:** Tipos inmutables (`PdfFontIdentifier`, `PdfGridLength`, `Color`) que encapsulan valores con semántica.
+    *   **Enumeraciones:** Estados y opciones del sistema (`LayoutPassType`, `TextAlignment`).
+    *   **Interfaces de Comunicación:** `ILayoutMetrics` para obtener métricas del motor.
+    *   **Estructuras de Layout:** `LayoutRequest`, `LayoutInfo`, que definen el protocolo de comunicación del sistema de layout.
+*   **Principio de Diseño:** Actúa como una "zona neutra" donde las capas pueden intercambiar información sin conocer detalles de implementación mutuos.
 
-La biblioteca se rige por dos conjuntos de principios complementarios: uno para el motor interno (`Core`) enfocado en la robustez, y otro para la API pública (`Fluent`) enfocado en la experiencia del desarrollador (DX).
+### 2.4. Flujo de Datos y Comunicación Entre Capas
 
-### 3.1. Filosofía del Motor `Core`: Robustez y Corrección por Construcción
-
-El motor de renderizado es la base de la biblioteca, y su fiabilidad es crítica.
-
-*   **Diseño Guiado por Casos de Uso:** Para funcionalidades complejas (especialmente en el sistema de layout), seguimos un proceso riguroso:
-    1.  **Identificar Casos de Uso:** Listar todos los escenarios posibles (normales, límite, inválidos).
-    2.  **Definir Comportamiento Esperado:** Para cada caso, definir el resultado correcto de forma precisa.
-    3.  **Implementar Lógica Generalista:** Diseñar una única pieza de lógica que satisfaga todos los casos.
-    4.  **Refactorizar con Confianza:** Una vez que la lógica es correcta, se puede mejorar con seguridad.
-    Este principio nos mueve de escribir código que "parece funcionar" a diseñar lógica que es **correcta por construcción**.
-
-*   **Pragmatismo sobre Pureza Dogmática:** Evitamos la sobre-ingeniería. No se introducen capas de abstracción o patrones complejos a menos que resuelvan un problema real y presente en el motor.
-
-### 3.2. Filosofía de la API `Fluent`: Usabilidad, Seguridad y Descubribilidad
-
-La API pública es la cara de la biblioteca. Su diseño se centra en hacer que la creación de PDFs sea una tarea intuitiva, segura y agradable.
-
-*   **API Guiada (Guided API):** Utilizamos el sistema de tipos de C# para guiar al desarrollador y prevenir errores en tiempo de compilación, no en tiempo de ejecución.
-    *   **Ejemplo Clave:** El patrón **Estado Guiado por Tipos (Type-State)**. El método `PdfGrid.Children()` no devuelve `PdfGrid`, sino `IGridAfterChildren`, una interfaz que no expone métodos para redefinir columnas o filas. Esto hace que sea *imposible* para el desarrollador modificar la estructura de la rejilla después de haber añadido contenido, eliminando una clase entera de posibles bugs.
-
-*   **Fluidez Específica y Descubribilidad (Specific Fluidity & Discoverability):** El encadenamiento de métodos debe ser natural y relevante.
-    *   **Ejemplo Clave:** Ocultación de métodos con `new`. Clases como `PdfParagraph` o `PdfHorizontalLine` re-implementan métodos como `.Margin()` para devolver su propio tipo (`PdfParagraph`) en lugar del tipo base (`PdfElement`). Esto mejora la experiencia de desarrollo (DX) al evitar `casts` innecesarios y asegurar que IntelliSense solo muestre los métodos aplicables al elemento actual (ej: `.FontSize()` en un párrafo, pero no en una línea horizontal).
-
-*   **Coherencia con el Ecosistema MAUI:** La API debe comportarse como una extensión natural del framework, manteniendo las mismas convenciones de nomenclatura, patrones de configuración y comportamientos de layout que los desarrolladores ya conocen.
-
-*   **Defaults Inteligentes y Contextuales (Smart & Contextual Defaults):** La API debe minimizar la verbosidad y tomar decisiones lógicas por el desarrollador cuando sea posible.
-    *   **Ejemplo Clave:** La clase `PdfLayoutDefaultOptions` proporciona comportamientos por defecto que dependen del contexto. Un elemento añadido directamente a una página (`ContentPage`) se expandirá horizontalmente por defecto (`Fill`), mientras que el mismo elemento dentro de un `HorizontalStackLayout` adoptará su tamaño natural (`Start`). Esto libera al desarrollador de tener que especificar explícitamente las opciones de layout más comunes.
-
-## 4. Catálogo de Patrones Arquitectónicos
-
-### 4.1. Patrones Globales
-*   **Inyección de Dependencias (DI):** Sigue el patrón estándar de .NET MAUI, integrándose directamente en `MauiProgram.cs` con métodos de extensión familiares como `UseMauiPdfGenerator()` y `PdfConfigureFonts()`.
-*   **Objeto de Contexto (Context Object):** El `PdfGenerationContext` encapsula todo el estado relevante para una operación de renderizado, simplificando las firmas de los métodos.
-*   **Fachada (Facade Pattern):** La interfaz `IPdfCoreGenerator` actúa como una fachada simple para el complejo motor de renderizado.
-
-### 4.2. Patrones de la Capa `Fluent`
-*   **Interfaz Fluida (Fluent Interface):** Patrón principal de la API que permite encadenar métodos de forma legible.
-*   **Builder Pattern Progresivo:** Objetos como `PdfDocumentBuilder` y `PdfGrid` usan transiciones de tipo (ej: `PdfGrid` → `IGridWithStructure` → `IGridAfterChildren`), donde cada interfaz expone solo los métodos válidos para esa fase de construcción.
-*   **Estado Guiado por Tipos (Type-State Pattern):** Usa el sistema de tipos para guiar al usuario y prevenir configuraciones inválidas en diferentes fases de construcción.
-
-### 4.3. Patrones de la Capa `Common`
-*   **DTO (Data Transfer Object):** Clases como `PdfDocumentData` y `PdfPageData` transportan datos de forma estructurada entre capas.
-*   **Value Object:** `structs` inmutables como `PdfFontIdentifier` y `PdfGridLength` que se definen por sus valores.
-*   **Contrato de Medición (`LayoutRequest`):** `struct` que encapsula la "pregunta" de un contenedor a un hijo, comunicando el espacio disponible y la intención de la medición.
-
-### 4.4. Patrones de la Capa `Core`
-*   **Estrategia (Strategy Pattern):** `IElementRenderer` es la interfaz de la estrategia. Cada implementación (`TextRenderer`, `ImageRenderer`) es una estrategia concreta para medir y dibujar un tipo de elemento.
-*   **Factoría (Factory Pattern):** La clase `ElementRendererFactory` desacopla al motor de la creación de los `Renderer` concretos.
+1.  **`Fluent` -> `Common`:** El desarrollador usa la API `Fluent`. Al finalizar, la capa `Fluent` mapea sus objetos de construcción a un árbol de DTOs puros en la capa `Common`.
+2.  **`Common` -> `Core.Integration`:** El orquestador del `Core` recibe el árbol de DTOs. El `ElementRendererFactory` lo recorre, instanciando el `IElementRenderer` apropiado para cada DTO.
+3.  **`Core.Integration` <-> `Core.Implementation`:** Durante `MeasureAsync`, la lógica de layout abstracta consulta las métricas de la implementación concreta a través de la interfaz `ILayoutMetrics`.
+4.  **`Core.Integration` -> `Core.Implementation`:** Una vez completadas las fases de `Measure` y `Arrange`, el "plano de layout" final se pasa a la fase `RenderAsync` de la implementación para el dibujado final.
 
 ---
 
 # PARTE II: ARQUITECTURA DEL SISTEMA DE LAYOUT
+
+(El resto del documento permanece igual que en la versión anterior, ya que su estructura y contenido ya son sólidos y coherentes con esta nueva y detallada descripción de la Parte I)
 
 ## 5. El Sistema de Layout de Tres Pasadas (Measure/Arrange/Render)
 
 El motor emula deliberadamente el **ciclo de Medición y Disposición (Measure/Arrange) de .NET MAUI**, adaptándolo a un contexto de generación de documentos asíncrono y separando explícitamente el renderizado.
 
 ### 5.1. Fase 1: La Pasada de Medición (`MeasureAsync`)
-*   **Responsabilidad:** Calcular el tamaño que cada elemento *desea* tener (`DesiredSize`).
+*   **Responsabilidad:** Calcular el tamaño que cada elemento *desea* tener (`DesiredSize`) basándose en su contenido y las restricciones recibidas.
 *   **Equivalencia MAUI:** Es el análogo directo de la pasada `Measure` de MAUI.
-*   **Proceso:** El sistema recorre el árbol de elementos de arriba hacia abajo. Cada elemento recibe restricciones de su padre y devuelve un `LayoutInfo` con su tamaño deseado.
-*   **Adaptación Clave:** Es **asíncrono** para manejar operaciones de I/O (ej. leer un stream de imagen) sin bloquear. El resultado es un `LayoutInfo` que contiene el tamaño deseado del elemento incluyendo su contenido y padding, pero **excluyendo el margin** (que será gestionado por el padre en la fase de disposición).
+*   **Ubicación Arquitectónica:** Esta lógica reside en `Core.Integration` (capa de abstracciones), ya que es independiente del motor de renderizado específico.
+*   **Proceso:** El sistema recorre el árbol de elementos de arriba hacia abajo. Cada elemento recibe un `LayoutRequest` de su padre que comunica el espacio disponible y el tipo de medición requerida.
+*   **Dependencia de Métricas:** Para elementos que requieren métricas específicas del motor (como texto), esta fase utiliza la interfaz `ILayoutMetrics` proporcionada por `Core.Implementation.Sk`, manteniendo la independencia arquitectónica.
+*   **Resultado:** Un `LayoutInfo` que contiene el tamaño deseado del elemento incluyendo su contenido y padding, pero **excluyendo explícitamente el margin**.
 
 ### 5.2. Fase 2: La Pasada de Disposición (`ArrangeAsync`)
-*   **Responsabilidad:** Asignar una posición y un tamaño final y concreto a cada elemento.
+*   **Responsabilidad:** Asignar una posición y un tamaño final y concreto a cada elemento dentro del espacio disponible.
 *   **Equivalencia MAUI:** Es el análogo directo de la pasada `Arrange` de MAUI.
-*   **Proceso:** Conociendo los tamaños deseados, el sistema recorre el árbol de nuevo. Cada padre posiciona a sus hijos dentro de su propio espacio, asignándoles un rectángulo final. El resultado es un "plano de layout" completo.
+*   **Ubicación Arquitectónica:** También reside en `Core.Integration`, siendo independiente del motor de renderizado.
+*   **Proceso:** Conociendo los tamaños deseados, el sistema recorre el árbol nuevamente. Cada contenedor padre distribuye su espacio entre sus hijos y les asigna un rectángulo final (`ArrangedRect`).
 *   **Gestión del Margin:** Durante esta fase, cada contenedor padre es responsable de considerar el `Margin` de sus hijos al calcular sus posiciones finales.
-*   **Estado:** En este punto, todo está medido y posicionado, pero **nada se ha dibujado todavía**.
+*   **Resultado:** Un "plano de layout" completo donde cada elemento conoce su posición y tamaño final. Al finalizar, **nada se ha dibujado todavía**.
 
 ### 5.3. Fase 3: La Pasada de Renderizado (`RenderAsync`)
-*   **Responsabilidad:** Dibujar cada elemento en su posición final.
-*   **Equivalencia MAUI:** Es análogo al ciclo de dibujado de la plataforma nativa (Android, iOS).
-*   **Proceso:** Esta es la única fase que depende del motor de renderizado concreto (`Core.Implementation.Sk`). Recorre el "plano de layout" generado en la fase anterior y utiliza las APIs específicas del motor (ej. `SKCanvas`) para dibujar los elementos en el PDF.
+*   **Responsabilidad:** Dibujar cada elemento en su posición final usando las APIs específicas del motor.
+*   **Equivalencia MAUI:** Es análogo al ciclo de dibujado de la plataforma nativa (Android Canvas, iOS CoreGraphics).
+*   **Ubicación Arquitectónica:** Esta es la única fase que reside en `Core.Implementation.Sk`, ya que depende completamente del motor concreto (SkiaSharp).
+*   **Proceso:** Recorre el "plano de layout" y utiliza las APIs del motor (ej. `SKCanvas`) para dibujar los elementos en el PDF.
+*   **Intercambiabilidad:** Esta fase es completamente intercambiable. Se podría implementar un `Core.Implementation.PdfSharp` sin afectar las fases de medición y disposición.
 
 ## 6. Principios y Reglas Fundamentales de Layout
 
 ### 6.1. El Principio de Propagación de Restricciones
 **Heredado directamente de MAUI:**
 *   **Universo Finito:** Un elemento **NUNCA** asume su tamaño. Siempre opera dentro de un espacio finito definido por su contenedor padre.
-*   **Propagación Obligatoria:** Un elemento **SIEMPRE** recibe un "espacio disponible" de su padre para poder medirse.
-*   **Elemento Raíz:** La única excepción es `ContentPage`, cuyo espacio disponible inicial es el tamaño de la página del PDF.
+*   **Propagación Obligatoria:** Un elemento **SIEMPRE** recibe un `LayoutRequest` de su padre que especifica el espacio disponible y el tipo de medición.
+*   **Elemento Raíz:** La única excepción es `ContentPage`, cuyo espacio disponible inicial es el área de contenido de la página (tamaño de página menos márgenes).
 
 ### 6.2. La Dualidad de la Medición
 **Adaptación del sistema de restricciones de MAUI:**
-Un elemento primitivo debe ser capaz de responder a dos tipos de "preguntas de medición", comunicadas a través del contrato `LayoutRequest`.
+Un elemento debe ser capaz de responder a dos tipos de "preguntas de medición", comunicadas a través del `LayoutRequest`.
 
 *   **Pregunta de Medición Restringida (`LayoutPassType.Constrained`):**
-    *   **Intención:** "Adáptate a este **ancho finito** y dime qué altura necesitas (aplicando saltos de línea si es necesario)".
+    *   **Intención:** "Tienes este **ancho finito**. Adáptate a él (aplicando saltos de línea si es necesario) y dime qué altura necesitas".
     *   **Quién la hace:** Contenedores de naturaleza vertical como `ContentPage` y `VerticalStackLayout`.
 
 *   **Pregunta de Medición Ideal (`LayoutPassType.Ideal`):**
-    *   **Intención:** "Usa el ancho máximo disponible sin aplicar wrapping. Dime cuál es tu tamaño **natural** en una sola línea".
+    *   **Intención:** "Ignora las restricciones de ancho. Dime cuál es tu tamaño **natural** si pudieras usar tanto espacio como necesites (sin saltos de línea)".
     *   **Quién la hace:** Contenedores de naturaleza horizontal como `HorizontalStackLayout`.
 
 ### 6.3. El Modelo de Caja (Box Model)
 **Idéntico al modelo de MAUI:**
-*   **`Margin` (Margen):** Espacio **externo** y transparente que empuja la caja lejos de sus vecinos. No forma parte del `BackgroundColor`. Es gestionado exclusivamente por el contenedor padre durante la pasada de `ArrangeAsync`, quien lo considera al calcular las posiciones finales de sus hijos.
+*   **`Margin` (Margen):** Espacio **externo** y transparente que empuja la caja lejos de sus vecinos. No forma parte del `BackgroundColor`. Es gestionado exclusivamente por el contenedor padre durante la pasada de `ArrangeAsync`.
 *   **`Padding` (Relleno):** Espacio **interno** que empuja el contenido lejos del borde. El `BackgroundColor` **sí** se dibuja en esta área.
-*   **Huella de Elemento:** El tamaño devuelto por `MeasureAsync` (`LayoutInfo`) representa la huella del `Contenido + Padding`, **excluyendo el Margin**. Esta separación permite que el contenedor padre maneje el spacing entre elementos de forma independiente.
+*   **Huella de Elemento:** El tamaño devuelto por `MeasureAsync` (`LayoutInfo`) representa la huella del `Contenido + Padding`, **excluyendo el Margin**.
 
 ### 6.4. Contexto de Layout y Orquestación de Fases
-*   **Propagación de Contexto:** El sistema utiliza un `LayoutContext` que se propaga recursivamente por el árbol de elementos. Este objeto transporta información del contenedor padre, permitiendo a los hijos determinar sus comportamientos por defecto apropiados (ej. `PdfLayoutDefaultOptions`).
-*   **Orquestación de Fases:** Un orquestador central (o máquina de estados) es responsable de invocar la secuencia de pasadas en el orden correcto para todo el árbol de elementos.
-*   **Flujo de Ejecución:** Las tres fases se ejecutan secuencialmente para todo el árbol: primero se completa `MeasureAsync` para todos los elementos, luego `ArrangeAsync` para todos, y finalmente `RenderAsync`. Esta separación garantiza que cada elemento tenga toda la información necesaria (tamaños y posiciones) antes de proceder al renderizado.
+*   **Propagación de Contexto:** El sistema utiliza un `LayoutContext` que se propaga recursivamente por el árbol. Este objeto transporta información del contenedor padre, permitiendo a los hijos determinar sus comportamientos por defecto.
+*   **Orquestación Centralizada:** Un orquestador en `Core.Integration` es responsable de invocar la secuencia de pasadas en el orden correcto.
+*   **Flujo de Ejecución Estricto:** Las tres fases se ejecutan secuencialmente para todo el árbol: primero se completa `MeasureAsync` para todos, luego `ArrangeAsync` para todos, y finalmente `RenderAsync`. Esto garantiza que cada fase tenga la información necesaria antes de proceder.
 
 ## 7. Comportamiento Detallado de Componentes
 
 ### 7.1. Contenedores de Layout
 
-#### `PdfVerticalStackLayout`
+#### `VerticalStackLayoutRenderer`
 **Emula `VerticalStackLayout` de MAUI:**
-1.  **`MeasureAsync`:** Hace una **Pregunta de Medición Restringida** a cada hijo. Su altura deseada es la suma de las alturas de los hijos.
-2.  **`ArrangeAsync`:** Posiciona a sus hijos uno debajo del otro, considerando sus `Margin` y alineándolos horizontalmente según sus `HorizontalOptions`.
-3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo en su rectángulo final asignado. Aplica `ClipRect` si el contenido se desborda.
+1.  **`MeasureAsync`:** Hace una **Pregunta de Medición Restringida** a cada hijo. Su altura deseada es la suma de las alturas de los hijos más el `Spacing`. Su ancho deseado es el del hijo más ancho. Añade su propio `Padding`.
+2.  **`ArrangeAsync`:** Posiciona a sus hijos uno debajo del otro, considerando sus `Margin` y alineándolos horizontalmente (`PdfHorizontalOptions`).
+3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo. Aplica `ClipRect` si el contenido se desborda.
 
-#### `PdfHorizontalStackLayout`
+
+
+#### `HorizontalStackLayoutRenderer`
 **Emula `HorizontalStackLayout` de MAUI:**
-1.  **`MeasureAsync`:** Hace una **Pregunta de Medición Ideal** a cada hijo. Su ancho deseado es la suma de los anchos de los hijos.
-2.  **`ArrangeAsync`:** Posiciona a sus hijos uno al lado del otro, considerando sus `Margin` y alineándolos verticalmente según sus `VerticalOptions`.
-3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo, aplicando `ClipRect` si el contenido se desborda.
+1.  **`MeasureAsync`:** Hace una **Pregunta de Medición Ideal** a cada hijo. Su ancho deseado es la suma de los anchos de los hijos más el `Spacing`. Su altura deseada es la del hijo más alto. Añade su propio `Padding`.
+2.  **`ArrangeAsync`:** Posiciona a sus hijos uno al lado del otro, considerando sus `Margin` y alineándolos verticalmente (`PdfHorizontalOptions`).
+3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo. Aplica `ClipRect` si el contenido se desborda.
+
+#### `GridRenderer`
+**Emula `Grid` de MAUI:**
+1.  **`MeasureAsync`:** Resuelve las definiciones de filas/columnas (`Star`, `Auto`, Absoluto). Hace preguntas de medición específicas a cada hijo según su celda. Calcula el tamaño total de la rejilla.
+2.  **`ArrangeAsync`:** Distribuye el espacio entre filas/columnas. Posiciona cada hijo en su celda, considerando `Margin` y alineación. Maneja `RowSpan` y `ColumnSpan`.
+3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo en su celda asignada.
 
 ### 7.2. Elementos Primitivos
 
-#### `TextRenderer` / `ImageRenderer` / `HorizontalLineRender`
-**Comportamiento equivalente a los primitivos de MAUI:**
-1.  **`MeasureAsync`:** Responde a la pregunta (`Constrained` o `Ideal`). Calcula el tamaño de su contenido, le suma su `Padding`, y devuelve un `LayoutInfo` con su huella de elemento (`Contenido + Padding`).
-2.  **`ArrangeAsync`:** Acepta el rectángulo final que su padre le asigna. No tiene hijos que organizar, por lo que esta fase es trivial para ellos.
-3.  **`RenderAsync`:** Recibe un `renderRect` con su tamaño y posición final (ya con el `Margin` descontado por el padre). Calcula su `contentBox` restando su propio `Padding` del `renderRect` y dibuja su fondo y contenido dentro de ese espacio usando las APIs del motor.
+#### `TextRenderer`
+**Equivalente a `Label` de MAUI:**
+1.  **`MeasureAsync`:** Usa `ILayoutMetrics` para calcular el tamaño del texto. Responde a `Constrained` (con saltos de línea) o `Ideal` (sin saltos). Añade `Padding`.
+2.  **`ArrangeAsync`:** Acepta el rectángulo final asignado por su padre.
+3.  **`RenderAsync`:** Dibuja el texto dentro del `renderRect` recibido, después de restar su propio `Padding` para obtener el `contentBox`.
+
+#### `ImageRenderer`
+**Equivalente a `Image` de MAUI:**
+1.  **`MeasureAsync`:** Carga la imagen asíncronamente. Calcula el tamaño basándose en las dimensiones naturales y el `Aspect`. Añade `Padding`.
+2.  **`ArrangeAsync`:** Acepta el rectángulo final y calcula la escala/posición de la imagen según el `Aspect` (`Fill`, `AspectFit`, `AspectFill`).
+3.  **`RenderAsync`:** Dibuja la imagen escalada y posicionada dentro del `renderRect` recibido, después de restar su `Padding`.
+
+#### `HorizontalLineRenderer`
+1.  **`MeasureAsync`:** Responde a `Constrained` (ancho completo) o `Ideal` (ancho mínimo). Añade `Padding`.
+2.  **`ArrangeAsync`:** Acepta el rectángulo final asignado.
+3.  **`RenderAsync`:** Dibuja una línea dentro del `renderRect` recibido, después de restar su `Padding`.
+
+### 7.3. Principios de Consistencia en Renderers
+Todos los renderers deben seguir estos principios:
+1.  **Separación de Responsabilidades:** La lógica de `Measure`/`Arrange` está separada del `Render`.
+2.  **Gestión Uniforme de Padding:** Los elementos añaden su `Padding` durante la medición y lo restan durante el renderizado.
+3.  **Gestión Delegada de Margin:** Los elementos nunca gestionan su propio `Margin`; es responsabilidad del contenedor padre.
+4.  **Respuesta a Tipos de Medición:** Los elementos responden apropiadamente a `Constrained` e `Ideal`.
+5.  **Clipping Consistente:** Los contenedores aplican clipping cuando el contenido se desborda.
+6.  **Background Rendering:** El `BackgroundColor` cubre el área de `Contenido + Padding`, pero excluye el `Margin`.

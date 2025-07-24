@@ -1,12 +1,25 @@
 ﻿# Documentación Técnica de la Biblioteca MauiPdfGenerator
 
-# Parte I
+# Parte I: Guía del Desarrollador: Componentes y Uso
 
-# 1. Principio Rector
+## 1. Introducción a MauiPdfGenerator
+
+### 1.1. Principio Rector
 
 Esta biblioteca está diseñada como una **extensión natural del ecosistema .NET MAUI**, no como una herramienta externa. Su propósito es permitir que los desarrolladores MAUI generen PDFs de forma nativa utilizando conceptos familiares de .NET MAUI. Para aquellos desarrolladores con experiencia en la plataforma, les resultará más cómodo el uso de esta biblioteca ya que su confección es similar a cuando se crea una UI de .NET MAUI, pero orientada a la generación de documentos PDF.
 
-## Estructura Visual General
+### 1.2. Analogía con MAUI
+
+La transición conceptual se establece así:
+
+- **Pages (MAUI)** → **Páginas PDF**: Cada página representa una unidad completa de contenido del documento.
+- **Layouts (MAUI)** → **Estructuras organizacionales PDF**: Organizan el contenido dentro de cada página del documento.
+- **Views (MAUI)** → **Elementos visuales PDF**: Componentes que renderizan contenido específico en el documento final.
+- **Experiencia de Desarrollo (DX):** Al igual que el MAUI moderno, la biblioteca adopta patrones de desarrollo avanzados como una API fluida (Fluent API), inyección de dependencias y generadores de código fuente para ofrecer una experiencia de desarrollo segura, productiva y que minimiza errores comunes como los 'magic strings'.
+
+Los conceptos de alineación y posicionamiento de MAUI se traducen directamente en la disposición visual del contenido PDF dentro de las estructuras organizacionales de cada página del documento.
+
+### 1.3. Estructura Visual General
 
 La interfaz visual de un documento PDF se construye con elementos que mapean conceptualmente a los controles de MAUI:
 
@@ -15,228 +28,139 @@ La interfaz visual de un documento PDF se construye con elementos que mapean con
 - **Layouts** → Estructuras de organización visual en PDF
 - **Views** → Elementos de contenido visual en PDF
 
-### Páginas
+## 2. Guía de Inicio Rápido: Configuración y Primer Documento
 
-Los documentos PDF constan de una o varias páginas. Cada página contiene al menos un diseño. MauiPdfGenerator contiene las siguientes páginas:
+### 2.1. Integración con .NET MAUI: El Punto de Entrada
 
-|Página|Descripción|
-|---|---|
-|PdfContentPage|Muestra un diseño principal y es el tipo de página más común en documentos PDF.|
+La biblioteca se adhiere a los patrones modernos de .NET, integrándose de forma nativa en el ecosistema de la aplicación. La inicialización se realiza en el fichero `MauiProgram.cs` mediante el método de extensión `UseMauiPdfGenerator()`. Este acto registra en el contenedor de inyección de dependencias (DI) todos los servicios necesarios, principalmente la interfaz `IPdfDocumentFactory`. Este enfoque garantiza que la creación de PDFs sea una capacidad intrínseca de la aplicación, accesible desde cualquier parte de la misma de una manera limpia, desacoplada y testeable.
 
-> **NOTA:** Para el futuro, se agregarán otros tipos de páginas especializadas.
+### 2.2. El Sistema de Fuentes Unificado
 
-### Diseños
+La gestión de fuentes es un aspecto crítico. La biblioteca aborda esto con dos características clave:
 
-Los diseños en MauiPdfGenerator se usan para organizar elementos visuales en estructuras jerárquicas dentro del documento PDF. Cada diseño normalmente contiene varios elementos hijos y otros diseños anidados. Las clases de diseño contienen lógica para establecer la posición y el tamaño de los elementos secundarios en el documento PDF.
+**1. Generador de Código para Seguridad de Tipos**
 
-MauiPdfGenerator contiene los siguientes diseños:
+La biblioteca incluye un **generador de código fuente** que inspecciona las llamadas a `AddFont()` en `MauiProgram.cs`. Por cada fuente registrada, crea automáticamente una clase estática `public static class PdfFonts` con propiedades estáticas de tipo `PdfFontIdentifier`.
 
-|Diseño|Descripción|
-|---|---|
-|PdfGrid|Coloca sus elementos secundarios en una cuadrícula de filas y columnas dentro del PDF.|
-|PdfHorizontalStackLayout|Coloca los elementos secundarios en una pila horizontal en el documento PDF.|
-|PdfVerticalStackLayout|Coloca los elementos secundarios en una pila vertical en el documento PDF.|
+Esto elimina el uso de "magic strings" (ej. `"OpenSans-Regular"`) y lo reemplaza por un acceso seguro en tiempo de compilación (ej. `PdfFonts.OpenSans_Regular`), proporcionando IntelliSense y evitando errores de tipeo.
 
-### Elementos Visuales
+**2. Registro y Configuración Avanzada**
 
-Los elementos visuales de MauiPdfGenerator son componentes que renderizan contenido específico en el documento PDF, como párrafos, imágenes y figuras geométricas.
+El generador se alimenta a través del método de extensión `PdfConfigureFonts()`. Este método permite especificar el propósito de cada fuente a través de la enumeración `FontDestinationType`.
 
-MauiPdfGenerator contiene los siguientes elementos visuales:
+| Valor de `FontDestinationType` | Descripción |
+| :--- | :--- |
+| `OnlyUI` | La fuente solo estará disponible para los controles de la UI de .NET MAUI. |
+| `OnlyPDF` | La fuente solo estará disponible para la generación de documentos PDF. Ideal para fuentes pesadas o con licencias específicas. |
+| `Both` | La fuente se registra tanto en la UI como en el motor de PDF. |
 
-|Elemento|Descripción|
-|---|---|
-|PdfImage|Renderiza una imagen en el PDF que se puede cargar desde un archivo local, un URI o una secuencia.|
-|PdfParagraph|Renderiza texto plano y enriquecido de una o varias líneas en el documento PDF.|
-|PdfShape|Renderiza figuras geométricas planas en el PDF.|
+Una vez registrada, se puede refinar el comportamiento de la fuente a través de la interfaz `IPdfFontRegistry`, accesible desde la configuración del documento.
 
-### Consideraciones de Diseño
-- **Layouts** definen la estructura espacial del contenido en el PDF
-- **Views** proporcionan el contenido visual específico renderizado en el documento
-- **Pages** contienen la composición completa de una página del PDF
-- La interactividad se omite intencionalmente, ya que los archivos PDF generados por MauiPdfGenerator se enfocan en documentos estáticos
+| Método en `IFontRegistrationOptions` | Descripción |
+| :--- | :--- |
+| `.Default()` | Designa esta fuente como la predeterminada para todo el documento. |
+| `.EmbeddedFont()` | Marca la fuente para ser incrustada en el fichero PDF, garantizando su correcta visualización. |
 
-### Aplicación Práctica
+### 2.3. La Fábrica de Documentos: Creación mediante DI
 
-Al diseñar un PDF basado en controles MAUI:
+Tras la configuración, la creación de un documento se realiza solicitando la interfaz `IPdfDocumentFactory` al contenedor de DI. Esta fábrica expone el método `CreateDocument()`, que devuelve una instancia de `IPdfDocument`, el punto de partida para construir el PDF. Este patrón desacopla el código del cliente de la implementación y facilita las pruebas.
 
-1. **Planifica las páginas** → Define el número y tipo de páginas del documento PDF
-2. **Diseña los layouts** → Estructura la organización visual del contenido en cada página
-3. **Selecciona los elementos** → Elige los componentes visuales apropiados para el contenido
-4. **Compón la jerarquía** → Organiza la estructura visual completa del documento
+### 2.4. Configuración Global del Documento
 
-Esta analogía permite trasladar conceptos de diseño de aplicaciones MAUI a la composición de documentos PDF, manteniendo la lógica estructural pero adaptándola a un medio de documento estático.
+Cada instancia de `IPdfDocument` ofrece el método `Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)` para definir las características globales del documento. La acción recibe una instancia de `IPdfDocumentConfigurator`.
 
-## Alineación y Posicionamiento en PDF
+| Método en `IPdfDocumentConfigurator` | Descripción |
+| :--- | :--- |
+| `.PageSize(PageSizeType size)` | Establece el tamaño de página por defecto para todo el documento. |
+| `.PageOrientation(PageOrientationType orientation)` | Define la orientación por defecto (Vertical/Apaisada). |
+| `.Margins(DefaultMarginType marginType)` | Aplica un conjunto de márgenes predefinidos (`Normal`, `Estrecho`, etc.). |
+| `.Margins(float uniform)` | Aplica un margen uniforme a los cuatro lados. |
+| `.MetaData(...)` | Accede al constructor de metadatos del PDF. |
+| `.ConfigureFontRegistry(...)` | Accede a la configuración avanzada de fuentes (`IPdfFontRegistry`). |
 
-### Conceptos Fundamentales
+### 2.5. Enriquecimiento con Metadatos
 
-Cada elemento PDF que deriva de `PdfView` (incluyendo vistas y layouts) tiene propiedades `PdfHorizontalOptions` y `PdfVerticalOptions` de tipo `LayoutAlignment`. Esta estructura encapsula la alineación preferida de un elemento, determinando su posición y tamaño dentro de su layout padre cuando este contiene espacio no utilizado en la página PDF.
+Dentro de la configuración global, el método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite establecer los metadatos del PDF. La acción recibe una instancia de `IPdfMetaData`.
 
-### Alineación de Elementos en Layouts PDF
+| Método en `IPdfMetaData` | Descripción |
+| :--- | :--- |
+| `.Title(string title)` | Define el título del documento. |
+| `.Author(string author)` | Define el autor del documento. |
+| `.Subject(string subject)` | Define el asunto. |
+| `.Keywords(string keywords)` | Define las palabras clave. |
+| `.CustomProperty(string name, string value)` | Añade un metadato personalizado. |
 
-Los campos de alineación controlan cómo se posicionan los elementos dentro del documento PDF:
+### 2.6. Construcción de Contenido de Página
 
-- **`Start`**
-  - Alineación horizontal: Posiciona el elemento en el lado izquierdo del layout padre
-  - Alineación vertical: Posiciona el elemento en la parte superior del layout padre
+Una vez configurado el documento, se añade una página con el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`. El paso final es llamar al método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método pasa el control a un constructor de contenido (`IPageContentBuilder`) que es la caja de herramientas para añadir elementos.
 
-- **`Center`**
-  - Centra el elemento horizontal o verticalmente dentro del layout padre
+| Método en `IPageContentBuilder` | Descripción |
+| :--- | :--- |
+| `.Paragraph(string text)` | Añade un elemento de texto. |
+| `.PdfImage(Stream stream)` | Añade una imagen desde un `Stream`. |
+| `.HorizontalLine()` | Añade un separador de línea horizontal. |
+| `.VerticalStackLayout(...)` | Añade un layout de pila vertical y proporciona un constructor para su contenido. |
+| `.HorizontalStackLayout(...)` | Añade un layout de pila horizontal y proporciona un constructor para su contenido. |
+| `.PdfGrid()` | Añade un layout de rejilla configurable. |
 
-- **`End`**
-  - Alineación horizontal: Posiciona el elemento en el lado derecho del layout padre
-  - Alineación vertical: Posiciona el elemento en la parte inferior del layout padre
+## 3. Componentes Fundamentales
 
-- **`Fill`**
-  - Alineación horizontal: Asegura que el elemento llene el ancho disponible del layout padre
-  - Alineación vertical: Asegura que el elemento llene la altura disponible del layout padre
+### 3.1. Páginas
 
-> **Nota**: El valor predeterminado de las propiedades `PdfHorizontalOptions` y `PdfVerticalOptions` es `LayoutAlignment.Fill`.
-
-### Comportamiento en PdfStackLayout
-
-Un `PdfStackLayout` solo respeta los campos `Start`, `Center`, `End` y `Fill` de `LayoutAlignment` en las vistas secundarias que están en la dirección opuesta a la orientación `PdfStackLayout`. Por lo tanto, las vistas secundarias dentro del `PdfStackLayout` con orientación vertical establecen sus propiedades `PdfHorizontalOptions` en uno de los campos `Start`, `Center`, `End` o `Fill`. De forma similar, las vistas secundarias dentro de un objeto `PdfStackLayout` con orientación horizontal pueden establecer sus propiedades `PdfVerticalOptions` en uno de los campos `Start`, `Center`, `End` o `Fill`.
-
-`PdfStackLayout` no respeta los campos `Start`, `Center`, `End` y `Fill` de `LayoutAlignment` en las vistas secundarias que están en la misma dirección que la orientación `PdfStackLayout`. Por lo tanto, un `PdfStackLayout` con orientación vertical omite los campos `Start`, `Center`, `End` o `Fill` si se establecen en las propiedades `PdfVerticalOptions` de las vistas secundarias. De forma similar, un `PdfStackLayout` con orientación horizontal omite los campos `Start`, `Center`, `End` o `Fill` si se establecen en las propiedades `PdfHorizontalOptions` de las vistas secundarias.
-
-> **Importante**: `LayoutAlignment.Fill` generalmente anula las solicitudes de tamaño especificadas usando las propiedades `HeightRequest` y `WidthRequest`.
-
-## Posicionamiento con Margin y Padding
-
-### Propiedades de Espaciado
-
-Las propiedades `Margin` y `Padding` posicionan elementos PDF relativos a elementos adyacentes o hijos:
-
-- **`Margin`**: Representa la distancia entre un elemento PDF y sus elementos adyacentes. Controla la posición de renderizado del elemento y de sus vecinos en el documento.
-- **`Padding`**: Representa la distancia entre un elemento PDF y sus elementos hijos. Separa el elemento de su propio contenido interno.
-
-### Características del Espaciado en PDF
-
-- Los valores de `Margin` son aditivos: dos elementos adyacentes con margen de 20 unidades tendrán una distancia de 40 unidades entre ellos en el PDF
-- Los valores de margin y padding se suman cuando ambos se aplican
-- Ambas propiedades son de tipo `Thickness`
-
-### Estructura Thickness
-
-Tres formas de crear una estructura `Thickness` para elementos PDF:
-
-1. **Valor uniforme único**: Se aplica a los cuatro lados (izquierda, superior, derecha, inferior).
-2. **Valores horizontal y vertical**: El valor horizontal se aplica simétricamente a izquierda y derecha, el vertical a superior e inferior.
-3. **Cuatro valores distintos**: Se aplican específicamente a izquierda, superior, derecha e inferior.
-
-> **Nota**: Los valores de `Thickness` pueden ser negativos, lo que típicamente recorta o superpone el contenido en el PDF.
-
-## Analogía Final: MAUI → PDF
-
-La transición conceptual se establece así:
-
-- **Pages (MAUI)** → **Páginas PDF**: Cada página representa una unidad completa de contenido del documento
-- **Layouts (MAUI)** → **Estructuras organizacionales PDF**: Organizan el contenido dentro de cada página del documento
-- **Views (MAUI)** → **Elementos visuales PDF**: Componentes que renderizan contenido específico en el documento final
-
-Los conceptos de alineación y posicionamiento de MAUI se traducen directamente en la disposición visual del contenido PDF dentro de las estructuras organizacionales de cada página del documento.
-
-## 1.1. Unidades de medidas: De unidades MAUI a puntos PDF
-
-Para mantener la coherencia y la familiaridad, la biblioteca `MauiPdfGenerator` utiliza el mismo sistema de **unidades independientes del dispositivo** que .NET MAUI para todas las propiedades que definen tamaño y espaciado (`WidthRequest`, `HeightRequest`, `FontSize`, `Margin`, `Padding`, `Spacing`, etc.).
-
-Sin embargo, el estándar para documentos PDF es el **punto (point)**, donde 72 puntos equivalen a una pulgada.
-
-La biblioteca se encarga de realizar la **conversión de forma automática y transparente** para el desarrollador. No necesitas hacer ningún cálculo. Simplemente trabaja con las unidades a las que ya estás acostumbrado en MAUI.
-
-### Regla de Conversión Clave
-
-El sistema de layout de la biblioteca asume una correspondencia directa donde las unidades de MAUI se escalan para encajar en el sistema de puntos del PDF. La relación estándar es:
-
-*   **1 unidad MAUI ≈ 1.33 puntos PDF**
-
-### Ejemplos Prácticos
-
-*   Si defines un `PdfParagraph` con `FontSize="12"`, el texto en el documento PDF resultante tendrá un tamaño de aproximadamente **16 puntos**.
-*   Si estableces un `PdfImage` con `WidthRequest="150"`, su ancho en el PDF será de **200 puntos**.
-*   Un `Margin` con valor `10` se traducirá a **13.3 puntos** de separación en el documento PDF.
-
-Este enfoque te permite diseñar la estructura de tu documento usando la misma lógica de dimensionamiento que usarías para una interfaz de usuario en .NET MAUI, garantizando que la biblioteca genere un resultado predecible y profesional.
-
-> **Nota:** Esta conversión se aplica a todas las propiedades de dimensionamiento: `WidthRequest`, `HeightRequest`, `FontSize`, `Margin`, `Padding`, `Spacing`, valores de `Thickness`, etc.
-
-> **Referencia técnica:** Esta conversión está basada en el estándar PDF de 72 puntos por pulgada (DPI), asegurando compatibilidad total con visores y herramientas PDF estándar.
-
-## 1.2. PdfContentPage
-
+#### PdfContentPage
 La `PdfContentPage` es el tipo de página más simple y común en MauiPdfGenerator. Su propósito es mostrar una única vista, que suele ser un layout como `PdfGrid` o `PdfStackLayout`, el cual a su vez contiene otras vistas.
 
-### Estructura y Contenido
+##### Creación y Uso Práctico
+Se crea una instancia de página llamando al método `.ContentPage()` en un objeto `IPdfDocument`. Esto devuelve una interfaz `IPdfContentPage` que permite configurar propiedades específicas de la página (como `BackgroundColor` o `Spacing`) y definir su contenido.
 
-Una `PdfContentPage` está diseñada para contener un único elemento hijo. Para construir una interfaz visual compleja, este único elemento debe ser un layout que pueda organizar múltiples vistas hijas.
+##### Estructura y Contenido
+Una `PdfContentPage` está diseñada para contener un único elemento hijo. Para construir una interfaz visual compleja, este único elemento debe ser un layout que pueda organizar múltiples vistas hijas. El contenido de la página se asigna a la propiedad `PdfContent`.
 
-El contenido de la página se asigna a la propiedad `PdfContent`.
-
-### Propiedades Principales
-
-Además de las propiedades heredadas, `PdfContentPage` define las siguientes propiedades específicas:
-
+##### Propiedades Principales
 | Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
 | `PdfContent` | `PdfView` | Define la vista única que representa el contenido de la página. |
 | `Padding` | `Thickness` | Define el espacio interior entre los bordes de la página y su contenido. |
 
-## 1.3. Layouts
+### 3.2. Layouts (Contenedores)
 
-Un layout se utiliza para componer las vistas de la interfaz visual en una estructura visual. Las clases de layout en MauiPdfGenerator derivan de la clase `PdfLayout`. La elección del layout a utilizar depende de cómo se necesite organizar y posicionar los elementos hijos.
+Un layout se utiliza para componer las vistas de la interfaz visual en una estructura visual. Las clases de layout en MauiPdfGenerator derivan de la clase `PdfLayout`.
 
-### PdfStackLayouts
+#### PdfVerticalStackLayout
+El `PdfVerticalStackLayout` organiza sus vistas hijas en una única columna vertical.
 
-El `PdfStackLayout` organiza los elementos en una pila unidimensional, ya sea horizontal o verticalmente. En lugar de usar el `PdfStackLayout` genérico, es más eficiente utilizar directamente `PdfHorizontalStackLayout` o `PdfVerticalStackLayout`, ya que son implementaciones optimizadas.
+##### Creación y Uso Práctico
+Se instancia a través del método `.VerticalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido. El patrón de `Action` proporciona un nuevo constructor anidado (`IStackLayoutBuilder`) para definir los elementos hijos dentro del layout.
 
-### PdfVerticalStackLayout
-
-El `PdfVerticalStackLayout` organiza sus vistas hijas en una única columna vertical. Es una alternativa de mayor rendimiento al `PdfStackLayout` con orientación vertical.
-
-**Propiedades clave:**
-
+##### Propiedades clave:
 | Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
 | `Spacing` | `double` | Define el espacio entre cada vista hija. El valor predeterminado es 0. |
 
-El posicionamiento de las vistas dentro de un `PdfVerticalStackLayout` no utiliza las propiedades adjuntas `LayoutAlignment` (`Start`, `Center`, `End`, `Fill`). Cualquier vista hija que las establezca no tendrá efecto en su posición.
+#### PdfHorizontalStackLayout
+El `PdfHorizontalStackLayout` organiza sus vistas hijas en una única fila horizontal.
 
-### PdfHorizontalStackLayout
+##### Creación y Uso Práctico
+Se instancia a través del método `.HorizontalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido, siguiendo el mismo patrón de constructor anidado que el `PdfVerticalStackLayout`.
 
-El `PdfHorizontalStackLayout` organiza sus vistas hijas en una única fila horizontal. Es una alternativa de mayor rendimiento al `PdfStackLayout` con orientación horizontal.
-
-**Propiedades clave:**
-
+##### Propiedades clave:
 | Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
 | `Spacing` | `double` | Define el espacio entre cada vista hija. El valor predeterminado es 0. |
 
-Al igual que el `PdfVerticalStackLayout`, el `PdfHorizontalStackLayout` ignora las propiedades `LayoutAlignment` en sus vistas hijas.
+#### PdfGrid
+El `PdfGrid` es un layout potente para mostrar vistas en filas y columnas. Su estructura se define con los objetos `RowDefinition` y `ColumnDefinition`.
 
-### PdfGrid
+##### Creación y Uso Práctico
+Se instancia con el método `.PdfGrid()` en un constructor de contenido. A diferencia de los StackLayouts, la configuración de filas, columnas y la adición de hijos se realiza directamente sobre el objeto `PdfGrid` devuelto.
 
-El `PdfGrid` es un layout potente para mostrar vistas en filas y columnas. Su estructura se define con los objetos `RowDefinition` y `ColumnDefinition`, que determinan el tamaño de cada fila y columna.
+##### Posicionamiento y Expansión de Vistas:
+Las vistas se colocan en celdas específicas utilizando las propiedades adjuntas `PdfGrid.Row` y `PdfGrid.Column`. Para que una vista ocupe múltiples filas o columnas, se utilizan `PdfGrid.RowSpan` y `PdfGrid.ColumnSpan`.
 
-**Posicionamiento de Vistas:**
+##### Definición de Tamaño:
+El tamaño de las filas y columnas se controla a través de la propiedad `Height` de `RowDefinition` y `Width` de `ColumnDefinition`. Se pueden usar tres tipos de unidades: `Auto`, un valor numérico explícito, o un valor proporcional (`*`).
 
-Las vistas se colocan en celdas específicas del `PdfGrid` utilizando las propiedades adjuntas `PdfGrid.Row` y `PdfGrid.Column`.
-
-**Expansión de Vistas:**
-
-Para que una vista ocupe múltiples filas o columnas, se utilizan las propiedades adjuntas `PdfGrid.RowSpan` y `PdfGrid.ColumnSpan`.
-
-**Definición de Tamaño:**
-
-El tamaño de las filas y columnas se controla a través de la propiedad `Height` de `RowDefinition` y `Width` de `ColumnDefinition`, respectivamente. Se pueden usar tres tipos de unidades:
-
-| Unidad | Descripción |
-| :--- | :--- |
-| `Auto` | La fila o columna se ajusta automáticamente al tamaño de su contenido. |
-| Valor numérico explícito | Un valor fijo en unidades independientes del dispositivo (ej. `100`). |
-| Proporcional (o "estrella") | Distribuye el espacio restante de forma proporcional. `*` equivale a `1*`. `2*` tomará el doble de espacio que `*`. |
-
-**Propiedades clave:**
-
+##### Propiedades clave:
 | Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
 | `RowDefinitions` | `RowDefinitionCollection` | La colección de objetos `RowDefinition` que definen las filas. |
@@ -244,260 +168,90 @@ El tamaño de las filas y columnas se controla a través de la propiedad `Height
 | `RowSpacing` | `double` | El espacio vertical entre las filas del grid. |
 | `ColumnSpacing` | `double` | El espacio horizontal entre las columnas del grid. |
 
-## 1.4. PdfImage
+### 3.3. Elementos Visuales
 
-La interfaz visual de `PdfImage` en MauiPdfGenerator muestra una imagen que se puede cargar desde un archivo local, un URI o una secuencia. El elemento `PdfImage` se utiliza para mostrar una imagen en un documento PDF. La fuente de la imagen siempre debe ser proporcionada como un `Stream`.
+#### PdfParagraph
+Un `PdfParagraph` muestra texto de una sola línea y de varias líneas.
 
-`PdfImage` define las siguientes propiedades:
+##### Creación y Uso Práctico
+Se instancia llamando al método `.Paragraph(string text)` en un constructor de contenido que implemente `IPageContentBuilder`.
 
-- `Aspect`, de tipo `Aspect`, define el modo de escalado de la imagen.
-- `Source`, de tipo `PdfImageSource`, especifica el origen de la imagen.
+##### Propiedades:
+- `CharacterSpacing`: `double`, establece el espaciado entre caracteres.
+- `FontAttributes`: `FontAttributes`, determina el estilo del texto (negrita, cursiva).
+- `FontFamily`: `PdfFontIdentifier`, define la familia de fuentes. Para garantizar la seguridad de tipos, se debe utilizar la clase estática `PdfFonts` generada automáticamente (ej. `.FontFamily(PdfFonts.OpenSans_Regular)`).
+- `FontSize`: `double`, define el tamaño de la fuente.
+- `FormattedText`: `FormattedString`, permite texto con múltiples estilos usando `PdfSpan`.
+- `HorizontalTextAlignment`: `TextAlignment`, define la alineación horizontal.
+- `LineBreakMode`: `LineBreakMode`, determina el comportamiento de ajuste y truncamiento.
+- `LineHeight`: `double`, especifica un multiplicador para la altura de línea.
+- `MaxLines`: `int`, indica el número máximo de líneas.
+- `Padding`: `Thickness`, determina el relleno interno.
+- `Text`: `string`, define el contenido de texto.
+- `TextColor`: `Color`, define el color del texto.
+- `TextDecorations`: `TextDecorations`, aplica decoraciones como `Underline` y `Strikethrough`.
+- `TextTransform`: `TextTransform`, especifica la transformación a mayúsculas o minúsculas.
+- `VerticalTextAlignment`: `TextAlignment`, define la alineación vertical.
 
-La clase `PdfImageSource` define los métodos siguientes que se pueden usar para cargar una imagen de orígenes diferentes:
+#### PdfImage
+Muestra una imagen que se puede cargar desde un archivo local, un URI o una secuencia.
 
-- `FromFile` devuelve un `FileImageSource` que lee una imagen de un archivo local.
-- `FromUri` devuelve un `UriImageSource` que descarga y lee una imagen de un URI especificado.
-- `FromStream` devuelve un `StreamImageSource` que lee una imagen de un flujo que proporciona datos de imagen.
+##### Creación y Uso Práctico
+Se crea una instancia de `PdfImage` a través del método `.PdfImage(Stream stream)` en el `IPageContentBuilder`.
 
-> **Importante:** Las imágenes se mostrarán en su resolución completa a menos que el tamaño del `PdfImage` esté restringido por su diseño, o que se especifique la propiedad `HeightRequest` o `WidthRequest` del `PdfImage`.
+##### Propiedades:
+- `Aspect`: `Aspect`, define el modo de escalado de la imagen (`AspectFit`, `AspectFill`, `Fill`, `Center`).
+- `Source`: `PdfImageSource`, especifica el origen de la imagen.
 
-### Carga de una imagen local
+La clase `PdfImageSource` proporciona métodos para cargar desde diferentes orígenes: `FromFile`, `FromUri` y `FromStream`. El almacenamiento en caché está habilitado por defecto para imágenes remotas.
 
-Las imágenes se pueden agregar a tu proyecto de aplicación arrastrándolas a la carpeta Resources\Images, donde se establecerá automáticamente su acción de compilación en `MauiImage`. 
+#### PdfShape
+Permite dibujar una forma en la página. `PdfShape` es una clase base.
 
-Para cumplir con las reglas de nomenclatura de recursos de Android, todos los nombres de archivo de imagen local deben estar en minúsculas, iniciar y terminar con un carácter de letra y contener solo caracteres alfanuméricos o caracteres de subrayado. Para obtener más información, consulte [Control de imagen en .NET MAUI](https://learn.microsoft.com/en-us/dotnet/maui/user-interface/controls/image?view=net-maui-8.0).
+##### Propiedades de Estilo:
+- `Fill`: `Brush`, indica el pincel para pintar el interior de la forma.
+- `Stroke`: `Brush`, indica el pincel para pintar el contorno.
+- `StrokeThickness`: `double`, indica el ancho del contorno.
+- `StrokeDashArray`: `DoubleCollection`, define un patrón de guiones y espacios.
+- `StrokeLineCap`: `PenLineCap`, describe la forma al principio y al final de una línea.
+- `StrokeLineJoin`: `PenLineJoin`, especifica el tipo de unión en los vértices.
+- `Aspect`: `Stretch`, describe cómo la forma llena su espacio asignado.
 
-> **Importante:** .NET MAUI convierte archivos SVG en archivos PNG. Por lo tanto, al agregar un archivo SVG al proyecto de aplicación MAUI de .NET, se debe hacer referencia desde XAML o C# con una extensión .png.
+## 4. Sistema de Layout y Comportamiento
 
-El método `PdfImageSource.FromFile` requiere un argumento string y devuelve un nuevo objeto `FileImageSource` que lee la imagen del archivo. También hay un operador de conversión implícito que permite especificar el nombre de archivo como argumento string a la propiedad `PdfImage.Source`.
+### 4.1. Alineación y Posicionamiento
 
-### Carga de una imagen remota
+Cada elemento que deriva de `PdfView` tiene propiedades `PdfHorizontalOptions` y `PdfVerticalOptions` de tipo `LayoutAlignment`, que determinan su posición y tamaño dentro de su layout padre.
 
-Las imágenes remotas se pueden descargar y mostrar especificando un URI como valor de la propiedad `Source`. El método `PdfImageSource.FromUri` requiere un argumento `Uri` y devuelve un nuevo objeto `UriImageSource` que lee la imagen de la `Uri`.
+#### 4.1.1. Opciones de Alineación
 
-#### Almacenamiento en caché de imágenes
+- **`Start`**: Posiciona el elemento a la izquierda (horizontal) o en la parte superior (vertical) de su contenedor.
+- **`Center`**: Centra el elemento horizontal o verticalmente.
+- **`End`**: Posiciona el elemento a la derecha (horizontal) o en la parte inferior (vertical).
+- **`Fill`**: Asegura que el elemento llene el ancho o la altura disponible de su contenedor.
 
-El almacenamiento en caché de imágenes descargadas está habilitado de forma predeterminada, con imágenes almacenadas en caché durante 1 día. Este comportamiento se puede cambiar estableciendo las propiedades de la clase `UriImageSource`.
+#### 4.1.2. Comportamiento en StackLayouts
 
-La clase `UriImageSource` define las siguientes propiedades:
+Un `PdfStackLayout` solo respeta las opciones de alineación en la dirección opuesta a su orientación. Por ejemplo, un `PdfVerticalStackLayout` solo aplicará las `PdfHorizontalOptions` (`Start`, `Center`, `End`, `Fill`) a sus hijos, ignorando las `PdfVerticalOptions`.
 
-- `Uri`, de tipo `Uri`, representa el URI de la imagen que se va a descargar para su visualización.
-- `CacheValidity`, de tipo `TimeSpan`, especifica cuánto tiempo se almacenará la imagen localmente. El valor predeterminado de esta propiedad es 1 día.
-- `CachingEnabled`, de tipo `bool`, define si está habilitado el almacenamiento en caché de imágenes. El valor predeterminado de esta propiedad es `true`.
+### 4.2. Margin y Padding
 
-Para establecer un período de caché específico, establezca la propiedad Source en un objeto `UriImageSource` que establece su propiedad `CacheValidity`.
+Las propiedades `Margin` y `Padding` (ambas de tipo `Thickness`) controlan el espaciado.
 
-### Carga de una imagen a partir de una secuencia
+- **`Margin`**: Representa la distancia **externa** entre un elemento y sus vecinos. Es gestionado por el contenedor padre.
+- **`Padding`**: Representa la distancia **interna** entre el borde de un elemento y su propio contenido.
 
-Las imágenes se pueden cargar desde secuencias con el método `PdfImageSource.FromStream`.
+### 4.3. El Principio de Herencia de Propiedades
 
-> **Importante:** El almacenamiento en caché de imágenes está deshabilitado en Android al cargar una imagen desde una secuencia con el método `PdfImageSource.FromStream`. Esto se debe a la falta de datos de los que crear una clave de caché razonable.
+La biblioteca implementa un sistema de herencia de dos niveles: **Local** y **Global**. Cuando se resuelve una propiedad de estilo (como la fuente o el color), el valor especificado directamente en el elemento (Local) siempre tiene prioridad. Si no existe, se utiliza el valor definido en la configuración global del documento (Global), establecida a través de `IPdfDocumentConfigurator`. Este mecanismo sienta las bases para futuras mejoras, como la herencia a nivel de página o contenedor, y promueve un código más limpio y mantenible.
 
-### Control del escalado de imágenes
-La propiedad Aspect determina cómo se escalará la imagen para ajustarse al área de visualización y debe establecerse en uno de los miembros de la enumeración Aspect:
+## 5. Unidades y Medidas
 
-- `AspectFit`: los cuadros de letras de la imagen (si es necesario) para que toda la imagen se ajuste al área de visualización, con espacio en blanco agregado a la parte superior/inferior o a los lados en función de si la imagen es ancha o alta.
-- `AspectFill`: recorta la imagen para que rellene el área de visualización mientras conserva la relación de aspecto.
-- `Fill`: amplía la imagen para rellenar completamente y exactamente el área de visualización. Esto puede dar lugar a que la imagen se distorsiona.
-- `Center`: centra la imagen en el área de visualización a la vez que conserva la relación de aspecto.
+### 5.1. Sistema de Unidades y Conversión Automática
 
-## 1.5. PdfParagraph
+Para mantener la coherencia con .NET MAUI, la biblioteca utiliza **unidades independientes del dispositivo** para todas las propiedades de tamaño y espaciado (`WidthRequest`, `FontSize`, `Margin`, etc.). El desarrollador trabaja con las unidades que ya conoce.
 
-Un `PdfParagraph` de la interfaz visual de MauiPdfGenerator muestra texto de una sola línea y de varias líneas. El texto que se muestra puede estar coloreado, espaciado y puede tener decoraciones de texto.
-
-La etiqueta define las siguientes propiedades:
-
-- `CharacterSpacing`, de tipo `double`, establece el espaciado entre caracteres en el texto.
-- `FontAttributes`, de tipo `FontAttributes`, determina el estilo del texto.
-- `FontFamily`, de tipo `string`, define la familia de fuentes.
-- `FontSize`, de tipo `double`, define el tamaño de la fuente.
-- `FormattedText`, de tipo `FormattedString`, especifica la presentación del texto con varias opciones de presentación, como fuentes y colores.
-- `HorizontalTextAlignment`, de tipo `TextAlignment`, define la alineación horizontal del texto mostrado.
-- `LineBreakMode`, de tipo `LineBreakMode`, determina cómo se debe controlar el texto cuando no cabe en una línea.
-- `LineHeight`, de tipo `double`, especifica el multiplicador que se aplicará a la altura de línea predeterminada al mostrar texto.
-- `MaxLines`, de tipo `int`, indica el número máximo de líneas permitidas en la etiqueta.
-- `Padding`, de tipo `Thickness`, determina el relleno de la etiqueta.
-- `Text`, de tipo `string`, define el texto que se muestra como el contenido de la etiqueta.
-- `TextColor`, de tipo `Color`, define el color del texto mostrado.
-- `TextDecorations`, de tipo `TextDecorations`, especifica las decoraciones de texto (subrayado y tachado) que se pueden aplicar.
-- `TextTransform`, de tipo `TextTransform`, especifica el uso de mayúsculas y minúsculas en el texto mostrado.
-- `VerticalTextAlignment`, de tipo `TextAlignment`, define la alineación vertical del texto mostrado.
-
-### Controlar el truncamiento y el ajuste de texto
-
-El ajuste y el truncamiento de texto se pueden controlar estableciendo la propiedad `LineBreakMode` en un valor de la enumeración `LineBreakMode`: 
-
-- `NoWrap` -> no ajusta el texto, mostrando solo la cantidad de texto que cabe en una línea. Este es el valor predeterminado de la propiedad.LineBreakMode
-- `WordWrap` -> Ajusta el texto en el límite de la palabra.
-- `CharacterWrap` -> Ajusta el texto en una nueva línea en el límite de un carácter.
-- `HeadTruncation` -> trunca el encabezado del texto, mostrando el final.
-- `MiddleTruncation` -> Muestra el principio y el final del texto, con el centro reemplazado por puntos suspensivos.
-- `TailTruncation` -> muestra el principio del texto, truncando el final.
-
-### Mostrar un número específico de líneas
-
-El número de líneas que muestra un `PdfParagraph` se puede especificar estableciendo la propiedad `MaxLines` en un valor `int`:
-
-- Cuando `MaxLinesLine` es -1, que es su valor predeterminado, Label respeta el valor de la propiedad `BreakMode` para mostrar solo una línea, posiblemente truncada, o todas las líneas con todo el texto.
-- Cuando `MaxLines` es 0, el `PdfParagraph` no se muestra.
-- Cuando `MaxLines` es 1, el resultado es idéntico a establecer la propiedad `LineBreakMode` en `NoWrap`, `HeadTruncation`, `MiddleTruncation`, o `TailTruncation`. Sin embargo, el `PdfParagraph` respetará el valor de la propiedad `LineBreakMode` con respecto a la colocación de puntos suspensivos, si corresponde.
-- Cuando `MaxLines` es mayor que 1, el `PdfParagraph` se mostrará hasta el número especificado de líneas, respetando el valor de la propiedad `LineBreakMode` con respecto a la ubicación de una elipsis, si corresponde. Sin embargo, establecer la propiedad `MaxLines` en un valor mayor que 1 no tiene ningún efecto si la propiedad `LineBreakMode` se establece en `NoWrap`.
-
-### Decorar texto
-
-Las decoraciones de texto subrayado y tachado se pueden aplicar a los objetos `PdfParagraph` estableciendo la propiedad `TextDecorations` en uno o varios miembros de enumeración `TextDecorations`:
-
-- `None`
-- `Underline`
-- `Strikethrough`
-
->  **Nota:** Las decoraciones de texto también se pueden aplicar a las instancias de `PdfSpan`. Para obtener más información sobre la clase `PdfSpan`.
-
-### Transformar texto
-
-`PdfParagraph` puede transformar las mayúsculas y minúsculas de su texto, almacenado en la propiedad `Text`, estableciendo la propiedad `TextTransform` en un valor de la enumeración `TextTransform`. Esta enumeración tiene estos cuatro valores:
-
-- `None` indica que el texto no se transformará.
-- `Default` indica que se utilizará el comportamiento predeterminado de la plataforma. Este es el valor predeterminado de la propiedad `TextTransform`.
-- `Lowercase` indica que el texto se transformará a minúsculas.
-- `Uppercase` indica que el texto se transformará a mayúsculas.
-
-### Usar texto con formato
-
-`PdfParagraph` expone una propiedad `FormattedText` que permite la presentación de texto con varias fuentes y colores en la misma vista. La propiedad `FormattedText` es de tipo `FormattedString`, que comprende una o más instancias de `PdfSpan`, establecidas a través de la propiedad `Spans`.
-
-`PdfSpan` define las siguientes propiedades:
-
-- `BackgroundColor`, de tipo `Color`, que representa el color del fondo del intervalo.
-- `CharacterSpacing`, de tipo `double`, establece el espaciado entre caracteres en el texto mostrado.
-- `FontAttributes`, de tipo `FontAttributes`, determina el estilo del texto.
-- `FontFamily`, de tipo `string`, define la familia de fuentes.
-- `FontSize`, de tipo `double`, define el tamaño de la fuente.
-- `LineHeight`, de tipo `double`, especifica el multiplicador que se aplicará a la altura de línea predeterminada al mostrar texto.
-- `Style`, de tipo `Style`, que es el estilo que se va a aplicar al intervalo.
-- `Text`, de tipo `string`, define el texto que se muestra como el contenido del intervalo.
-- `TextColor`, de tipo `Color`, define el color del texto mostrado.
-- `TextDecorations`, de tipo `TextDecorations`, especifica las decoraciones de texto (subrayado y tachado) que se pueden aplicar.
-- `TextTransform`, de tipo `TextTransform`, especifica el uso de mayúsculas y minúsculas en el texto mostrado.
-
-## 1.6. PdfShape
-
-Una forma de MauiPdfGenerator es un tipo de vista que permite dibujar una forma en la pagina. Los objetos `PdfShape` se pueden usar dentro de las clases de diseño y la mayoría de los elementos visuales, ya que la clase `PdfShape` deriva de la clase `PdfView`.
-
-El `PdfShape` define las siguientes propiedades:
-
-- Aspect, de tipo `Stretch`, describe cómo la forma llena su espacio asignado. El valor predeterminado de esta propiedad es `Stretch.None`.
-- `Fill`, de tipo `Brush`, indica el pincel utilizado para pintar el interior de la forma.
-- `Stroke`, de tipo `Brush`, indica el pincel utilizado para pintar el contorno de la forma.
-- `StrokeDashArray`, de tipo `DoubleCollection`, que representa una colección de valores `double` que indican el patrón de guiones y espacios que se usan para delinear una forma.
-- `StrokeDashOffset`, de tipo `double`, especifica la distancia dentro del patrón de guiones donde comienza un guión. El valor predeterminado de esta propiedad es 0,0.
-- `StrokeDashPattern`, de tipo `float[]`, indica el patrón de guiones y espacios que se usan al dibujar el trazo de una forma.
-- `StrokeLineCap`, de tipo `PenLineCap`, describe la forma al principio y al final de una línea o segmento. El valor predeterminado de esta propiedad es `PenLineCap.Flat`.
-- `StrokeLineJoin`, de tipo `PenLineJoin`, especifica el tipo de combinación que se utiliza en los vértices de una forma. El valor predeterminado de esta propiedad es `PenLineJoin.Miter`.
-- `StrokeMiterLimit`, de tipo `double`, especifica el límite en la relación entre la longitud del inglete y la mitad del `StrokeThickness` de una forma. El valor predeterminado de esta propiedad es 10.0.
-- `StrokeThickness`, de tipo `double`, indica el ancho del contorno de la forma. El valor predeterminado de esta propiedad es 1.0.
-
-### Formas de pintura
-
-Los objetos de pincel se utilizan para pintar el trazo y el relleno de una forma. Si no especifica un objeto `Brush` para Stroke, o si establece `StrokeThickness` en 0, no se dibuja el borde alrededor de la forma.
-
->  **Importante:** Los objetos `Brush` utilizan un convertidor de tipos que habilita los valores de `Color` especificados para la propiedad `Stroke`.
-
-### Formas elásticas
-
-Los objetos `PdfShape` tienen una propiedad `Aspect` de tipo `Stretch`. Esta propiedad determina cómo se estira el contenido de un objeto `PdfShape` para rellenar el espacio de diseño del objeto. El espacio de diseño de un objeto es la cantidad de espacio que el sistema de diseño de MauiPdfGenerator asigna a `PdfShape`, ya sea por una configuración explícita de `WidthRequest` y `HeightRequest` o por su configuración `HorizontalOptions` y `VerticalOptions`.
-
-La enumeración `Stretch` define los siguientes miembros:
-
-- `None`, lo que indica que el contenido conserva su tamaño original. Este es el valor predeterminado de la propiedad `PdfShape.Aspect`.
-- `Fill`, que indica que se ha cambiado el tamaño del contenido para rellenar las dimensiones de destino. La relación de aspecto no se conserva.
-- `Uniform`, lo que indica que el contenido se redimensiona para ajustarse a las dimensiones de destino, al tiempo que se conserva la relación de aspecto.
-- `UniformToFill`, indica que se cambia el tamaño del contenido para rellenar las dimensiones de destino, al tiempo que se conserva la relación de aspecto. Si la relación de aspecto del rectángulo de destino difiere del de origen, el contenido de origen se recorta para que se ajuste a las dimensiones de destino.
-
-### Dibujar formas discontinuas
-
-Los objetos `PdfShape` tienen una propiedad StrokeDashArray, de tipo `DoubleCollection`. Esta propiedad representa una colección de valores `double` que indican el patrón de guiones y espacios que se utilizan para delinear una forma. Una `DoubleCollection` es una `ObservableCollection` de valores `double`. Cada uno de los miembros de la colección `double` especifica la longitud de un guión o un espacio. El primer elemento de la colección, que se encuentra en el índice 0, especifica la longitud de un guión. El segundo elemento de la colección, que se encuentra en el índice 1, especifica la longitud de un espacio. Por lo tanto, los objetos con un valor de índice par especifican guiones, mientras que los objetos con un valor de índice impar especifican espacios.
-
-Los objetos `PdfShape` también tienen una propiedad `StrokeDashOffset`, de tipo `double`, que especifica la distancia dentro del patrón de guiones donde comienza un guión. Si no se establece esta propiedad, la forma tendrá un contorno sólido.
-
-Las formas discontinuas se pueden dibujar estableciendo las propiedades `StrokeDashArray` y `StrokeDashOffset`. La propiedad `StrokeDashArray` debe establecerse en uno o varios valores `double`, con cada par delimitado por una sola coma o uno o varios espacios. Por ejemplo, "0.5 1.0" y "0.5,1.0" son válidos.
-
-### Finales de la línea de control
-
-Una línea tiene tres partes: tapa de inicio, cuerpo de línea y tapa de extremo. Las mayúsculas inicial y final describen la forma al principio y al final de una línea o segmento.
-
-Los objetos de forma tienen una propiedad `StrokeLineCap`, de tipo `PenLineCap`, que describe la forma al principio y al final de una línea o segmento. La enumeración `PenLineCap` define los siguientes miembros:
-
-- `Flat`, que representa un límite que no se extiende más allá del último punto de la línea. Esto es comparable a ningún límite de línea y es el valor predeterminado de la propiedad `StrokeLineCap`.
-- `Square`, que representa un rectángulo que tiene una altura igual al grosor de la línea y una longitud igual a la mitad del grosor de la línea.
-- `Round`, que representa un semicírculo que tiene un diámetro igual al grosor de la línea.
-
->  **Importante:** La propiedad `StrokeLineCap` no tiene ningún efecto si se establece en una forma que no tiene puntos inicial ni final. Por ejemplo, esta propiedad no tiene ningún efecto si se establece en una elipse o un rectángulo.
-
-### Uniones de línea de control
-
-Los objetos `PdfShape` tienen una propiedad `StrokeLineJoin`, de tipo `PenLineJoin`, que especifica el tipo de combinación que se utiliza en los vértices de la forma. La enumeración `PenLineJoin` define los siguientes miembros:
-
-- `Miter`, que representa vértices angulares regulares. Este es el valor predeterminado de la propiedad `StrokeLineJoin`.
-- `Bevel`, que representa vértices biselados.
-- `Round`, que representa vértices redondeados.
-
-> **Nota:** Cuando la propiedad `StrokeLineJoin` se establece en `Miter`, la propiedad `StrokeMiterLimit` se puede establecer en `double` para limitar la longitud de inglete de las combinaciones de línea en la forma.
-
-# 2. Visión General: Las Tres Capas
-
-La arquitectura de la biblioteca está diseñada en torno a una clara **Separación de Capas (SoC)**, cada una con una responsabilidad única y bien definida. Esta separación permite evolución independiente, intercambiabilidad de componentes y mantenimiento del código a largo plazo.
-
-## 2.1. Capa `Fluent` (API Pública)
-
-*   **Propósito:** Única puerta de entrada para el desarrollador. Su misión es ofrecer una experiencia de desarrollo declarativa, legible y fácil de usar.
-*   **Responsabilidades:**
-    *   **API Guiada:** Utiliza el patrón Type-State para prevenir errores en tiempo de compilación.
-    *   **Fluidez Contextual:** Métodos encadenables que exponen solo opciones válidas según el contexto.
-    *   **Encapsulan de Complejidad:** Oculta completamente la implementación interna del motor.
-*   **Narrativa de Transformación:** Cuando el desarrollador construye un documento, los objetos de la API Fluent (ej. `PdfParagraph`) actúan como *builders* que acumulan configuración. Al finalizar el proceso (ej. en `SaveAsync`), estos objetos se transforman en sus DTOs equivalentes de la capa `Common` (ej. `PdfParagraphData`). Esta transformación despoja a los objetos de su lógica de construcción, conservando solo la configuración pura para ser procesada por el motor.
-*   **Principio de Exposición:** Esta capa es de alcance externo para la los desarrolladores que usan la biblioteca.
-
-## 2.2. Capa `Core` (Motor de Layout y Renderizado)
-
-El motor se subdivide siguiendo el **Principio de Inversión de Dependencias**, separando abstracciones de implementaciones concretas:
-
-### Subcapa `Core.Integration` (Abstracciones)
-*   **Propósito:** Contiene la lógica de layout independiente del motor de renderizado.
-*   **Responsabilidades:**
-    *   **Sistema de Layout:** Implementa las fases `MeasureAsync` y `ArrangeAsync`.
-    *   **Contratos de Medición:** Define `ILayoutMetrics` para obtener métricas sin depender de implementaciones.
-    *   **Orquestación:** Coordina la secuencia de pasadas de layout.
-    *   **Lógica de Contenedores:** Algoritmos de distribución para `Grid`, `StackLayout`, etc.
-*   **Principio de Exposición:** Esta capa es de alcance interno para la biblioteca.
-
-### Subcapa `Core.Implementation.Sk` (Implementación Concreta)
-*   **Propósito:** Implementa el renderizado específico usando un motor concreto (actualmente se usa SkiaSharp, de ahí el directorio Sk).
-*   **Responsabilidades:**
-    *   **Renderizado Final:** Implementa `RenderAsync` usando APIs de SkiaSharp.
-    *   **Métricas Concretas:** Proporciona la implementación real de `ILayoutMetrics`.
-    *   **Gestión de Recursos:** Maneja `SKTypeface`, `SKImage`, etc.
-*   **Principio de Diseño:** Cada implementación es un "plugin" intercambiable que cumple los contratos definidos en `Core.Integration`.
-*   **Principio de Exposición:** Esta capa es de alcance interno para la biblioteca.
-
-### 2.3. Capa `Common` (Contratos Compartidos)
-
-*   **Propósito:** Define el "lenguaje común" que permite la comunicación entre capas sin crear dependencias directas.
-*   **Contenido Principal:**
-    *   **Contratos de Datos (DTOs):** `PdfDocumentData`, `PdfPageData`, `PdfParagraphData`, etc. Transportan información estructurada y pura.
-    *   **Value Objects:** Tipos inmutables (`PdfFontIdentifier`, `PdfGridLength`, `Color`) que encapsulan valores con semántica.
-    *   **Enumeraciones:** Estados y opciones del sistema (`LayoutPassType`, `TextAlignment`).
-    *   **Interfaces de Comunicación:** `ILayoutMetrics` para obtener métricas del motor.
-    *   **Estructuras de Layout:** `LayoutRequest`, `LayoutInfo`, que definen el protocolo de comunicación del sistema de layout.
-*   **Principio de Diseño:** Actúa como una "zona neutra" donde las capas pueden intercambiar información sin conocer detalles de implementación mutuos.
-*   **Principio de Exposición:** Esta capa es de alcance interno para la biblioteca.
-
-### 2.4. Flujo de datos y comunicación entre capas
-
-1.  **`Fluent` -> `Common`:** El desarrollador usa la API `Fluent`. Al finalizar, la capa `Fluent` mapea sus objetos de construcción a un árbol de DTOs puros en la capa `Common`.
-2.  **`Common` -> `Core.Integration`:** El orquestador del `Core` recibe el árbol de DTOs. El `ElementRendererFactory` lo recorre, instanciando el `IElementRenderer` apropiado para cada DTO.
-3.  **`Core.Integration` <-> `Core.Implementation`:** Durante `MeasureAsync`, la lógica de layout abstracta consulta las métricas de la implementación concreta a través de la interfaz `ILayoutMetrics`.
-4.  **`Core.Integration` -> `Core.Implementation`:** Una vez completadas las fases de `Measure` y `Arrange`, el "plano de layout" final se pasa a la fase `RenderAsync` de la implementación para el dibujado final.
+Internamente, la biblioteca convierte de forma automática y transparente estas unidades a **puntos (points)**, el estándar en PDF (72 puntos por pulgada). La relación de conversión es aproximadamente **1 unidad MAUI ≈ 1.33 puntos PDF**. Este detalle de implementación asegura que el desarrollador no necesite realizar cálculos manuales, manteniendo la filosofía de ser una extensión natural de MAUI.
 
 ---
 
@@ -576,8 +330,6 @@ Un elemento debe ser capaz de responder a dos tipos de "preguntas de medición",
 2.  **`ArrangeAsync`:** Posiciona a sus hijos uno debajo del otro, considerando sus `Margin` y alineándolos horizontalmente (`PdfHorizontalOptions`).
 3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo. Aplica `ClipRect` si el contenido se desborda.
 
-
-
 #### `HorizontalStackLayoutRenderer`
 **Emula `HorizontalStackLayout` de MAUI:**
 1.  **`MeasureAsync`:** Hace una **Pregunta de Medición Ideal** a cada hijo. Su ancho deseado es la suma de los anchos de los hijos más el `Spacing`. Su altura deseada es la del hijo más alto. Añade su propio `Padding`.
@@ -588,7 +340,7 @@ Un elemento debe ser capaz de responder a dos tipos de "preguntas de medición",
 **Emula `Grid` de MAUI:**
 1.  **`MeasureAsync`:** Resuelve las definiciones de filas/columnas (`Star`, `Auto`, Absoluto). Hace preguntas de medición específicas a cada hijo según su celda. Calcula el tamaño total de la rejilla.
 2.  **`ArrangeAsync`:** Distribuye el espacio entre filas/columnas. Posiciona cada hijo en su celda, considerando `Margin` y alineación. Maneja `RowSpan` y `ColumnSpan`.
-3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo en su celda asignada.
+3.  **`RenderAsync`:** Orquesta la llamada al `RenderAsync` de cada hijo en su celada asignada.
 
 ### 7.2. Elementos Primitivos
 

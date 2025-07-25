@@ -2,7 +2,6 @@
 using System.Text;
 using Microsoft.Maui.Controls;
 using MauiPdfGenerator;
-using MauiPdfGenerator.Fluent.Enums;
 
 namespace Test;
 public static class MauiProgram

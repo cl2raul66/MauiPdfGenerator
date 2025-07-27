@@ -110,10 +110,10 @@ La jerarquía de resolución de valores predeterminados sigue este orden de prio
 
 Cuando se crea un documento sin configuración explícita, se aplican estos valores predeterminados globales:
 
-- **`PageSize`**: `PageSizeType.Letter` - Formato estándar en América.
+- **`PageSize`**: `PageSizeType.A4` - Formato estándar internacional más utilizado globalmente.
 - **`PageOrientation`**: `PageOrientationType.Portrait` - Orientación vertical.
-- **`Margins`**: `DefaultMarginType.Normal` - Márgenes equilibrados.
-- **`MetaData`**: `null` - Sin metadatos (comportamiento provisional).
+- **`Margins`**: `DefaultMarginType.Normal` - Márgenes equilibrados (72pt en todos los lados).
+- **`MetaData`**: `null` - Los metadatos son null por defecto para evitar la generación de campos vacíos en las propiedades del documento PDF, manteniendo el archivo limpio. Se recomienda al desarrollador proporcionar metadatos significativos explícitamente para mejorar la indexación, búsqueda y accesibilidad del documento.
 - **`FontRegistry`**: Registro automático de fuentes configuradas en `MauiProgram.cs`.
 
 #### Sistema Automático de Registro de Fuentes
@@ -161,7 +161,13 @@ Sigue el **Principio de Inversión de Dependencias**.
 ### 1.3. Capa `Common` (Contratos Compartidos)
 
 *   **Propósito:** Define el "lenguaje común" entre capas.
-*   **Contenido Principal:** DTOs (`PdfDocumentData`, `PdfPageData`), Value Objects, Enumeraciones, e interfaces de comunicación como `ILayoutMetrics`.
+*   **Contenido Principal:** DTOs (`PdfDocumentData`, `PdfPageData`), Value Objects, Enumeraciones (`DefaultMarginType`, `PageSizeType`), utilidades de cálculo (`MarginCalculator`), e interfaces de comunicación como `ILayoutMetrics`.
+
+#### 1.3.1. Utilidades de Cálculo Compartidas
+
+La capa `Common` incluye utilidades que implementan lógica de negocio compartida:
+
+- **`MarginCalculator`**: Convierte `DefaultMarginType` a valores `Thickness` específicos, centralizando los estándares de márgenes editoriales definidos por la biblioteca.
 
 ### 1.4. Flujo de Datos y Comunicación Entre Capas
 
@@ -282,13 +288,13 @@ En línea con el Principio de Garantía de Completitud establecido en la Parte I
 ### 6.1. Documento PDF (`PdfDocument`)
 
 #### Valores Predeterminados del Documento
-- **`PageSize`**: `PageSizeType.Letter` - Formato estándar en América, ampliamente utilizado.
+- **`PageSize`**: `PageSizeType.A4` - Formato estándar internacional más utilizado globalmente.
 - **`PageOrientation`**: `PageOrientationType.Portrait` - Orientación vertical estándar para documentos.
 - **`Margins`**: `DefaultMarginType.Normal` - Márgenes equilibrados que proporcionan espacio de lectura cómodo.
 - **`FontFamily`**: `Helvetica` - Fuente sans-serif legible y ampliamente soportada en PDF.
 - **`FontSize`**: `12pt` - Tamaño estándar para texto de documento.
 - **`TextColor`**: `Colors.Black` - Color de texto tradicional para máxima legibilidad.
-- **`MetaData`**: `null` - Sin metadatos por defecto (comportamiento provisional, se analizarán valores predeterminados en futuras versiones).
+- **`MetaData`**: `null` - Los metadatos son null por defecto para evitar la generación de campos vacíos en las propiedades del documento PDF, manteniendo el archivo limpio. Se recomienda al desarrollador proporcionar metadatos significativos explícitamente para mejorar la indexación, búsqueda y accesibilidad del documento.
 
 #### Sistema Automático de Registro de Fuentes
 
@@ -489,10 +495,23 @@ await doc
 | :--- | :--- |
 | `.PageSize(PageSizeType size)` | Establece el tamaño de página por defecto para todo el documento. |
 | `.PageOrientation(PageOrientationType orientation)` | Define la orientación por defecto (Vertical/Apaisada). |
-| `.Margins(DefaultMarginType marginType)` | Aplica un conjunto de márgenes predefinidos (`Normal`, `Estrecho`, etc.). |
-| `.Margins(float uniform)` | Aplica un margen uniforme a los cuatro lados. |
+| `.Margins(DefaultMarginType marginType)` | Aplica un conjunto de márgenes predefinidos. |
+| `.Margins(float uniformMargin)` | Aplica un margen uniforme a los cuatro lados. |
+| `.Margins(float verticalMargin, float horizontalMargin)` | Aplica márgenes diferenciados vertical y horizontal. |
+| `.Margins(float leftMargin, float topMargin, float rightMargin, float bottomMargin)` | Aplica márgenes específicos para cada lado. |
 | `.MetaData(...)` | Accede al constructor de metadatos del PDF. |
 | `.ConfigureFontRegistry(...)` | Accede a la configuración avanzada de fuentes (`IPdfFontRegistry`). |
+
+#### Tipos de Márgenes Predeterminados
+
+La enumeración `DefaultMarginType` proporciona conjuntos de márgenes predefinidos basados en estándares editoriales:
+
+| Tipo | Descripción | Valores (en puntos) |
+| :--- | :--- | :--- |
+| `Normal` | Márgenes estándar equilibrados | 72pt en todos los lados |
+| `Narrow` | Márgenes reducidos para maximizar espacio | 36pt en todos los lados |
+| `Moderate` | Márgenes moderados con diferenciación vertical/horizontal | Horizontal: 72pt, Vertical: 54pt |
+| `Wide` | Márgenes amplios para documentos formales | Horizontal: 144pt, Vertical: 72pt |
 
 #### Configuración de Registro de Fuentes
 
@@ -550,7 +569,7 @@ Una vez configurado el documento, se añade una página con el método `.Content
 #### PdfContentPage
 La `PdfContentPage` es el tipo de `Page` más simple y común. Su propósito es mostrar un único `Layout` hijo, que a su vez contiene otras `Views`.
 
-> **NOTA:** Los valores predeterminados se aplican automáticamente según el Principio de Garantía de Completitud: `Padding` inicia en cero, `BackgroundColor` es transparente, y las características del documento (tamaño Letter, orientación Portrait, márgenes Normal) se heredan automáticamente.
+> **NOTA:** Los valores predeterminados se aplican automáticamente según el Principio de Garantía de Completitud: `Padding` inicia en cero, `BackgroundColor` es transparente, y las características del documento (tamaño A4, orientación Portrait, márgenes Normal) se heredan automáticamente.
 
 ##### Creación y Uso Práctico
 Se crea una instancia de página llamando al método `.ContentPage()` en un objeto `IPdfDocument`. Esto devuelve una interfaz `IPdfContentPage` que permite configurar propiedades específicas de la página (como `BackgroundColor` o `Spacing`) y definir su contenido.

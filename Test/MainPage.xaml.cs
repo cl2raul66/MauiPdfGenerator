@@ -28,6 +28,12 @@ public partial class MainPage : ContentPage
             await doc
                 .Configuration(cfg =>
                 {
+                    cfg.PageSize(PageSizeType.Letter);
+                    cfg.PageOrientation(PageOrientationType.Landscape);
+                    cfg.Margins(DefaultMarginType.Wide);
+                })
+                .Configuration(cfg =>
+                {
                     cfg.ConfigureFontRegistry(cfr =>
                     {
                         cfr.Font(PdfFonts.OpenSansRegular).EmbeddedFont();

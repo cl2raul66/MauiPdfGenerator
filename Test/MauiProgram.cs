@@ -4,6 +4,7 @@ using Microsoft.Maui.Controls;
 using MauiPdfGenerator;
 
 namespace Test;
+
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()

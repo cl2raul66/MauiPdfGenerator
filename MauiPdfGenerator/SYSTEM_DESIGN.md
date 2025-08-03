@@ -561,6 +561,16 @@ El método `ConfigureFontRegistry()` es específicamente para configurar el **em
 
 Gracias al Principio de Garantía de Completitud, cada documento PDF se crea automáticamente con un conjunto básico de metadatos. El método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite **sobrescribir o complementar** estos valores predeterminados.
 
+**Valores Predeterminados de Metadatos (Aplicados Automáticamente):**
+
+| Propiedad | Valor Predeterminado | Descripción |
+| :--- | :--- | :--- |
+| `Title` | "New PDF" | Título genérico del documento. |
+| `Author` | "MauiPdfGenerator" | Identificador de la biblioteca como autor. |
+| `Subject` | `null` | Sin asunto predeterminado. |
+| `Keywords` | `null` | Sin palabras clave predeterminadas. |
+| `CustomProperties` | `empty` | Colección vacía de propiedades personalizadas. |
+
 > **Nota:** Se recomienda encarecidamente establecer explícitamente los metadatos para mejorar la indexación y accesibilidad del documento PDF. Los valores predeterminados son un respaldo funcional.
 
 *Ejemplo de cómo sobrescribir los metadatos:*

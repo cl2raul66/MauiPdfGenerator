@@ -4,9 +4,11 @@
 
 # Parte I: Visión General y Conceptual
 
-## 1. Principio Rector
+## 1. Filosofía y Principios de Diseño
 
-Esta biblioteca está diseñada como una **extensión natural del ecosistema .NET MAUI**, no como una herramienta externa. Su propósito es permitir que los desarrolladores MAUI generen PDFs de forma nativa utilizando conceptos y, fundamentalmente, **tipos de datos** que ya les son familiares.
+### 1.1. Principio Rector: Extensión Natural del Ecosistema .NET MAUI
+
+Esta biblioteca está diseñada como una **extensión natural del ecosistema .NET MAUI**, no como una herramienta externa. Su propósito es permitir que los desarrolladores MAUI generen PDFs de forma nativa utilizando conceptos familiares de .NET MAUI. Para aquellos desarrolladores con experiencia en la plataforma, les resultará más cómodo el uso de esta biblioteca, ya que su confección es similar a cuando se crea una UI de .NET MAUI, pero orientada a la generación de documentos PDF.
 
 Para lograr esta integración profunda, la biblioteca adopta directamente tipos del ecosistema MAUI, incluyendo:
 - `Microsoft.Maui.Graphics.Color`
@@ -18,7 +20,19 @@ Para lograr esta integración profunda, la biblioteca adopta directamente tipos 
 
 El desarrollador no aprende una nueva API desde cero, simplemente aplica su conocimiento existente de MAUI a un nuevo lienzo: el documento PDF.
 
-### 1.1. Estructura Jerárquica General
+### 1.2. Resolución del Conflicto Conceptual: Padding vs Margins
+
+Durante el diseño de la biblioteca surgió un conflicto fundamental entre la terminología PDF tradicional (que utiliza "margins" para el espaciado de página) y la filosofía .NET MAUI (donde `ContentPage` utiliza "Padding" para el espaciado interno). 
+
+**Decisión Arquitectónica**: Se adoptó `Padding` por las siguientes razones:
+
+1. **Coherencia con el Ecosistema MAUI**: La biblioteca se define como "una extensión natural del ecosistema .NET MAUI", por lo que debe mantener consistencia conceptual con los tipos de datos familiares.
+
+2. **Modelo Mental Unificado**: Los desarrolladores MAUI ya comprenden que `ContentPage.Padding` define el espacio interno entre el borde de la página y su contenido.
+
+3. **Eliminación de Redundancia**: Evita la confusión de tener tanto `Margins` como `Padding` en el mismo contexto, donde ambos conceptos serían funcionalmente idénticos.
+
+### 1.3. Jerarquía Conceptual: Pages → Layouts → Views
 
 La interfaz de un documento PDF se construye con una jerarquía que mapea conceptualmente a la de .NET MAUI. La terminología correcta es la siguiente:
 
@@ -29,7 +43,7 @@ La interfaz de un documento PDF se construye con una jerarquía que mapea concep
 
 #### Pages
 
-Los documentos PDF constan de una o varias páginas. Cada página contiene al menos un `Layout`. MauiPdfGenerator contiene la siguiente `Page`:
+Los documentos PDF constan de una o varias páginas. Cada página contiene al menos un `Layout`. MauiPdfGenerator contiene los siguientes tipos de Pages:
 
 |Page|Descripción|
 |---|---|
@@ -59,17 +73,9 @@ Las `Views` de MauiPdfGenerator son los componentes que renderizan contenido esp
 
 > **NOTA sobre Colores:** Todas las propiedades que aceptan un color (ej. `TextColor`, `BackgroundColor`) utilizan el tipo `Microsoft.Maui.Graphics.Color`. Esto permite a los desarrolladores usar las mismas constantes (`Colors.Blue`) y estructuras que ya utilizan en sus aplicaciones.
 
-### 1.2. Consideraciones de Diseño
-- Los `Layouts` definen la estructura espacial del contenido.
-- Las `Views` proporcionan el contenido visual específico.
-- Las `Pages` contienen la composición completa de una página del PDF.
-- La interactividad se omite intencionalmente; el enfoque es en documentos estáticos.
-
-### 1.3. Principio de Garantía de Completitud
+### 1.4. Principio de Garantía de Completitud
 
 La biblioteca se rige por el principio de **Garantía de Completitud**, que dicta que el desarrollador nunca debe estar obligado a especificar cada detalle para obtener un resultado funcional. El objetivo es permitir la creación de documentos con el mínimo código posible, confiando en que la biblioteca aplicará valores predeterminados sensibles y estéticamente agradables.
-
-> **NOTA CRÍTICA DE DEPENDENCIA:** MauiPdfGenerator depende de `MauiPdfGenerator.SourceGenerators` para generar la clase estática `PdfFonts`. Después de configurar las fuentes en `MauiProgram.cs` mediante `PdfConfigureFonts()`, **se debe compilar el proyecto** para que el Source Generator genere automáticamente las propiedades estáticas de tipo `PdfFontIdentifier`, haciendo disponibles referencias como `PdfFonts.OpenSansRegular`.
 
 #### ¿Qué es la Garantía de Completitud?
 
@@ -93,45 +99,38 @@ En este ejemplo, la biblioteca automáticamente aplica valores predeterminados p
 3. **Minimizar Errores**: Elimina la posibilidad de crear elementos "vacíos" o "invisibles" por falta de configuración.
 4. **Facilitar la Iteración**: Permite al desarrollador centrarse en el contenido y la estructura, refinando el estilo progresivamente.
 
-#### ¿Cómo y dónde se implementa?
+## 2. Modelo Conceptual de Layout
 
-La implementación de este principio ocurre exclusivamente en la **Capa `Fluent`** de la arquitectura. Esta capa actúa como un interceptor inteligente que:
+### 2.1. Sistema de Tres Pasadas (Concepto General)
 
-1. **Detecta Propiedades No Especificadas**: Cuando el desarrollador crea un elemento sin definir ciertas propiedades (ej. `FontSize`, `TextColor`).
-2. **Aplica Valores Predeterminados Inteligentes**: Consulta una jerarquía de valores predeterminados (locales del componente → globales del documento → valores fijos de la biblioteca).
-3. **Garantiza Completitud Antes del Procesamiento**: Antes de pasar los datos al motor de renderizado, asegura que todos los DTOs estén completamente poblados.
+El motor emula deliberadamente el ciclo de Medición y Disposición (Measure/Arrange) de .NET MAUI, adaptándolo a un contexto de generación de documentos asíncrono y separando explícitamente el renderizado.
 
-La jerarquía de resolución de valores predeterminados sigue este orden de prioridad:
-1. **Valor Explícito**: Si el desarrollador especificó un valor, se usa ese valor.
-2. **Valor Global del Documento**: Si se configuró un valor predeterminado en `IPdfDocumentConfigurator`.
-3. **Valor Fijo de la Biblioteca**: Como último recurso, se usa un valor codificado que garantiza funcionalidad.
+*   **Fase 1: La Pasada de Medición (`MeasureAsync`)**
+    *   **Responsabilidad:** Calcular el tamaño que cada `View` *desea* tener (`DesiredSize`) basándose en su contenido y las restricciones recibidas de su `Layout` padre.
 
-#### Valores Predeterminados del Documento
+*   **Fase 2: La Pasada de Disposición (`ArrangeAsync`)**
+    *   **Responsabilidad:** Asignar una posición (`X`, `Y`) y un tamaño final (`Width`, `Height`) a cada `View` dentro del espacio asignado por su `Layout` padre.
 
-Cuando se crea un documento sin configuración explícita, se aplican estos valores predeterminados globales:
+*   **Fase 3: La Pasada de Renderizado (`RenderAsync`)**
+    *   **Responsabilidad:** Dibujar cada `View` en su posición final usando las APIs específicas del motor de renderizado.
 
-- **`PageSize`**: `PageSizeType.A4` - Formato estándar internacional más utilizado globalmente.
-- **`PageOrientation`**: `PageOrientationType.Portrait` - Orientación vertical.
-- **`Margins`**: `DefaultMarginType.Normal` - Márgenes equilibrados (72pt en todos los lados).
-- **`MetaData`**: `null` - Los metadatos son null por defecto para evitar la generación de campos vacíos en las propiedades del documento PDF, manteniendo el archivo limpio. Se recomienda al desarrollador proporcionar metadatos significativos explícitamente para mejorar la indexación, búsqueda y accesibilidad del documento.
-- **`FontRegistry`**: Registro automático de fuentes configuradas en `MauiProgram.cs`.
+### 2.2. Paginación Automática (Concepto General)
 
-#### Sistema Automático de Registro de Fuentes
+Esta es una de las características más potentes del motor. El orquestador de layout no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición detecta que el contenido excede el espacio vertical disponible, crea una nueva página y reinicia el ciclo de layout con el contenido restante.
 
-Las fuentes configuradas en `MauiProgram.cs` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` se registran automáticamente en el documento con el método `Default()`, haciéndolas disponibles pero no embebidas. Para embeber fuentes específicas, se utiliza `ConfigureFontRegistry()`.
+### 2.3. Elementos Atómicos vs Divisibles
 
-### 1.4. Aplicación Práctica
+La política de paginación depende del tipo de `View`:
 
-Al diseñar un PDF:
+*   **Atómicos:** `PdfImage`, `PdfHorizontalLine`, `PdfVerticalStackLayout`, `PdfHorizontalStackLayout`. Si una `View` atómica no cabe en el espacio restante de una página, se mueve **completa** a la página siguiente. Nunca se divide.
 
-1.  **Planifica las `Pages`**: Define el número y tipo de páginas.
-2.  **Diseña los `Layouts`**: Estructura la organización visual en cada página.
-3.  **Selecciona las `Views`**: Elige los componentes visuales para el contenido.
-4.  **Compón la jerarquía**: Organiza la estructura completa del documento.
+*   **Divisibles:** `PdfParagraph` y `PdfGrid`. Estos son los únicos elementos que la biblioteca puede dividir a través de un salto de página.
+    *   **División de `PdfParagraph`:** El `TextRenderer` calcula cuántas líneas de texto caben en el espacio disponible. Si no caben todas, renderiza las que sí caben y pasa el texto sobrante al orquestador para que lo coloque en la página siguiente.
+    *   **División de `PdfGrid`:** El `GridRenderer` mide sus filas secuencialmente. Si al añadir una fila se excede el alto de la página, la división ocurre **entre la fila anterior y la actual**. La fila que no cabe, junto con todas las siguientes, se mueven a la página siguiente. La división nunca ocurre a mitad de una celda.
 
 ---
 
-# Parte II: Diseño y Arquitectura de la Solución
+# Parte II: Arquitectura y Diseño Técnico
 
 ## 1. Arquitectura de Capas y Flujo de Datos
 
@@ -161,13 +160,13 @@ Sigue el **Principio de Inversión de Dependencias**.
 ### 1.3. Capa `Common` (Contratos Compartidos)
 
 *   **Propósito:** Define el "lenguaje común" entre capas.
-*   **Contenido Principal:** DTOs (`PdfDocumentData`, `PdfPageData`), Value Objects, Enumeraciones (`DefaultMarginType`, `PageSizeType`), utilidades de cálculo (`MarginCalculator`), e interfaces de comunicación como `ILayoutMetrics`.
+*   **Contenido Principal:** DTOs (`PdfDocumentData`, `PdfPageData`), Value Objects, Enumeraciones (`DefaultPagePaddingType`, `PageSizeType`), utilidades de cálculo (`PaddingCalculator`), e interfaces de comunicación como `ILayoutMetrics`.
 
 #### 1.3.1. Utilidades de Cálculo Compartidas
 
 La capa `Common` incluye utilidades que implementan lógica de negocio compartida:
 
-- **`MarginCalculator`**: Convierte `DefaultMarginType` a valores `Thickness` específicos, centralizando los estándares de márgenes editoriales definidos por la biblioteca.
+- **`PaddingCalculator`**: Convierte `DefaultPagePaddingType` a valores `Thickness` específicos, centralizando los estándares de padding definidos por la biblioteca.
 
 ### 1.4. Flujo de Datos y Comunicación Entre Capas
 
@@ -176,27 +175,22 @@ La capa `Common` incluye utilidades que implementan lógica de negocio compartid
 3.  **`Core.Integration` <-> `Core.Implementation`:** Durante `MeasureAsync`, la lógica de layout abstracta consulta las métricas de la implementación concreta a través de `ILayoutMetrics`.
 4.  **`Core.Integration` -> `Core.Implementation`:** El "plano de layout" final se pasa a la fase `RenderAsync` de la implementación para el dibujado final.
 
-## 2. Diseño del Motor de Layout
+## 2. Implementación del Sistema de Layout
 
-El motor emula deliberadamente el ciclo de Medición y Disposición (Measure/Arrange) de .NET MAUI, adaptándolo a un contexto de generación de documentos asíncrono y separando explícitamente el renderizado.
-
-### 2.1. El Sistema de Tres Pasadas (Measure/Arrange/Render)
+### 2.1. El Sistema de Tres Pasadas (Implementación Técnica)
 
 *   **Fase 1: La Pasada de Medición (`MeasureAsync`)**
-    *   **Responsabilidad:** Calcular el tamaño que cada `View` *desea* tener (`DesiredSize`) basándose en su contenido y las restricciones recibidas de su `Layout` padre.
     *   **Ubicación Arquitectónica:** Lógica principal en `Core.Integration` (capa de abstracciones).
 
 *   **Fase 2: La Pasada de Disposición (`ArrangeAsync`)**
-    *   **Responsabilidad:** Asignar una posición (`X`, `Y`) y un tamaño final (`Width`, `Height`) a cada `View` dentro del espacio asignado por su `Layout` padre.
     *   **Ubicación Arquitectónica:** Lógica principal en `Core.Integration`.
 
 *   **Fase 3: La Pasada de Renderizado (`RenderAsync`)**
-    *   **Responsabilidad:** Dibujar cada `View` en su posición final usando las APIs específicas del motor de renderizado.
     *   **Ubicación Arquitectónica:** Lógica principal en `Core.Implementation.Sk` (capa de implementación).
 
 ### 2.2. Principios y Reglas Fundamentales de Layout
 
-*   **El Principio de Propagación de Restricciones:** Heredado directamente de MAUI: una `View` **NUNCA** asume su tamaño. Siempre opera dentro de un espacio finito (`LayoutRequest`) definido por su `Layout` padre. La única excepción es la `Page` raíz, cuyo espacio inicial es el tamaño de la página menos sus márgenes.
+*   **El Principio de Propagación de Restricciones:** Heredado directamente de MAUI: una `View` **NUNCA** asume su tamaño. Siempre opera dentro de un espacio finito (`LayoutRequest`) definido por su `Layout` padre. La única excepción es la `Page` raíz, cuyo espacio inicial es el tamaño de la página menos su padding.
 
 *   **La Dualidad de la Medición:** Una `View` debe ser capaz de responder a dos tipos de "preguntas de medición":
     *   **Pregunta de Medición Restringida (`LayoutPassType.Constrained`):**
@@ -211,35 +205,34 @@ El motor emula deliberadamente el ciclo de Medición y Disposición (Measure/Arr
     *   **`Padding` (Relleno):** Espacio **interno** que empuja el contenido lejos del borde. El `BackgroundColor` **sí** se dibuja en esta área.
     *   **Implementación del Fondo (`BackgroundColor`):** Es fundamental entender que el `BackgroundColor` no es una propiedad del lienzo. Internamente, cuando una `View` tiene un `BackgroundColor` definido, el motor de renderizado primero dibuja una `View` de tipo `PdfRectangle` (una forma) en la posición y tamaño del elemento. Inmediatamente después, dibuja el contenido real de la `View` (texto, imagen, etc.) encima de ese rectángulo. El rectángulo de fondo abarca el área del `Contenido + Padding`, lo que explica visualmente por qué el `Padding` es un espacio interno afectado por el color de fondo, mientras que el `Margin` permanece como un espacio externo transparente.
 
-*   **Contexto de Layout y Orquestación de Fases:** Un objeto `LayoutContext` se propaga recursivamente por el árbol para comunicar información del padre a los hijos. Un orquestador centralizado en `Core.Integration` es responsable de invocar la secuencia de pasadas (`MeasureAsync`, `ArrangeAsync`, `RenderAsync`) en el orden correcto para todo el árbol.
+*   **Contexto de Layout y Orquestación de Fases:** Un objeto `LayoutContext` se propaga recursivamente por el árbol para comunicar información del padre a los hijos. Un orquestador centralizado en `Core.Integration` es responsable de invocar la secuencia de pasadas (`MeasureAsync`, `Arrange Async`, `RenderAsync`) en el orden correcto para todo el árbol.
 
-## 3. Diseño del Sistema de Paginación
-
-Esta es una de las características más potentes y complejas del motor.
+### 2.3. Sistema de Paginación Automática (Implementación)
 
 *   **Orquestación Iterativa:** El orquestador de layout no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición detecta que el contenido excede el espacio vertical disponible, crea una nueva página y reinicia el ciclo de layout con el contenido restante.
 
-*   **Elementos Atómicos vs. Divisibles:** La política de paginación depende del tipo de `View`:
-    *   **Atómicos:** `PdfImage`, `PdfHorizontalLine`, `PdfVerticalStackLayout`, `PdfHorizontalStackLayout`. Si una `View` atómica no cabe en el espacio restante de una página, se mueve **completa** a la página siguiente. Nunca se divide.
-    *   **Divisibles:** `PdfParagraph` y `PdfGrid`. Estos son los únicos elementos que la biblioteca puede dividir a través de un salto de página.
-        *   **División de `PdfParagraph`:** El `TextRenderer` calcula cuántas líneas de texto caben en el espacio disponible. Si no caben todas, renderiza las que sí caben y pasa el texto sobrante al orquestador para que lo coloque en la página siguiente.
-        *   **División de `PdfGrid`:** El `GridRenderer` mide sus filas secuencialmente. Si al añadir una fila se excede el alto de la página, la división ocurre **entre la fila anterior y la actual**. La fila que no cabe, junto con todas las siguientes, se mueven a la página siguiente. La división nunca ocurre a mitad de una celda.
+## 3. Implementación de Principios de Diseño
 
-## 4. Diseño del Sistema de Estilos y Recursos
+### 3.1. Garantía de Completitud en Capa Fluent
 
-*   **El Principio de Herencia de Propiedades:** La biblioteca implementa un sistema de herencia de dos niveles: **Local** y **Global**. Cuando se resuelve una propiedad de estilo (como la fuente o el color), el valor especificado directamente en la `View` (Local) siempre tiene prioridad. Si no existe, se utiliza el valor definido en la configuración global del documento (Global), establecida a través de `IPdfDocumentConfigurator`.
+La implementación de este principio ocurre exclusivamente en la **Capa `Fluent`** de la arquitectura. Esta capa actúa como un interceptor inteligente que:
 
-*   **Unidades y Medidas:** Para mantener la coherencia con .NET MAUI, la biblioteca utiliza **unidades independientes del dispositivo** para todas las propiedades de tamaño y espaciado (`WidthRequest`, `FontSize`, `Margin`, etc.). El desarrollador trabaja con las unidades que ya conoce. Internamente, la biblioteca convierte de forma automática y transparente estas unidades a **puntos (points)**, el estándar en PDF (72 puntos por pulgada).
+1. **Detecta Propiedades No Especificadas**: Cuando el desarrollador crea un elemento sin definir ciertas propiedades (ej. `FontSize`, `TextColor`).
+2. **Aplica Valores Predeterminados Inteligentes**: Consulta una jerarquía de valores predeterminados (locales del componente → globales del documento → valores fijos de la biblioteca).
+3. **Garantiza Completitud Antes del Procesamiento**: Antes de pasar los datos al motor de renderizado, asegura que todos los DTOs estén completamente poblados.
 
-## 5. Diseño del Sistema de Fuentes
+### 3.2. Jerarquía de Resolución de Valores Predeterminados
 
-La gestión de fuentes es un aspecto crítico. La arquitectura lo aborda con dos características clave:
+La jerarquía de resolución de valores predeterminados sigue este orden de prioridad:
+1. **Valor Explícito**: Si el desarrollador especificó un valor, se usa ese valor.
+2. **Valor Global del Documento**: Si se configuró un valor predeterminado en `IPdfDocumentConfigurator`.
+3. **Valor Fijo de la Biblioteca**: Como último recurso, se usa un valor codificado que garantiza funcionalidad.
 
-### 5.1. Dependencia Arquitectónica Crítica
+### 3.3. Sistema de Source Generators para Fuentes
+
+> **NOTA CRÍTICA DE DEPENDENCIA:** MauiPdfGenerator depende de `MauiPdfGenerator.SourceGenerators` para generar la clase estática `PdfFonts`. Después de configurar las fuentes en `MauiProgram.cs` mediante `PdfConfigureFonts()`, **se debe compilar el proyecto** para que el Source Generator genere automáticamente las propiedades estáticas de tipo `PdfFontIdentifier`, haciendo disponibles referencias como `PdfFonts.OpenSansRegular`.
 
 **MauiPdfGenerator depende obligatoriamente de `MauiPdfGenerator.SourceGenerators`** para el sistema de fuentes. Esta dependencia es fundamental para la funcionalidad de identificación de fuentes con seguridad de tipos.
-
-### 5.2. Generador de Código para Seguridad de Tipos
 
 La biblioteca incluye un **generador de código fuente** que inspecciona las llamadas a `AddFont()` en `MauiProgram.cs`. Por cada fuente registrada, crea automáticamente una clase estática `public static class PdfFonts` con propiedades estáticas de tipo `PdfFontIdentifier`. Este diseño arquitectónico elimina el uso de "magic strings" (ej. `"OpenSans-Regular"`) y lo reemplaza por un acceso seguro en tiempo de compilación (ej. `PdfFonts.OpenSans_Regular`), proporcionando IntelliSense y evitando errores de tipeo.
 
@@ -269,8 +262,6 @@ public static class PdfFonts
 }
 ```
 
-### 5.3. Registro y Configuración Avanzada
-
 El generador se alimenta a través del método de extensión `PdfConfigureFonts()`. Este método permite especificar el propósito de cada fuente a través de la enumeración `FontDestinationType`.
 
 | Valor de `FontDestinationType` | Descripción |
@@ -281,6 +272,26 @@ El generador se alimenta a través del método de extensión `PdfConfigureFonts(
 
 > **NOTA:** Si se omite, la biblioteca asume de forma predeterminada el valor `FontDestinationType.Both`, siguiendo una filosofía de "valores predeterminados inteligentes" para mantener el código de configuración limpio y conciso.
 
+## 4. Gestión de Recursos y Performance
+
+### 4.1. Ciclo de Vida de Recursos Nativos
+
+El ciclo de vida de recursos nativos deben durar lo mismo que el ciclo de vida de la generación del pdf, o sea en `SaveAsync(...)` inicia y termina todo de una vez. La biblioteca MauiPdfGenerator, sí gestiona recursos nativos de SkiaSharp y aplica el patrón de disposición recomendado para evitar fugas de memoria.
+
+### 4.2. Integración con SkiaSharp
+
+El motor de renderizado es desacoplable, actualmente estamos usando SkiaSharp, pero puede ser cualquier otro. Se puede generar múltiples PDFs concurrentemente desde la misma instancia de `IPdfDocumentFactory`.
+
+### 4.3. Estrategia de Intercambiabilidad de Motores
+
+Idealmente no debería ser nada complejo cambiar de motor de renderizado, pues Core debe tener toda la abstracción necesaria para cualquier motor en `Core.Implementation`.
+
+## 5. Diseño del Sistema de Estilos y Recursos
+
+*   **El Principio de Herencia de Propiedades:** La biblioteca implementa un sistema de herencia de dos niveles: **Local** y **Global**. Cuando se resuelve una propiedad de estilo (como la fuente o el color), el valor especificado directamente en la `View` (Local) siempre tiene prioridad. Si no existe, se utiliza el valor definido en la configuración global del documento (Global), establecida a través de `IPdfDocumentConfigurator`.
+
+*   **Unidades y Medidas:** Para mantener la coherencia con .NET MAUI, la biblioteca utiliza **unidades independientes del dispositivo** para todas las propiedades de tamaño y espaciado (`WidthRequest`, `FontSize`, `Margin`, etc.). El desarrollador trabaja con las unidades que ya conoce. Internamente, la biblioteca convierte de forma automática y transparente estas unidades a **puntos (points)**, el estándar en PDF (72 puntos por pulgada).
+
 ## 6. Implementación de Valores Predeterminados Inteligentes por Componente
 
 En línea con el Principio de Garantía de Completitud establecido en la Parte I, cada componente de la biblioteca posee un conjunto cuidadosamente seleccionado de valores predeterminados que garantizan funcionalidad inmediata y resultados estéticamente agradables.
@@ -290,11 +301,16 @@ En línea con el Principio de Garantía de Completitud establecido en la Parte I
 #### Valores Predeterminados del Documento
 - **`PageSize`**: `PageSizeType.A4` - Formato estándar internacional más utilizado globalmente.
 - **`PageOrientation`**: `PageOrientationType.Portrait` - Orientación vertical estándar para documentos.
-- **`Margins`**: `DefaultMarginType.Normal` - Márgenes equilibrados que proporcionan espacio de lectura cómodo.
+- **`Padding`**: `DefaultPagePaddingType.Normal` - Padding equilibrado que proporciona espacio de lectura cómodo.
 - **`FontFamily`**: `Helvetica` - Fuente sans-serif legible y ampliamente soportada en PDF.
 - **`FontSize`**: `12pt` - Tamaño estándar para texto de documento.
 - **`TextColor`**: `Colors.Black` - Color de texto tradicional para máxima legibilidad.
-- **`MetaData`**: `null` - Los metadatos son null por defecto para evitar la generación de campos vacíos en las propiedades del documento PDF, manteniendo el archivo limpio. Se recomienda al desarrollador proporcionar metadatos significativos explícitamente para mejorar la indexación, búsqueda y accesibilidad del documento.
+- **`MetaData`**: Se crea automáticamente un bloque de metadatos con los siguientes valores predeterminados:
+    - **`Title`**: "New PDF"
+    - **`Author`**: "MauiPdfGenerator"
+    - **`Subject`**: `null`
+    - **`Keywords`**: `null`
+    - **`CustomProperties`**: Colección vacía.
 
 #### Sistema Automático de Registro de Fuentes
 
@@ -319,16 +335,15 @@ El método `ConfigureFontRegistry()` es específicamente para configurar el embe
 ```
 
 #### Justificación Arquitectónica
-Estos valores fueron seleccionados basándose en estándares de la industria editorial y garantizan que cualquier documento generado sea inmediatamente legible y profesional sin configuración adicional.
+Estos valores fueron seleccionados basándose en estándares de la industria editorial y garantizan que cualquier documento generado sea inmediatamente legible y profesional sin configuración adicional. La creación automática de metadatos con un `Title` y `Author` predeterminados garantiza que ningún documento generado sea anónimo, facilitando su identificación y gestión. Se dejan como `null` los campos más específicos (`Subject`, `Keywords`) para evitar añadir información irrelevante por defecto, pero se anima al desarrollador a poblarlos para mejorar la accesibilidad y capacidad de búsqueda del documento.
 
 ### 6.2. Páginas (`PdfContentPage`)
 
 #### Valores Predeterminados de Página
-- **`Padding`**: `new Thickness(0)` - Sin relleno interno por defecto, permitiendo que el contenido use todo el espacio disponible.
 - **`BackgroundColor`**: `Colors.Transparent` - Fondo transparente que respeta el color del papel PDF.
 
 #### Justificación Arquitectónica
-Las páginas actúan como contenedores neutros. Un padding de cero maximiza el espacio utilizable, mientras que el fondo transparente evita interferir con el diseño del contenido.
+Las páginas actúan como contenedores neutros. El fondo transparente evita interferir con el diseño del contenido. Los valores de `Padding` se heredan automáticamente de `IPdfPage<TSelf>`, eliminando redundancia.
 
 ### 6.3. Layouts
 
@@ -397,9 +412,9 @@ Los valores predeterminados de las Views priorizan la legibilidad y la funcional
 
 ---
 
-# Parte III: Guía de Implementación y Referencia de API
+# Parte III: Guía de Uso y Referencia de API
 
-## 1. Guía de Inicio Rápido: Configuración y Primer Documento
+## 1. Inicio Rápido: Tu Primer Documento
 
 ### 1.1. Integración con .NET MAUI: El Punto de Entrada
 
@@ -457,10 +472,6 @@ public static class MauiProgram
 
 Tras la configuración, la creación de un documento se realiza solicitando la interfaz `IPdfDocumentFactory` al contenedor de DI. Esta fábrica expone el método `CreateDocument()`, que devuelve una instancia de `IPdfDocument`, el punto de partida para construir el PDF. 
 
-### 1.3. Configuración Global del Documento
-
-Cada instancia de `IPdfDocument` ofrece el método `Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)` para definir las características globales del documento. **Esta configuración es completamente opcional** gracias al Principio de Garantía de Completitud.
-
 #### Ejemplo de Uso Mínimo (Sin Configuración)
 
 ```csharp
@@ -472,6 +483,12 @@ await doc
     .SaveAsync(targetFilePath);
 ```
 
+## 2. Configuración del Documento (Opcional)
+
+### 2.1. Configuración Global del Documento
+
+Cada instancia de `IPdfDocument` ofrece el método `Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)` para definir las características globales del documento. **Esta configuración es completamente opcional** gracias al Principio de Garantía de Completitud.
+
 #### Ejemplo de Uso con Configuración
 
 ```csharp
@@ -481,7 +498,7 @@ await doc
     {
         cfg.PageSize(PageSizeType.A4);
         cfg.PageOrientation(PageOrientationType.Landscape);
-        cfg.Margins(DefaultMarginType.Wide);
+        cfg.Padding(DefaultPagePaddingType.Wide);
     })
     .ContentPage()
     .Content(c => c.Paragraph("Hola mundo"))
@@ -494,26 +511,26 @@ await doc
 | Método en `IPdfDocumentConfigurator` | Descripción |
 | :--- | :--- |
 | `.PageSize(PageSizeType size)` | Establece el tamaño de página por defecto para todo el documento. |
-| `.PageOrientation(PageOrientationType orientation)` | Define la orientación por defecto (Vertical/Apaisada). |
-| `.Margins(DefaultMarginType marginType)` | Aplica un conjunto de márgenes predefinidos. |
-| `.Margins(float uniformMargin)` | Aplica un margen uniforme a los cuatro lados. |
-| `.Margins(float verticalMargin, float horizontalMargin)` | Aplica márgenes diferenciados vertical y horizontal. |
-| `.Margins(float leftMargin, float topMargin, float rightMargin, float bottomMargin)` | Aplica márgenes específicos para cada lado. |
-| `.MetaData(...)` | Accede al constructor de metadatos del PDF. |
-| `.ConfigureFontRegistry(...)` | Accede a la configuración avanzada de fuentes (`IPdfFontRegistry`). |
+| `.PageOrientation(PageOrientationType orientation)` | Define la orientación por defecto (`Portrait`/`Landscape`). |
+| `.Padding(DefaultPagePaddingType paddingType)` | Aplica un conjunto de padding predefinidos (`DefaultPagePaddingType`). |
+| `.Padding(float uniformPadding)` | Aplica un padding uniforme a los cuatro lados con un único valor `float`. |
+| `.Padding(float verticalPadding, float horizontalPadding)` | Aplica padding diferenciados vertical y horizontal. |
+| `.Padding(float leftPadding, float topPadding, float rightPadding, float bottomPadding)` | Aplica padding específicos para cada lado. |
+| `.MetaData(...)` | Accede al constructor de meta datos del PDF. |
+| `.ConfigureFontRegistry(...)` | Accede a al registro avanzado de fuentes (`IPdfFontRegistry`). |
 
-#### Tipos de Márgenes Predeterminados
+#### Tipos de Padding de Página Predeterminados
 
-La enumeración `DefaultMarginType` proporciona conjuntos de márgenes predefinidos basados en estándares editoriales:
+La enumeración `DefaultPagePaddingType` proporciona conjuntos de padding predefinidos basados en estándares editoriales:
 
 | Tipo | Descripción | Valores (en puntos) |
 | :--- | :--- | :--- |
-| `Normal` | Márgenes estándar equilibrados | 72pt en todos los lados |
-| `Narrow` | Márgenes reducidos para maximizar espacio | 36pt en todos los lados |
-| `Moderate` | Márgenes moderados con diferenciación vertical/horizontal | Horizontal: 72pt, Vertical: 54pt |
-| `Wide` | Márgenes amplios para documentos formales | Horizontal: 144pt, Vertical: 72pt |
+| `Normal` | Padding estándar equilibrado | 72pt en todos los lados |
+| `Narrow` | Padding reducido para maximizar espacio | 36pt en todos los lados |
+| `Moderate` | Padding moderado con diferenciación vertical/horizontal | Horizontal: 72pt, Vertical: 54pt |
+| `Wide` | Padding amplios para documentos formales | Horizontal: 144pt, Vertical: 72pt |
 
-#### Configuración de Registro de Fuentes
+### 2.2. Gestión de Fuentes (Embebido y Fuentes Predeterminadas)
 
 Una vez registrada una fuente en `MauiProgram.cs`, se puede refinar su comportamiento a través de la interfaz `IPdfFontRegistry`, accesible desde la configuración del documento.
 
@@ -524,34 +541,53 @@ Una vez registrada una fuente en `MauiProgram.cs`, se puede refinar su comportam
 
 #### Propósito Específico de ConfigureFontRegistry
 
-El método `ConfigureFontRegistry()` es específicamente para configurar el **embebido de fuentes**, no su disponibilidad (que es automática). Las fuentes configuradas en `MauiProgram.cs` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` ya están disponibles automáticamente.
+El método `ConfigureFontRegistry()` es específicamente para configurar el **embebido de fuentes** y para establecer una **fuente predeterminada**, no su disponibilidad (que es automática). Las fuentes configuradas en `MauiProgram.cs` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` ya están disponibles automáticamente. En caso de no establecer una fuente predeterminada, toma la primera fuente registrada en `PdfConfigureFontes()`.
 
 ```csharp
 .Configuration(cfg =>
 {
     cfg.ConfigureFontRegistry(cfr =>
     {
+        cfr.Font(PdfFonts.OpenSansSemibold).Default();
+        cfr.Font(PdfFonts.Comic).Default(); // esta no se toma en cuenta
         cfr.Font(PdfFonts.Comic).EmbeddedFont();
-        cfr.Font(PdfFonts.OpenSansRegular).Default(); // Opcional, ya es automático
     });
 })
 ```
 
-### 1.4. Enriquecimiento con Metadatos
+> **Nota:** Por lógica se debe establecer una sola fuente predeterminada para todo el documento, en caso que el usuario especifique mas de una, solo toma la primera
 
-Dentro de la configuración global, el método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite establecer los metadatos del PDF.
+### 2.3. Enriquecimiento con Metadatos
 
-| Método en `IPdfMetaData` | Descripción |
-| :--- | :--- |
-| `.Title(string title)` | Define el título del documento. |
-| `.Author(string author)` | Define el autor del documento. |
-| `.Subject(string subject)` | Define el asunto. |
-| `.Keywords(string keywords)` | Define las palabras clave. |
-| `.CustomProperty(string name, string value)` | Añade un metadato personalizado. |
+Gracias al Principio de Garantía de Completitud, cada documento PDF se crea automáticamente con un conjunto básico de metadatos. El método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite **sobrescribir o complementar** estos valores predeterminados.
 
-### 1.5. Construcción de Contenido de Página
+> **Nota:** Se recomienda encarecidamente establecer explícitamente los metadatos para mejorar la indexación y accesibilidad del documento PDF. Los valores predeterminados son un respaldo funcional.
 
-Una vez configurado el documento, se añade una página con el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`. El paso final es llamar al método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método pasa el control a un constructor de contenido (`IPageContentBuilder`) que es la caja de herramientas para añadir `Views` y `Layouts`.
+*Ejemplo de cómo sobrescribir los metadatos:*
+
+```csharp
+.Configuration(cfg =>
+{
+    cfg.MetaData(m =>
+    {
+        m.Title("Informe Anual 2025");
+        m.Author("Mi Empresa, Inc.");
+        m.Subject("Resultados Financieros");
+    });
+})
+```
+
+## 3. Referencia de Componentes y API
+
+### 3.1. Construcción de Contenido de Página
+
+Una vez configurado el documento, se procede a definir su contenido. El proceso sigue una secuencia lógica:
+
+1. Se añade una página usando el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`.
+2. Se define el contenido de la página mediante el método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método proporciona un constructor de contenido (`IPageContentBuilder`) que actúa como una caja de herramientas completa para añadir `Views` y `Layouts`.
+3. Finalmente, se llama al método `Build()`, que devuelve un `IPdfDocument` listo para ser guardado o procesado.
+
+El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para crear todos los elementos visuales soportados, permitiendo una construcción intuitiva y declarativa del documento.
 
 | Método en `IPageContentBuilder` | Descripción |
 | :--- | :--- |
@@ -562,32 +598,32 @@ Una vez configurado el documento, se añade una página con el método `.Content
 | `.HorizontalStackLayout(...)` | Añade un `Layout` de pila horizontal y proporciona un constructor para su contenido. |
 | `.PdfGrid()` | Añade un `Layout` de rejilla configurable. |
 
-## 2. Referencia de Componentes
-
-### 2.1. Pages
+### 3.2. Pages
 
 #### PdfContentPage
-La `PdfContentPage` es el tipo de `Page` más simple y común. Su propósito es mostrar un único `Layout` hijo, que a su vez contiene otras `Views`.
+La `IPdfContentPage` es el tipo de `Page` más simple y común. `PdfContentPage` es su implementación concreta. Su propósito es mostrar un único `Layout` hijo, que a su vez contiene otras `Views`.
 
-> **NOTA:** Los valores predeterminados se aplican automáticamente según el Principio de Garantía de Completitud: `Padding` inicia en cero, `BackgroundColor` es transparente, y las características del documento (tamaño A4, orientación Portrait, márgenes Normal) se heredan automáticamente.
+> **NOTA:** Utiliza valores predeterminados del documento: `BackgroundColor` es transparente por defecto. Las páginas utilizan las configuraciones globales del documento (PageSize A4, PageOrientation Portrait, Padding Normal) establecidas en `IPdfDocumentConfigurator`.
 
 ##### Creación y Uso Práctico
-Se crea una instancia de página llamando al método `.ContentPage()` en un objeto `IPdfDocument`. Esto devuelve una interfaz `IPdfContentPage` que permite configurar propiedades específicas de la página (como `BackgroundColor` o `Spacing`) y definir su contenido.
+Se crea una instancia de página llamando al método `.ContentPage()` en un objeto `IPdfDocument`. Esto devuelve una interfaz `IPdfContentPage` que permite configurar propiedades específicas de la página (como `BackgroundColor` o propiedades disponibles a través de `IPdfPage`) y definir su contenido.
 
 ##### Propiedades Principales
 | Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
 | `Content` | `PdfLayout` | Define el `Layout` único que representa el contenido de la página. |
-| `Padding` | `Microsoft.Maui.Thickness` | Define el espacio interior entre los bordes de la página y su contenido. |
+| Propiedades disponibles a través de `IPdfPage<TSelf>` | Varios | Incluye métodos para configurar `Padding`, `PageSize`, `PageOrientation`, `BackgroundColor`. |
 
-### 2.2. Layouts (Contenedores)
+### 3.3. Layouts (Contenedores)
 
 Un `Layout` se utiliza para componer las `Views` en una estructura visual. Las clases de `Layout` en MauiPdfGenerator derivan de la clase `PdfLayout`.
 
 #### PdfVerticalStackLayout
 El `PdfVerticalStackLayout` organiza sus `Views` hijas en una única columna vertical.
 
-> **NOTA:** Los valores predeterminados incluyen `Spacing` de 0, `Padding` y `Margin` en cero, y `HorizontalOptions` configurado en `Fill` para ocupar todo el ancho disponible.
+> **NOTA:** Utiliza valores predeterminados: `Spacing` de 0, `Padding` y `Margin` en cero, y `HorizontalOptions` configurado en `Fill` para ocupar todo el ancho disponible.
+
+> **Comportamiento de Paginación:** Este `Layout` es **atómico**. Si no cabe en el espacio restante de la página actual, la biblioteca lo moverá completo a la siguiente página.
 
 ##### Creación y Uso Práctico
 Se instancia a través del método `.VerticalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido. El patrón de `Action` proporciona un nuevo constructor anidado (`IStackLayoutBuilder`) para definir los elementos hijos dentro del `Layout`.
@@ -597,12 +633,12 @@ Se instancia a través del método `.VerticalStackLayout(Action<IStackLayoutBuil
 | :--- | :--- | :--- |
 | `Spacing` | `double` | Define el espacio entre cada `View` hija. El valor predeterminado es 0. |
 
-> **Comportamiento de Paginación:** Este `Layout` es **atómico**. Si no cabe en el espacio restante de la página actual, la biblioteca lo moverá completo a la siguiente página.
-
 #### PdfHorizontalStackLayout
 El `PdfHorizontalStackLayout` organiza sus `Views` hijas en una única fila horizontal.
 
 > **NOTA:** Comparte los mismos valores predeterminados que `PdfVerticalStackLayout` para mantener consistencia en el comportamiento de los layouts.
+
+> **Comportamiento de Paginación:** Este `Layout` es **atómico**.
 
 ##### Creación y Uso Práctico
 Se instancia a través del método `.HorizontalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido, siguiendo el mismo patrón que el `PdfVerticalStackLayout`.
@@ -611,8 +647,6 @@ Se instancia a través del método `.HorizontalStackLayout(Action<IStackLayoutBu
 | Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
 | `Spacing` | `double` | Define el espacio entre cada `View` hija. El valor predeterminado es 0. |
-
-> **Comportamiento de Paginación:** Este `Layout` es **atómico**.
 
 *Ejemplo de Uso de StackLayouts:*
 
@@ -637,6 +671,8 @@ El `PdfGrid` es un `Layout` potente para mostrar `Views` en filas y columnas.
 
 > **NOTA:** Los valores predeterminados incluyen `RowSpacing` y `ColumnSpacing` de 0, permitiendo diseños precisos sin espaciado no deseado.
 
+> **Comportamiento de Paginación:** Este `Layout` es **divisible**. Si su contenido excede el espacio disponible en la página actual, la biblioteca lo dividirá automáticamente, continuando las filas restantes en la siguiente página. La división siempre ocurre entre filas.
+
 ##### Creación y Uso Práctico
 Se instancia con el método `.PdfGrid()` en un constructor de contenido. La configuración de filas, columnas y la adición de hijos se realiza mediante una API fluida directamente sobre el objeto `PdfGrid` devuelto.
 
@@ -653,8 +689,6 @@ El tamaño de las filas y columnas se controla a través de `RowDefinitions` y `
 | `ColumnDefinitions` | `ColumnDefinitionCollection` | La colección de objetos `ColumnDefinition` que definen las columnas. |
 | `RowSpacing` | `double` | El espacio vertical entre las filas del grid. |
 | `ColumnSpacing` | `double` | El espacio horizontal entre las columnas del grid. |
-
-> **Comportamiento de Paginación:** Este `Layout` es **divisible**. Si su contenido excede el espacio disponible en la página actual, la biblioteca lo dividirá automáticamente, continuando las filas restantes en la siguiente página. La división siempre ocurre entre filas.
 
 *Ejemplo de Uso de PdfGrid:*
 
@@ -685,12 +719,12 @@ c.PdfGrid()
     });
 ```
 
-### 2.3. Views (Elementos Visuales)
+### 3.4. Views (Elementos Visuales)
 
 #### PdfParagraph
 Un `PdfParagraph` muestra texto de una sola línea y de varias líneas.
 
-> **NOTA:** Los valores predeterminados garantizan texto legible inmediatamente: fuente Helvetica a 12pt, color negro, alineación a la izquierda y ajuste de línea por palabras. Las propiedades de fuente y color se heredan de la configuración global del documento.
+> **NOTA:** Utiliza valores predeterminados del documento: fuente Helvetica a 12pt, color negro, alineación a la izquierda y ajuste de línea por palabras. Las propiedades de fuente y color se heredan de la configuración global del documento.
 
 > **Comportamiento de Paginación:** Esta `View` es **divisible**. Si su contenido excede el espacio disponible, será partido y continuará en la página siguiente.
 
@@ -735,7 +769,7 @@ c.Paragraph("[P4] Estilo Completo: Subrayado, Negrita, Itálica y fuente Comic."
 #### PdfImage
 Muestra una imagen que se puede cargar desde un archivo local, un URI o una secuencia.
 
-> **NOTA:** Los valores predeterminados incluyen `Aspect.AspectFit` para mantener las proporciones de la imagen, y opciones de layout configuradas en `Fill` para adaptarse al espacio disponible.
+> **NOTA:** Utiliza valores predeterminados: `Aspect.AspectFit` para mantener las proporciones de la imagen, y opciones de layout configuradas en `Fill` para adaptarse al espacio disponible.
 
 > **Comportamiento de Paginación:** Esta `View` es **atómica**.
 
@@ -759,7 +793,7 @@ c.PdfImage(new MemoryStream(imageData))
 #### PdfHorizontalLine
 Es una `View` pública cuyo propósito es dibujar una línea horizontal, comúnmente usada como separador visual. Internamente, es una implementación especializada de la clase base `PdfShape`.
 
-> **NOTA:** Los valores predeterminados incluyen color negro y grosor de 1.0, con `HorizontalOptions` configurado en `Fill` para ocupar todo el ancho disponible.
+> **NOTA:** Utiliza valores predeterminados: color negro y grosor de 1.0, con `HorizontalOptions` configurado en `Fill` para ocupar todo el ancho disponible.
 
 > **Comportamiento de Paginación:** Esta `View` es **atómica**.
 
@@ -790,9 +824,11 @@ Es una clase base que permite dibujar formas en la página. Aunque los desarroll
 - `StrokeLineJoin`: `PenLineJoin`, especifica el tipo de unión en los vértices.
 - `Aspect`: `Stretch`, describe cómo la forma llena su espacio asignado.
 
-## 3. Sistema de Layout en la Práctica
+## 4. Guías Prácticas y Patrones de Uso (Cookbook)
 
-### 3.1. Alineación y Posicionamiento
+### 4.1. Sistema de Layout en la Práctica
+
+#### Alineación y Posicionamiento
 
 Cada `View` o `Layout` tiene propiedades `HorizontalOptions` y `VerticalOptions` de tipo `Microsoft.Maui.Controls.LayoutAlignment`. Esta estructura determina su posición y tamaño dentro de su `Layout` padre cuando este contiene espacio no utilizado.
 
@@ -804,9 +840,18 @@ Cada `View` o `Layout` tiene propiedades `HorizontalOptions` y `VerticalOptions`
 
 > **Nota**: El valor predeterminado de `HorizontalOptions` y `VerticalOptions` es `LayoutAlignment.Fill`.
 
-### 3.2. Posicionamiento con Margin y Padding
+#### Posicionamiento con Margin y Padding
 
 Las propiedades `Margin` y `Padding`, de tipo `Microsoft.Maui.Thickness`, controlan el espaciado.
 
-- **`Margin`**: Distancia **externa** entre un elemento y sus vecinos.
-- **`Padding`**: Distancia **interna** entre el borde de un elemento y su contenido.
+- **`Margin`**: Distancia **externa** entre un elemento y sus vecinos (aplicable a elementos individuales dentro de layouts).
+- **`Padding`**: Para páginas y documentos, define el espacio **interno** entre el borde y el contenido. Para elementos individuales, es la distancia interna entre el borde del elemento y su contenido.
+
+### 4.2. Aplicación Práctica
+
+Al diseñar un PDF:
+
+1.  **Planifica las `Pages`**: Define el número y tipo de páginas.
+2.  **Diseña los `Layouts`**: Estructura la organización visual en cada página.
+3.  **Selecciona las `Views`**: Elige los componentes visuales para el contenido.
+4.  **Compón la jerarquía**: Organiza la estructura completa del documento.

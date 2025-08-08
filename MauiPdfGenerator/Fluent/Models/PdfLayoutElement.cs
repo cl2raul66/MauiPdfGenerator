@@ -5,7 +5,7 @@ namespace MauiPdfGenerator.Fluent.Models;
 public abstract class PdfLayoutElement : PdfElement
 {
     protected readonly List<PdfElement> _children = [];
-    internal readonly PdfFontRegistryBuilder? _fontRegistry; // Cambiado de private a protected
+    internal readonly PdfFontRegistryBuilder? _fontRegistry; 
 
     internal float GetSpacing { get; private set; }
 

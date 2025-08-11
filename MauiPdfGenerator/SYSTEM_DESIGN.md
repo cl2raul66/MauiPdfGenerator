@@ -43,11 +43,11 @@ La interfaz de un documento PDF se construye con una jerarquía que mapea concep
 
 #### Pages
 
-Los documentos PDF constan de una o varias páginas. Cada página contiene contenido organizado a través de dos modos de operación. MauiPdfGenerator contiene los siguientes tipos de Pages:
+Los documentos PDF constan de una o varias páginas. Cada página contiene al menos un `Layout`. MauiPdfGenerator contiene los siguientes tipos de Pages:
 
 |Page|Descripción|
 |---|---|
-|PdfContentPage|Página con dos modos de operación: `DefaultContent()` (comportamiento parecido a un VerticalStackLayout) y `AdvancedContent()` (comportamiento parecido a un PdfGrid). Es el tipo de página más común en documentos PDF.|
+|PdfContentPage|Muestra un `Layout` principal y es el tipo de página más común en documentos PDF.|
 
 > **NOTA:** Para el futuro, se agregarán otros tipos de páginas especializadas.
 
@@ -85,7 +85,7 @@ Es la promesa arquitectónica de que cada componente (documento, página, layout
 var doc = pdfDocFactory.CreateDocument();
 await doc
     .ContentPage()
-    .DefaultContent(c => c.Paragraph("Hola mundo"))
+    .Content(c => c.Paragraph("Hola mundo"))
     .Build()
     .SaveAsync(targetFilePath);
 ```
@@ -99,46 +99,21 @@ En este ejemplo, la biblioteca automáticamente aplica valores predeterminados p
 3. **Minimizar Errores**: Elimina la posibilidad de crear elementos "vacíos" o "invisibles" por falta de configuración.
 4. **Facilitar la Iteración**: Permite al desarrollador centrarse en el contenido y la estructura, refinando el estilo progresivamente.
 
-### 1.5. Principio de Clipping Predictivo
+### 1.5. Principio de Seguridad de Tipos y Cero "Magic Strings"
 
-La biblioteca implementa un sistema de **clipping predictivo** que garantiza comportamiento consistente cuando el contenido excede los límites de página disponibles. Este sistema prioriza la predictibilidad y el rendimiento sobre el redimensionamiento automático complejo.
+La biblioteca se adhiere estrictamente a un principio de **seguridad de tipos** para la gestión de recursos, con el objetivo de eliminar por completo el uso de "magic strings" (cadenas de texto literales propensas a errores de tipeo). Este enfoque es fundamental para la robustez y la experiencia del desarrollador.
 
-#### ¿Qué es el Clipping Predictivo?
+Para la identificación de fuentes, en lugar de requerir que el desarrollador escriba manualmente alias como `"OpenSans-Regular"`, la biblioteca utiliza un **sistema de generación de código automático**. Este sistema inspecciona la configuración de fuentes del proyecto y genera referencias estáticas y seguras en tiempo de compilación, como `PdfFonts.OpenSansRegular`.
 
-Es la garantía arquitectónica de que cada elemento visual tiene un comportamiento de recorte bien definido y predecible cuando excede el espacio disponible. En lugar de intentar redimensionar o reorganizar automáticamente el contenido, la biblioteca aplica reglas claras de clipping por tipo de elemento.
+**Beneficios de este principio:**
 
-#### Comportamiento por Tipo de Elemento
+1.  **Prevención de Errores:** Los errores de tipeo en los nombres de las fuentes se detectan durante la compilación, no en tiempo de ejecución.
+2.  **IntelliSense y Autocompletado:** El desarrollador obtiene sugerencias automáticas de las fuentes disponibles, mejorando la velocidad y la precisión del desarrollo.
+3.  **Refactorización Segura:** Renombrar una fuente o su alias se convierte en una operación segura gestionada por las herramientas del IDE.
 
-**StackLayouts (`PdfVerticalStackLayout`, `PdfHorizontalStackLayout`):**
-- **PdfHorizontalStackLayout**: Cuando el ancho alcanza el máximo disponible, ocurre clipping horizontal. La altura depende del elemento hijo más alto; si excede la altura disponible, ocurre clipping vertical.
-- **PdfVerticalStackLayout**: Cuando la altura alcanza el máximo disponible, ocurre clipping vertical. El ancho depende del hijo más ancho; si excede el ancho disponible, ocurre clipping horizontal.
+Este principio refuerza la filosofía de ser una extensión natural del ecosistema .NET, aprovechando las capacidades del compilador para crear una API más segura y fácil de usar.
 
-**PdfGrid:**
-- Las celdas no se recortan individualmente.
-- Se muestra hasta la última columna completa que quepa dentro del ancho disponible.
-- Se muestra hasta la última fila completa que quepa dentro de la altura disponible.
-
-**PdfImage:**
-- Si las dimensiones exceden el tamaño de página (altura o anchura), se aplica clipping directo.
-
-**Elementos Divisibles (`PdfParagraph`):**
-- Siguen las reglas de paginación automática antes del clipping.
-- Solo se aplica clipping si el contenido restante no cabe en una página completa.
-
-#### Sistema de Logging de Clipping
-
-Cuando ocurre clipping, la biblioteca registra advertencias con formato estándar:
-
-```
-CLIP WARNING: PdfParagraph at VerticalStack[2] - Content: "Este es el texto que se está..."
-CLIP WARNING: PdfImage at HorizontalStack[0] - Dimensions: 800x600, Available: 400x500
-```
-
-**Estructura del Log:**
-- **Severidad**: `CLIP WARNING` para identificación rápida
-- **Tipo de Elemento**: Clase específica del elemento afectado
-- **Ubicación**: Contenedor padre inmediato con índice o coordenadas
-- **Contexto**: Para texto, muestra del contenido truncado; para imágenes, dimensiones vs espacio disponible
+> **NOTA:** La implementación técnica de este principio, basada en un **Source Generator**, se detalla en la **Parte II: Arquitectura y Diseño Técnico**.
 
 ## 2. Modelo Conceptual de Layout
 
@@ -155,14 +130,6 @@ El motor emula deliberadamente el ciclo de Medición y Disposición (Measure/Arr
 *   **Fase 3: La Pasada de Renderizado (`RenderAsync`)**
     *   **Responsabilidad:** Dibujar cada `View` en su posición final usando las APIs específicas del motor de renderizado.
 
-#### Logging Durante el Renderizado
-
-Durante la **Fase 3 (Renderizado)**, el motor detecta y registra automáticamente cualquier operación de clipping. Este logging ocurre en tiempo real durante el dibujado, proporcionando información precisa sobre:
-
-- Ubicación exacta del elemento afectado (contenedor padre + índice)
-- Tipo específico del elemento
-- Contexto relevante (contenido para texto, dimensiones para imágenes)
-
 ### 2.2. Paginación Automática (Concepto General)
 
 Esta es una de las características más potentes del motor. El orquestador de layout no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición detecta que el contenido excede el espacio vertical disponible, crea una nueva página y reinicia el ciclo de layout con el contenido restante.
@@ -176,14 +143,6 @@ La política de paginación depende del tipo de `View`:
 *   **Divisibles:** `PdfParagraph` y `PdfGrid`. Estos son los únicos elementos que la biblioteca puede dividir a través de un salto de página.
     *   **División de `PdfParagraph`:** El `TextRenderer` calcula cuántas líneas de texto caben en el espacio disponible. Si no caben todas, renderiza las que sí caben y pasa el texto sobrante al orquestador para que lo coloque en la página siguiente.
     *   **División de `PdfGrid`:** El `GridRenderer` mide sus filas secuencialmente. Si al añadir una fila se excede el alto de la página, la división ocurre **entre la fila anterior y la actual**. La fila que no cabe, junto con todas las siguientes, se mueven a la página siguiente. La división nunca ocurre a mitad de una celda.
-
-#### Comportamiento de Clipping en Elementos Atómicos
-
-Los elementos atómicos que no caben en el espacio disponible de una página se mueven completos a la página siguiente. Sin embargo, si un elemento atómico excede las dimensiones totales de una página (incluso estando solo), se aplica clipping:
-
-- **StackLayouts**: Clipping en la dimensión que excede el límite
-- **PdfImage**: Clipping directo si excede dimensiones de página
-- **PdfHorizontalLine**: Se ajusta automáticamente al ancho disponible
 
 ---
 
@@ -219,7 +178,7 @@ Sigue el **Principio de Inversión de Dependencias**.
 *   **Propósito:** Define el "lenguaje común" entre capas.
 *   **Contenido Principal:** DTOs (`PdfDocumentData`, `PdfPageData`), Value Objects, Enumeraciones (`DefaultPagePaddingType`, `PageSizeType`), utilidades de cálculo (`PaddingCalculator`), e interfaces de comunicación como `ILayoutMetrics`.
 
-#### 1.3.1. Utilidades de Cálculo Compartidas
+#### Utilidades de Cálculo Compartidas
 
 La capa `Common` incluye utilidades que implementan lógica de negocio compartida:
 
@@ -252,7 +211,7 @@ La capa `Common` incluye utilidades que implementan lógica de negocio compartid
 *   **La Dualidad de la Medición:** Una `View` debe ser capaz de responder a dos tipos de "preguntas de medición":
     *   **Pregunta de Medición Restringida (`LayoutPassType.Constrained`):**
         *   **Intención:** "Tienes este **ancho finito**. Adáptate a él (aplicando saltos de línea si es necesario) y dime qué altura necesitas".
-        *   **Quién la hace:** `Layouts` de naturaleza vertical como el `DefaultContent` de `PdfContentPage` y `PdfVerticalStackLayout`.
+        *   **Quién la hace:** `Layouts` de naturaleza vertical como `PdfContentPage` y `PdfVerticalStackLayout`.
     *   **Pregunta de Medición Ideal (`LayoutPassType.Ideal`):**
         *   **Intención:** "Ignora las restricciones de ancho. Dime cuál es tu tamaño **natural** si pudieras usar todo el espacio que necesites (sin saltos de línea)".
         *   **Quién la hace:** `Layouts` de naturaleza horizontal como `PdfHorizontalStackLayout`.
@@ -262,32 +221,11 @@ La capa `Common` incluye utilidades que implementan lógica de negocio compartid
     *   **`Padding` (Relleno):** Espacio **interno** que empuja el contenido lejos del borde. El `BackgroundColor` **sí** se dibuja en esta área.
     *   **Implementación del Fondo (`BackgroundColor`):** Es fundamental entender que el `BackgroundColor` no es una propiedad del lienzo. Internamente, cuando una `View` tiene un `BackgroundColor` definido, el motor de renderizado primero dibuja una `View` de tipo `PdfRectangle` (una forma) en la posición y tamaño del elemento. Inmediatamente después, dibuja el contenido real de la `View` (texto, imagen, etc.) encima de ese rectángulo. El rectángulo de fondo abarca el área del `Contenido + Padding`, lo que explica visualmente por qué el `Padding` es un espacio interno afectado por el color de fondo, mientras que el `Margin` permanece como un espacio externo transparente.
 
-*   **Comportamiento Arquitectónico de los Layouts de `PdfContentPage`:** A diferencia de los `Layouts de Composición`, los `Layouts de Primer Nivel` (`DefaultContent` y `AdvancedContent`) están diseñados con capacidades de paginación integradas en su lógica de medición y disposición.
-    *   **`DefaultContent`:** Su motor de layout interno se comporta como un `PdfVerticalStackLayout`, pero con una lógica adicional que, al detectar un desbordamiento vertical durante la fase de `MeasureAsync`, desencadena el mecanismo de creación de una nueva página en el orquestador.
-    *   **`AdvancedContent`:** Su motor de layout interno se comporta como un `PdfGrid`, pero su lógica de `MeasureAsync` y `ArrangeAsync` está diseñada para manejar desbordamientos tanto verticales como horizontales, no aplicando clipping, sino solicitando nuevas páginas al orquestador y redistribuyendo las columnas o filas restantes.
-
-*   **Contexto de Layout y Orquestación de Fases:** Un objeto `LayoutContext` se propaga recursivamente por el árbol para comunicar información del padre a los hijos. Un orquestador centralizado en `Core.Integration` es responsable de invocar la secuencia de pasadas (`MeasureAsync`, `ArrangeAsync`, `RenderAsync`) en el orden correcto para todo el árbol.
+*   **Contexto de Layout y Orquestación de Fases:** Un objeto `LayoutContext` se propaga recursivamente por el árbol para comunicar información del padre a los hijos. Un orquestador centralizado en `Core.Integration` es responsable de invocar la secuencia de pasadas (`MeasureAsync`, `Arrange Async`, `RenderAsync`) en el orden correcto para todo el árbol.
 
 ### 2.3. Sistema de Paginación Automática (Implementación)
 
-La paginación automática es una característica central de la biblioteca, implementada principalmente a través de los **Layouts de Primer Nivel** de `PdfContentPage`.
-
-*   **Orquestación Iterativa:** El orquestador de layout en `Core.Integration` no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición, un layout de primer nivel reporta que su contenido excede el espacio disponible, el orquestador crea una nueva página y reinicia el ciclo de layout con el contenido restante.
-
-#### Paginación en `DefaultContent` (Modo Lineal)
-
-*   Cuando la altura del contenido excede el espacio disponible, el layout de `DefaultContent` lo comunica al orquestador.
-*   Se crea una nueva página.
-*   Los elementos que no cupieron (incluyendo elementos divisibles parcialmente renderizados como `PdfParagraph`) continúan en la nueva página.
-*   Los elementos atómicos que no caben se mueven completos a la nueva página, junto con todos los elementos que los siguen.
-
-#### Paginación en `AdvancedContent` (Modo Rejilla)
-
-*   Implementa una paginación bidimensional con una prioridad arquitectónica definida: **columnas primero, luego filas**.
-*   **Overflow de Ancho:** El layout de `AdvancedContent` calcula cuántas columnas caben. Las columnas restantes se pasan al orquestador para ser renderizadas en una nueva página.
-*   **Overflow de Alto:** Si todas las columnas caben pero las filas no, se renderizan las filas que caben y las restantes pasan a una nueva página.
-*   Las definiciones de `ColumnDefinitions` y `RowDefinitions` se mantienen consistentes entre todas las páginas generadas para garantizar la coherencia del diseño.
-*   Este layout está diseñado para **nunca aplicar clipping**, siempre recurriendo a la paginación.
+*   **Orquestación Iterativa:** El orquestador de layout no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición detecta que el contenido excede el espacio vertical disponible, crea una nueva página y reinicia el ciclo de layout con el contenido restante.
 
 ## 3. Implementación de Principios de Diseño
 
@@ -308,18 +246,33 @@ La jerarquía de resolución de valores predeterminados sigue este orden de prio
 
 ### 3.3. Sistema de Source Generators para Fuentes
 
-> **NOTA CRÍTICA DE DEPENDENCIA:** MauiPdfGenerator depende de `MauiPdfGenerator.SourceGenerators` para generar la clase estática `PdfFonts`. Después de configurar las fuentes en `MauiProgram.cs` mediante `PdfConfigureFonts()`, **se debe compilar el proyecto** para que el Source Generator genere automáticamente las propiedades estáticas de tipo `PdfFontIdentifier`, haciendo disponibles referencias como `PdfFonts.OpenSansRegular`.
-
-**MauiPdfGenerator depende obligatoriamente de `MauiPdfGenerator.SourceGenerators`** para el sistema de fuentes. Esta dependencia es fundamental para la funcionalidad de identificación de fuentes con seguridad de tipos.
+> **NOTA CRÍTICA DE DEPENDENCIA:** MauiPdfGenerator depende obligatoriamente de `MauiPdfGenerator.SourceGenerators` para el sistema de fuentes. Esta dependencia es fundamental para la funcionalidad de identificación de fuentes con seguridad de tipos. Después de configurar las fuentes en `MauiProgram.cs` mediante `PdfConfigureFonts()`, **se debe compilar el proyecto** para que el Source Generator genere automáticamente las propiedades estáticas de tipo `PdfFontIdentifier`, haciendo disponibles referencias como `PdfFonts.OpenSansRegular`.
 
 La biblioteca incluye un **generador de código fuente** que inspecciona las llamadas a `AddFont()` en `MauiProgram.cs`. Por cada fuente registrada, crea automáticamente una clase estática `public static class PdfFonts` con propiedades estáticas de tipo `PdfFontIdentifier`. Este diseño arquitectónico elimina el uso de "magic strings" (ej. `"OpenSans-Regular"`) y lo reemplaza por un acceso seguro en tiempo de compilación (ej. `PdfFonts.OpenSans_Regular`), proporcionando IntelliSense y evitando errores de tipeo.
 
+#### Estándar de Nomenclatura de Aliases
+
+Para garantizar una generación de código predecible y limpia, se recomienda seguir un estándar de nomenclatura para los alias de fuentes.
+
+**Formato Recomendado:** `{FontFamily}{Weight}{Style}`
+
+*   **FontFamily**: El nombre de la familia de la fuente, sin espacios y en formato PascalCase (ej. "OpenSans", "Roboto").
+*   **Weight**: El peso de la fuente (ej. Regular, Light, Medium, SemiBold, Bold, ExtraBold).
+*   **Style**: Opcional. Se omite para el estilo normal y se añade para variantes como `Italic` u `Oblique`.
+
+**Ejemplos de Aliases Ideales:**
+```csharp
+fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+fonts.AddFont("OpenSans-Bold.ttf", "OpenSansBold");
+fonts.AddFont("Roboto-LightItalic.ttf", "RobotoLightItalic");
+```
+
 #### Proceso de Generación Automática
 
-1. **Configuración:** El desarrollador configura fuentes en `MauiProgram.cs` usando `PdfConfigureFonts()`
-2. **Compilación:** Al compilar el proyecto, el Source Generator analiza la configuración
-3. **Generación:** Se crea automáticamente la clase `PdfFonts` con propiedades estáticas
-4. **Disponibilidad:** Las propiedades están disponibles para uso con IntelliSense
+1.  **Configuración:** El desarrollador configura fuentes en `MauiProgram.cs` usando `PdfConfigureFonts()`.
+2.  **Compilación:** Al compilar el proyecto, el Source Generator analiza la configuración.
+3.  **Generación:** Se crea automáticamente la clase `PdfFonts` con propiedades estáticas en el fichero `PdfFonts.g.cs`.
+4.  **Disponibilidad:** Las propiedades están disponibles para uso con IntelliSense en todo el proyecto.
 
 #### Ejemplo de Código Generado
 
@@ -330,7 +283,9 @@ fonts.AddFont("comic.ttf", "Comic");
 ```
 
 El Source Generator produce:
+
 ```csharp
+// <auto-generated/>
 public static class PdfFonts
 {
     public static global::MauiPdfGenerator.Fluent.Models.PdfFontIdentifier OpenSansRegular { get; } = 
@@ -339,6 +294,24 @@ public static class PdfFonts
         new global::MauiPdfGenerator.Fluent.Models.PdfFontIdentifier("Comic");
 }
 ```
+
+#### Implementación Interna del Generador (`FontAliasGenerator`)
+
+*   **Detección**: El método `IsPotentialAddFontCall()` localiza todas las invocaciones al método `AddFont()` dentro de la configuración.
+*   **Validación**: Se asegura de que los argumentos proporcionados (nombre del fichero y alias) sean literales de `string` válidos para poder ser analizados en tiempo de compilación.
+*   **Transformación**: Utiliza una rutina `CreateValidCSharpIdentifier()` para convertir el alias de la fuente en un nombre de propiedad C# válido. Esta rutina:
+    *   Conserva caracteres alfanuméricos (`a-z`, `A-Z`, `0-9`) y guiones bajos (`_`).
+    *   Convierte caracteres comunes como guiones (`-`), espacios (` `) y puntos (`.`) en guiones bajos (`_`).
+    *   Elimina guiones bajos duplicados (`__` se convierte en `_`).
+    *   Añade un prefijo de guion bajo si el identificador comienza con un número (ej. `123Font` se convierte en `_123Font`).
+*   **Generación**: Construye el fichero `PdfFonts.g.cs` con la clase estática y sus propiedades.
+
+#### Manejo de Errores y Casos Borde por el Generador
+
+*   **Aliases Duplicados**: Si se registran múltiples fuentes con el mismo alias, el generador solo considerará la primera ocurrencia para evitar errores de compilación por propiedades duplicadas.
+*   **Caracteres Especiales**: La conversión a un identificador C# válido es automática. Sin embargo, seguir el estándar de nomenclatura evita resultados inesperados (ej. `"Open Sans-Regular"` se convierte en `Open_Sans_Regular`).
+*   **Palabras Reservadas de C#**: Si un alias resulta en una palabra reservada (ej. `class`), el generador le antepondrá el prefijo `@` para que sea un identificador válido (ej. `@class`).
+*   **Diagnóstico y Debugging**: El generador puede emitir advertencias de compilación para aliases problemáticos, ayudando al desarrollador a corregir la configuración.
 
 El generador se alimenta a través del método de extensión `PdfConfigureFonts()`. Este método permite especificar el propósito de cada fuente a través de la enumeración `FontDestinationType`.
 
@@ -548,17 +521,15 @@ public static class MauiProgram
 
 ### 1.2. La Fábrica de Documentos: Creación mediante DI
 
-Tras la configuración, la creación de un documento se realiza solicitando la interfaz `IPdfDocumentFactory` al contenedor de DI. Esta fábrica expone el método `CreateDocument()`, que devuelve una instancia de `IPdfDocument`, el punto de partida para construir el PDF.
+Tras la configuración, la creación de un documento se realiza solicitando la interfaz `IPdfDocumentFactory` al contenedor de DI. Esta fábrica expone el método `CreateDocument()`, que devuelve una instancia de `IPdfDocument`, el punto de partida para construir el PDF. 
 
 #### Ejemplo de Uso Mínimo (Sin Configuración)
-
-Gracias al Principio de Garantía de Completitud, el siguiente código es todo lo que se necesita para generar un PDF funcional:
 
 ```csharp
 var doc = pdfDocFactory.CreateDocument();
 await doc
     .ContentPage()
-    .DefaultContent(c => c.Paragraph("Hola mundo"))
+    .Content(c => c.Paragraph("Hola mundo"))
     .Build()
     .SaveAsync(targetFilePath);
 ```
@@ -581,7 +552,7 @@ await doc
         cfg.Padding(DefaultPagePaddingType.Wide);
     })
     .ContentPage()
-    .DefaultContent(c => c.Paragraph("Hola mundo"))
+    .Content(c => c.Paragraph("Hola mundo"))
     .Build()
     .SaveAsync(targetFilePath);
 ```
@@ -612,30 +583,35 @@ La enumeración `DefaultPagePaddingType` proporciona conjuntos de padding predef
 
 ### 2.2. Gestión de Fuentes (Embebido y Fuentes Predeterminadas)
 
-Una vez registrada una fuente en `MauiProgram.cs`, se puede refinar su comportamiento a través de la interfaz `IPdfFontRegistry`, accesible desde la configuración del documento.
+Una vez registrada una fuente en `MauiProgram.cs` y generada por el Source Generator, se puede refinar su comportamiento a través de la interfaz `IPdfFontRegistry`, accesible desde la configuración del documento.
 
 | Método en `IFontRegistrationOptions` | Descripción |
 | :--- | :--- |
 | `.Default()` | Designa esta fuente como la predeterminada para todo el documento. |
-| `.EmbeddedFont()` | Marca la fuente para ser incrustada en el fichero PDF, garantizando su correcta visualización. |
+| `.EmbeddedFont()` | Marca la fuente para ser incrustada en el fichero PDF, garantizando su correcta visualización en cualquier sistema. |
 
 #### Propósito Específico de ConfigureFontRegistry
 
-El método `ConfigureFontRegistry()` es específicamente para configurar el **embebido de fuentes** y para establecer una **fuente predeterminada**, no su disponibilidad (que es automática). Las fuentes configuradas en `MauiProgram.cs` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` ya están disponibles automáticamente. En caso de no establecer una fuente predeterminada, toma la primera fuente registrada en `PdfConfigureFontes()`.
+El método `ConfigureFontRegistry()` es específicamente para configurar el **embebido de fuentes** y para establecer una **fuente predeterminada** para el documento. La disponibilidad de la fuente ya es automática si se registró con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` en `MauiProgram.cs`.
 
+En caso de no establecer una fuente predeterminada explícitamente con `.Default()`, la biblioteca tomará la primera fuente registrada en `PdfConfigureFonts()` como la fuente por defecto.
+
+*Ejemplo de configuración de registro de fuentes:*
 ```csharp
 .Configuration(cfg =>
 {
     cfg.ConfigureFontRegistry(cfr =>
     {
+        // Establece OpenSansSemibold como la fuente por defecto para todo el documento.
         cfr.Font(PdfFonts.OpenSansSemibold).Default();
-        cfr.Font(PdfFonts.Comic).Default(); // esta no se toma en cuenta
+
+        // Asegura que la fuente Comic sea incrustada en el archivo PDF.
         cfr.Font(PdfFonts.Comic).EmbeddedFont();
     });
 })
 ```
 
-> **Nota:** Por lógica se debe establecer una sola fuente predeterminada para todo el documento, en caso que el usuario especifique mas de una, solo toma la primera
+> **Nota:** Por lógica, solo se debe establecer una fuente predeterminada para el documento. Si el usuario especifica más de una llamada a `.Default()`, la biblioteca tomará la primera que fue configurada.
 
 ### 2.3. Enriquecimiento con Metadatos
 
@@ -669,93 +645,40 @@ Gracias al Principio de Garantía de Completitud, cada documento PDF se crea aut
 
 ## 3. Referencia de Componentes y API
 
-### 3.1. Construcción de Contenido de Página: El Rol de los Layouts de Primer Nivel
+### 3.1. Construcción de Contenido de Página
 
 Una vez configurado el documento, se procede a definir su contenido. El proceso sigue una secuencia lógica:
 
-1.  Se añade una página usando el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`.
-2.  Se define el layout principal de la página mediante uno de los dos **métodos de layout de primer nivel**:
-    *   **`.DefaultContent(Action<IPageContentBuilder> contentSetup)`**: Utiliza un layout de tipo `VerticalStackLayout` con capacidades avanzadas de paginación. Ideal para documentos lineales.
-    *   **`.AdvancedContent(Action<IPageContentBuilder> contentSetup)`**: Utiliza un layout de tipo `Grid` con paginación bidimensional inteligente. Ideal para diseños complejos.
-3.  Dentro del constructor de contenido (`contentSetup`), se añaden las `Views` y los `Layouts de Composición` necesarios.
-4.  Finalmente, se llama al método `.Build()`, que devuelve un `IPdfDocument` listo para ser guardado o procesado.
+1. Se añade una página usando el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`.
+2. Se define el contenido de la página mediante el método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método proporciona un constructor de contenido (`IPageContentBuilder`) que actúa como una caja de herramientas completa para añadir `Views` y `Layouts`.
+3. Finalmente, se llama al método `Build()`, que devuelve un `IPdfDocument` listo para ser guardado o procesado.
 
-El constructor de contenido (`IPageContentBuilder`) que se recibe en la `Action` expone métodos fluidos para crear todos los elementos visuales soportados:
+El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para crear todos los elementos visuales soportados, permitiendo una construcción intuitiva y declarativa del documento.
 
 | Método en `IPageContentBuilder` | Descripción |
 | :--- | :--- |
 | `.Paragraph(string text)` | Añade una `View` de texto. |
 | `.PdfImage(Stream stream)` | Añade una `View` de imagen desde un `Stream`. |
 | `.HorizontalLine()` | Añade una `View` de línea horizontal. |
-| `.VerticalStackLayout(...)` | Añade un `Layout de Composición` de pila vertical. |
-| `.HorizontalStackLayout(...)` | Añade un `Layout de Composición` de pila horizontal. |
-| `.PdfGrid()` | Añade un `Layout de Composición` de rejilla configurable. |
+| `.VerticalStackLayout(...)` | Añade un `Layout` de pila vertical y proporciona un constructor para su contenido. |
+| `.HorizontalStackLayout(...)` | Añade un `Layout` de pila horizontal y proporciona un constructor para su contenido. |
+| `.PdfGrid()` | Añade un `Layout` de rejilla configurable. |
 
 ### 3.2. Pages
 
-#### PdfContentPage y sus Layouts de Primer Nivel
+#### PdfContentPage
+La `IPdfContentPage` es el tipo de `Page` más simple y común. `PdfContentPage` es su implementación concreta. Su propósito es mostrar un único `Layout` hijo, que a su vez contiene otras `Views`.
 
-La `IPdfContentPage` es el tipo de `Page` más común y versátil. `PdfContentPage` es su implementación concreta. Su función es servir de lienzo para un **Layout de Primer Nivel**, que define cómo se organiza y pagina su contenido.
+> **NOTA:** Utiliza valores predeterminados del documento: `BackgroundColor` es transparente por defecto. Las páginas utilizan las configuraciones globales del documento (PageSize A4, PageOrientation Portrait, Padding Normal) establecidas en `IPdfDocumentConfigurator`.
 
-> **NOTA:** Utiliza valores predeterminados del documento: `BackgroundColor` es transparente. Las páginas heredan las configuraciones globales (PageSize, PageOrientation, Padding) de `IPdfDocumentConfigurator`.
+##### Creación y Uso Práctico
+Se crea una instancia de página llamando al método `.ContentPage()` en un objeto `IPdfDocument`. Esto devuelve una interfaz `IPdfContentPage` que permite configurar propiedades específicas de la página (como `BackgroundColor` o propiedades disponibles a través de `IPdfPage`) y definir su contenido.
 
-##### Modos de Operación (Layouts de Primer Nivel)
-
-**1. Modo `DefaultContent` (Comportamiento tipo VerticalStackLayout)**
-
-Este modo utiliza un layout que organiza los elementos verticalmente en una sola columna y tiene capacidades especiales de paginación automática. Es la opción recomendada para documentos lineales como informes o artículos.
-
-*   **Disposición**: Organiza los elementos verticalmente.
-*   **Espaciado**: Configurable con `.Spacing(float)` después de `DefaultContent()`.
-*   **Paginación Automática**:
-    *   Si la altura del contenido excede el espacio de la página, se crea una nueva página.
-    *   Los elementos divisibles (`PdfParagraph`) continúan automáticamente en la nueva página.
-    *   Los elementos atómicos (`PdfImage`, `PdfVerticalStackLayout`, etc.) se mueven completos a la nueva página.
-
-*Ejemplo de Uso:*
-```csharp
-.ContentPage()
-.DefaultContent(c => {
-    c.Paragraph("Párrafo 1");
-    c.Paragraph("Párrafo 2 que es muy largo...");
-    c.HorizontalLine();
-})
-.Spacing(8f)
-.Build()
-```
-
-**2. Modo `AdvancedContent` (Comportamiento tipo PdfGrid)**
-
-Este modo utiliza un layout de rejilla con paginación bidimensional automática, ideal para catálogos, dashboards o diseños complejos.
-
-*   **Disposición**: Organiza los elementos en filas y columnas.
-*   **Configuración**: El espaciado (`.ColumnSpacing`, `.RowSpacing`) y las definiciones (`.ColumnDefinitions`, `.RowDefinitions`) se configuran después de `AdvancedContent()`.
-*   **Paginación Bidimensional (Sin Clipping)**:
-    *   **Prioridad:** Columnas primero, luego filas.
-    *   Si el contenido excede el ancho, las columnas sobrantes pasan a una nueva página.
-    *   Si el contenido excede el alto, las filas sobrantes pasan a una nueva página.
-
-*Ejemplo de Uso:*
-```csharp
-.ContentPage()
-.AdvancedContent(c => {
-    c.Paragraph("Celda A1").Row(0).Column(0);
-    c.Paragraph("Celda A2").Row(0).Column(1);
-    c.Paragraph("Celda B1").Row(1).Column(0);
-})
-.ColumnSpacing(8f)
-.RowSpacing(8f)
-.ColumnDefinitions(cd => cd.GridLength(GridUnitType.Star).GridLength(GridUnitType.Star))
-.Build()
-```
-
-##### Diferencias Clave vs. Layouts de Composición
-
-| Característica | Layout de Primer Nivel (`DefaultContent`/`AdvancedContent`) | Layout de Composición (`PdfVerticalStackLayout`/`PdfGrid`) |
+##### Propiedades Principales
+| Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
-| **Conciencia de Página** | Sí | No |
-| **Manejo de Overflow** | Paginación Automática | Clipping Predictivo |
-| **Propósito Principal** | Estructurar el flujo de todo el documento | Agrupar elementos en un área confinada |
+| `Content` | `PdfLayout` | Define el `Layout` único que representa el contenido de la página. |
+| Propiedades disponibles a través de `IPdfPage<TSelf>` | Varios | Incluye métodos para configurar `Padding`, `PageSize`, `PageOrientation`, `BackgroundColor`. |
 
 ### 3.3. Layouts (Contenedores)
 
@@ -998,44 +921,3 @@ Al diseñar un PDF:
 2.  **Diseña los `Layouts`**: Estructura la organización visual en cada página.
 3.  **Selecciona las `Views`**: Elige los componentes visuales para el contenido.
 4.  **Compón la jerarquía**: Organiza la estructura completa del documento.
-
-### 4.3. Gestión de Clipping y Debugging
-
-#### Identificación de Contenido Recortado
-
-La biblioteca proporciona logging automático para identificar cuando el contenido es recortado debido a limitaciones de espacio. Este sistema es esencial para garantizar la calidad del documento final.
-
-#### Interpretación de Logs de Clipping
-
-**Para Elementos de Texto:**
-```
-CLIP WARNING: PdfParagraph at VerticalStack[2] - Content: "Este es el texto que se está..."
-```
-- Indica que un párrafo en la posición 2 de un VerticalStackLayout fue recortado
-- Muestra los primeros caracteres del contenido afectado
-- Permite localizar rápidamente el elemento problemático en el código
-
-**Para Imágenes:**
-```
-CLIP WARNING: PdfImage at HorizontalStack[0] - Dimensions: 800x600, Available: 400x500
-```
-- Indica que una imagen en la posición 0 de un HorizontalStackLayout fue recortada
-- Muestra las dimensiones reales vs el espacio disponible
-- Facilita el ajuste de tamaños o la reorganización del layout
-
-#### Estrategias de Resolución
-
-**Clipping en StackLayouts:**
-- Reducir el tamaño de elementos hijos
-- Usar `Spacing` menor entre elementos
-- Considerar división en múltiples páginas
-
-**Clipping en Grids:**
-- Ajustar `ColumnDefinitions` y `RowDefinitions`
-- Revisar `ColumnSpacing` y `RowSpacing`
-- Considerar contenido más conciso en celdas
-
-**Clipping en Imágenes:**
-- Usar `WidthRequest` y `HeightRequest` apropiados
-- Considerar `Aspect.AspectFit` para ajuste automático
-- Redimensionar imágenes antes de la inclusión

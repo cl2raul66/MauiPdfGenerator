@@ -8,7 +8,7 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 internal interface IPdfContentPageBuilder : IPdfPageBuilder
 {
     PageSizeType GetEffectivePageSize();
-    Thickness GetEffectiveMargin();
+    Thickness GetEffectivePadding();
     PageOrientationType GetEffectivePageOrientation();
     Color? GetEffectiveBackgroundColor();
     IReadOnlyList<PdfElement> GetElements();

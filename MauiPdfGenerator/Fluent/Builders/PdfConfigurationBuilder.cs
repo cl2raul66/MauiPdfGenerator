@@ -7,7 +7,7 @@ namespace MauiPdfGenerator.Fluent.Builders;
 internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
 {
     public PageSizeType GetPageSize { get; private set; }
-    public Thickness GetMargin { get; private set; }
+    public Thickness GetPadding { get; private set; }
     public PageOrientationType GetPageOrientation { get; private set; }
     public PdfFontRegistryBuilder FontRegistry { get; }
     public PdfMetaDataBuilder MetaDataBuilder { get; }
@@ -16,7 +16,7 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     {
         this.FontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
         this.MetaDataBuilder = new PdfMetaDataBuilder();
-        GetMargin = MarginCalculator.GetThickness(DefaultMarginType.Normal);
+        GetPadding = PagePaddingTypeCalculator.GetThickness(DefaultPagePaddingType.Normal);
         GetPageSize = PageSizeType.A4;
         GetPageOrientation = PageOrientationType.Portrait;
     }
@@ -33,27 +33,27 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
         return this;
     }
 
-    public IPdfDocumentConfigurator Margins(float uniformMargin)
+    public IPdfDocumentConfigurator Padding(float uniformPadding)
     {
-        GetMargin = new Thickness(uniformMargin);
+        GetPadding = new Thickness(uniformPadding);
         return this;
     }
 
-    public IPdfDocumentConfigurator Margins(float verticalMargin, float horizontalMargin)
+    public IPdfDocumentConfigurator Padding(float verticalPadding, float horizontalPadding)
     {
-        GetMargin = new Thickness(horizontalMargin, verticalMargin);
+        GetPadding = new Thickness(horizontalPadding, verticalPadding);
         return this;
     }
 
-    public IPdfDocumentConfigurator Margins(float leftMargin, float topMargin, float rightMargin, float bottomMargin)
+    public IPdfDocumentConfigurator Padding(float leftPadding, float topPadding, float rightPadding, float bottomPadding)
     {
-        GetMargin = new Thickness(leftMargin, topMargin, rightMargin, bottomMargin);
+        GetPadding = new Thickness(leftPadding, topPadding, rightPadding, bottomPadding);
         return this;
     }
 
-    public IPdfDocumentConfigurator Margins(DefaultMarginType defaultMarginType)
+    public IPdfDocumentConfigurator Padding(DefaultPagePaddingType defaultPaddingType)
     {
-        GetMargin = MarginCalculator.GetThickness(defaultMarginType);
+        GetPadding = PagePaddingTypeCalculator.GetThickness(defaultPaddingType);
         return this;
     }
 
@@ -73,6 +73,6 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
 
     public override string ToString()
     {
-        return $"PageSize: {GetPageSize}, Orientation: {GetPageOrientation}, Margin: {GetMargin}, Fonts: {FontRegistry}, Meta: {MetaDataBuilder}";
+        return $"PageSize: {GetPageSize}, Orientation: {GetPageOrientation}, Padding: {GetPadding}, Fonts: {FontRegistry}, Meta: {MetaDataBuilder}";
     }
 }

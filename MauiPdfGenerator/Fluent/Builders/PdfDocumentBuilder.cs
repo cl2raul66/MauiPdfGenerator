@@ -65,7 +65,7 @@ internal class PdfDocumentBuilder : IPdfDocument
                 var pageData = new PdfPageData(
                     contentPageBuilder.GetEffectivePageSize(),
                     contentPageBuilder.GetEffectivePageOrientation(),
-                    contentPageBuilder.GetEffectiveMargin(),
+                    contentPageBuilder.GetEffectivePadding(),
                     contentPageBuilder.GetEffectiveBackgroundColor(),
                     contentPageBuilder.GetElements(),
                     contentPageBuilder.GetPageSpacing(),

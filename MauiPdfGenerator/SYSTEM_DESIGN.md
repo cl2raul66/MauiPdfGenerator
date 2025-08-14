@@ -22,15 +22,13 @@ El desarrollador no aprende una nueva API desde cero, simplemente aplica su cono
 
 ### 1.2. Resolución del Conflicto Conceptual: Padding vs Margins
 
-Durante el diseño de la biblioteca surgió un conflicto fundamental entre la terminología PDF tradicional (que utiliza "margins" para el espaciado de página) y la filosofía .NET MAUI (donde `ContentPage` utiliza "Padding" para el espaciado interno). 
+Durante el diseño de la biblioteca surgió un conflicto fundamental entre la terminología PDF tradicional (que utiliza "margins" para el espaciado de página) y la filosofía .NET MAUI (donde `ContentPage` utiliza "Padding" para el espaciado interno).
 
 **Decisión Arquitectónica**: Se adoptó `Padding` por las siguientes razones:
 
-1. **Coherencia con el Ecosistema MAUI**: La biblioteca se define como "una extensión natural del ecosistema .NET MAUI", por lo que debe mantener consistencia conceptual con los tipos de datos familiares.
-
-2. **Modelo Mental Unificado**: Los desarrolladores MAUI ya comprenden que `ContentPage.Padding` define el espacio interno entre el borde de la página y su contenido.
-
-3. **Eliminación de Redundancia**: Evita la confusión de tener tanto `Margins` como `Padding` en el mismo contexto, donde ambos conceptos serían funcionalmente idénticos.
+1.  **Coherencia con el Ecosistema MAUI**: La biblioteca se define como "una extensión natural del ecosistema .NET MAUI", por lo que debe mantener consistencia conceptual con los tipos de datos familiares.
+2.  **Modelo Mental Unificado**: Los desarrolladores MAUI ya comprenden que `ContentPage.Padding` define el espacio interno entre el borde de la página y su contenido.
+3.  **Eliminación de Redundancia**: Evita la confusión de tener tanto `Margins` como `Padding` en el mismo contexto, donde ambos conceptos serían funcionalmente idénticos.
 
 ### 1.3. Jerarquía Conceptual: Pages → Layouts → Views
 
@@ -94,26 +92,10 @@ En este ejemplo, la biblioteca automáticamente aplica valores predeterminados p
 
 #### ¿Para qué sirve este principio?
 
-1. **Maximizar la Productividad**: Permite crear documentos funcionales con líneas mínimas de código.
-2. **Reducir la Curva de Aprendizaje**: El desarrollador puede comenzar a generar PDFs inmediatamente, sin estudiar todas las propiedades disponibles.
-3. **Minimizar Errores**: Elimina la posibilidad de crear elementos "vacíos" o "invisibles" por falta de configuración.
-4. **Facilitar la Iteración**: Permite al desarrollador centrarse en el contenido y la estructura, refinando el estilo progresivamente.
-
-### 1.5. Principio de Seguridad de Tipos y Cero "Magic Strings"
-
-La biblioteca se adhiere estrictamente a un principio de **seguridad de tipos** para la gestión de recursos, con el objetivo de eliminar por completo el uso de "magic strings" (cadenas de texto literales propensas a errores de tipeo). Este enfoque es fundamental para la robustez y la experiencia del desarrollador.
-
-Para la identificación de fuentes, en lugar de requerir que el desarrollador escriba manualmente alias como `"OpenSans-Regular"`, la biblioteca utiliza un **sistema de generación de código automático**. Este sistema inspecciona la configuración de fuentes del proyecto y genera referencias estáticas y seguras en tiempo de compilación, como `PdfFonts.OpenSansRegular`.
-
-**Beneficios de este principio:**
-
-1.  **Prevención de Errores:** Los errores de tipeo en los nombres de las fuentes se detectan durante la compilación, no en tiempo de ejecución.
-2.  **IntelliSense y Autocompletado:** El desarrollador obtiene sugerencias automáticas de las fuentes disponibles, mejorando la velocidad y la precisión del desarrollo.
-3.  **Refactorización Segura:** Renombrar una fuente o su alias se convierte en una operación segura gestionada por las herramientas del IDE.
-
-Este principio refuerza la filosofía de ser una extensión natural del ecosistema .NET, aprovechando las capacidades del compilador para crear una API más segura y fácil de usar.
-
-> **NOTA:** La implementación técnica de este principio, basada en un **Source Generator**, se detalla en la **Parte II: Arquitectura y Diseño Técnico**.
+1.  **Maximizar la Productividad**: Permite crear documentos funcionales con líneas mínimas de código.
+2.  **Reducir la Curva de Aprendizaje**: El desarrollador puede comenzar a generar PDFs inmediatamente, sin estudiar todas las propiedades disponibles.
+3.  **Minimizar Errores**: Elimina la posibilidad de crear elementos "vacíos" o "invisibles" por falta de configuración.
+4.  **Facilitar la Iteración**: Permite al desarrollador centrarse en el contenido y la estructura, refinando el estilo progresivamente.
 
 ## 2. Modelo Conceptual de Layout
 
@@ -233,16 +215,16 @@ La capa `Common` incluye utilidades que implementan lógica de negocio compartid
 
 La implementación de este principio ocurre exclusivamente en la **Capa `Fluent`** de la arquitectura. Esta capa actúa como un interceptor inteligente que:
 
-1. **Detecta Propiedades No Especificadas**: Cuando el desarrollador crea un elemento sin definir ciertas propiedades (ej. `FontSize`, `TextColor`).
-2. **Aplica Valores Predeterminados Inteligentes**: Consulta una jerarquía de valores predeterminados (locales del componente → globales del documento → valores fijos de la biblioteca).
-3. **Garantiza Completitud Antes del Procesamiento**: Antes de pasar los datos al motor de renderizado, asegura que todos los DTOs estén completamente poblados.
+1.  **Detecta Propiedades No Especificadas**: Cuando el desarrollador crea un elemento sin definir ciertas propiedades (ej. `FontSize`, `TextColor`).
+2.  **Aplica Valores Predeterminados Inteligentes**: Consulta una jerarquía de valores predeterminados (locales del componente → globales del documento → valores fijos de la biblioteca).
+3.  **Garantiza Completitud Antes del Procesamiento**: Antes de pasar los datos al motor de renderizado, asegura que todos los DTOs estén completamente poblados.
 
 ### 3.2. Jerarquía de Resolución de Valores Predeterminados
 
 La jerarquía de resolución de valores predeterminados sigue este orden de prioridad:
-1. **Valor Explícito**: Si el desarrollador especificó un valor, se usa ese valor.
-2. **Valor Global del Documento**: Si se configuró un valor predeterminado en `IPdfDocumentConfigurator`.
-3. **Valor Fijo de la Biblioteca**: Como último recurso, se usa un valor codificado que garantiza funcionalidad.
+1.  **Valor Explícito**: Si el desarrollador especificó un valor, se usa ese valor.
+2.  **Valor Global del Documento**: Si se configuró un valor predeterminado en `IPdfDocumentConfigurator`.
+3.  **Valor Fijo de la Biblioteca**: Como último recurso, se usa un valor codificado que garantiza funcionalidad.
 
 ### 3.3. Sistema de Source Generators para Fuentes
 
@@ -283,7 +265,6 @@ fonts.AddFont("comic.ttf", "Comic");
 ```
 
 El Source Generator produce:
-
 ```csharp
 // <auto-generated/>
 public static class PdfFonts
@@ -345,7 +326,7 @@ Idealmente no debería ser nada complejo cambiar de motor de renderizado, pues C
 
 ## 6. Implementación de Valores Predeterminados Inteligentes por Componente
 
-En línea con el Principio de Garantía de Completitud establecido en la Parte I, cada componente de la biblioteca posee un conjunto cuidadosamente seleccionado de valores predeterminados que garantizan funcionalidad inmediata y resultados estéticamente agradables.
+Por diseño arquitectónico, cada componente de la biblioteca posee un conjunto cuidadosamente seleccionado de valores predeterminados que garantizan funcionalidad inmediata y resultados estéticamente agradables.
 
 ### 6.1. Documento PDF (`PdfDocument`)
 
@@ -367,9 +348,9 @@ En línea con el Principio de Garantía de Completitud establecido en la Parte I
 
 Las fuentes configuradas en `MauiProgram.cs` mediante `PdfConfigureFonts()` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` se registran automáticamente en el documento utilizando el método `Default()`. Esto significa que:
 
-1. **Registro Automático**: Estas fuentes están disponibles para uso inmediato en el documento.
-2. **No Embebidas por Defecto**: Las fuentes registradas automáticamente no se embeben en el PDF.
-3. **Configuración Adicional**: Para embeber fuentes específicas, se debe utilizar `ConfigureFontRegistry()` explícitamente.
+1.  **Registro Automático**: Estas fuentes están disponibles para uso inmediato en el documento.
+2.  **No Embebidas por Defecto**: Las fuentes registradas automáticamente no se embeben en el PDF.
+3.  **Configuración Adicional**: Para embeber fuentes específicas, se debe utilizar `ConfigureFontRegistry()` explícitamente.
 
 #### Propósito de ConfigureFontRegistry
 
@@ -469,9 +450,9 @@ Los valores predeterminados de las Views priorizan la legibilidad y la funcional
 
 ### 1.1. Integración con .NET MAUI: El Punto de Entrada
 
-La biblioteca se adhiere a los patrones modernos de .NET, integrándose de forma nativa en el ecosistema de la aplicación. La inicialización se realiza en el fichero `MauiProgram.cs` mediante **dos métodos de extensión obligatorios**: `UseMauiPdfGenerator()` y `PdfConfigureFonts()`. 
+La biblioteca se adhiere a los patrones modernos de .NET, integrándose de forma nativa en el ecosistema de la aplicación. La inicialización se realiza en el fichero `MauiProgram.cs` mediante **dos métodos de extensión obligatorios**: `UseMauiPdfGenerator()` y `PdfConfigureFonts()`.
 
-**`UseMauiPdfGenerator()`** registra en el contenedor de inyección de dependencias (DI) todos los servicios necesarios, principalmente la interfaz `IPdfDocumentFactory`. 
+**`UseMauiPdfGenerator()`** registra en el contenedor de inyección de dependencias (DI) todos los servicios necesarios, principalmente la interfaz `IPdfDocumentFactory`.
 
 **`PdfConfigureFonts()`** es **obligatorio** para el registro de fuentes y permite que el Source Generator cree la clase estática `PdfFonts`. **Después de configurar las fuentes, se debe compilar el proyecto** para que `MauiPdfGenerator.SourceGenerators` genere automáticamente las propiedades estáticas de tipo `PdfFontIdentifier`.
 
@@ -479,10 +460,10 @@ Este enfoque garantiza que la creación de PDFs sea una capacidad intrínseca de
 
 #### Flujo de Desarrollo con Source Generators
 
-1. **Configuración Inicial:** Agregar `UseMauiPdfGenerator()` y `PdfConfigureFonts()` en `MauiProgram.cs`
-2. **Compilación Requerida:** Compilar el proyecto para generar la clase `PdfFonts`
-3. **Disponibilidad:** Las propiedades como `PdfFonts.OpenSansRegular` están disponibles con IntelliSense
-4. **Uso:** Utilizar las fuentes generadas en el código de creación de PDFs
+1.  **Configuración Inicial:** Agregar `UseMauiPdfGenerator()` y `PdfConfigureFonts()` en `MauiProgram.cs`
+2.  **Compilación Requerida:** Compilar el proyecto para generar la clase `PdfFonts`
+3.  **Disponibilidad:** Las propiedades como `PdfFonts.OpenSansRegular` están disponibles con IntelliSense
+4.  **Uso:** Utilizar las fuentes generadas en el código de creación de PDFs
 
 > **NOTA CRÍTICA:** Sin la compilación posterior a `PdfConfigureFonts()`, la clase `PdfFonts` no estará disponible y el código que la reference producirá errores de compilación.
 
@@ -521,7 +502,7 @@ public static class MauiProgram
 
 ### 1.2. La Fábrica de Documentos: Creación mediante DI
 
-Tras la configuración, la creación de un documento se realiza solicitando la interfaz `IPdfDocumentFactory` al contenedor de DI. Esta fábrica expone el método `CreateDocument()`, que devuelve una instancia de `IPdfDocument`, el punto de partida para construir el PDF. 
+Tras la configuración, la creación de un documento se realiza solicitando la interfaz `IPdfDocumentFactory` al contenedor de DI. Esta fábrica expone el método `CreateDocument()`, que devuelve una instancia de `IPdfDocument`, el punto de partida para construir el PDF.
 
 #### Ejemplo de Uso Mínimo (Sin Configuración)
 
@@ -538,7 +519,7 @@ await doc
 
 ### 2.1. Configuración Global del Documento
 
-Cada instancia de `IPdfDocument` ofrece el método `Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)` para definir las características globales del documento. **Esta configuración es completamente opcional** gracias al Principio de Garantía de Completitud.
+Cada instancia de `IPdfDocument` ofrece el método `Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)` para definir las características globales del documento. **Esta configuración es completamente opcional** por diseño.
 
 #### Ejemplo de Uso con Configuración
 
@@ -615,7 +596,7 @@ En caso de no establecer una fuente predeterminada explícitamente con `.Default
 
 ### 2.3. Enriquecimiento con Metadatos
 
-Gracias al Principio de Garantía de Completitud, cada documento PDF se crea automáticamente con un conjunto básico de metadatos. El método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite **sobrescribir o complementar** estos valores predeterminados.
+Por diseño, cada documento PDF se crea automáticamente con un conjunto básico de metadatos. El método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite **sobrescribir o complementar** estos valores predeterminados.
 
 **Valores Predeterminados de Metadatos (Aplicados Automáticamente):**
 
@@ -649,9 +630,9 @@ Gracias al Principio de Garantía de Completitud, cada documento PDF se crea aut
 
 Una vez configurado el documento, se procede a definir su contenido. El proceso sigue una secuencia lógica:
 
-1. Se añade una página usando el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`.
-2. Se define el contenido de la página mediante el método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método proporciona un constructor de contenido (`IPageContentBuilder`) que actúa como una caja de herramientas completa para añadir `Views` y `Layouts`.
-3. Finalmente, se llama al método `Build()`, que devuelve un `IPdfDocument` listo para ser guardado o procesado.
+1.  Se añade una página usando el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`.
+2.  Se define el contenido de la página mediante el método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método proporciona un constructor de contenido (`IPageContentBuilder`) que actúa como una caja de herramientas completa para añadir `Views` y `Layouts`.
+3.  Finalmente, se llama al método `Build()`, que devuelve un `IPdfDocument` listo para ser guardado o procesado.
 
 El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para crear todos los elementos visuales soportados, permitiendo una construcción intuitiva y declarativa del documento.
 
@@ -696,7 +677,7 @@ Se instancia a través del método `.VerticalStackLayout(Action<IStackLayoutBuil
 
 ##### Propiedades clave:
 | Propiedad | Tipo de Dato | Descripción |
-| :--- | :--- | :--- |
+| :--- | :--- |
 | `Spacing` | `double` | Define el espacio entre cada `View` hija. El valor predeterminado es 0. |
 
 #### PdfHorizontalStackLayout

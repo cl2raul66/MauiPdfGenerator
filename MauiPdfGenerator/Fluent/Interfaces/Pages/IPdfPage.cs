@@ -8,13 +8,13 @@ public interface IPdfPage<TSelf> where TSelf : IPdfPage<TSelf>
 
     TSelf PageOrientation(PageOrientationType pageOrientationType);
 
-    TSelf Margins(float uniformMargin);
+    TSelf Padding(float uniformPadding);
 
-    TSelf Margins(float verticalMargin, float horizontalMargin);
+    TSelf Padding(float verticalPadding, float horizontalPadding);
 
-    TSelf Margins(float leftMargin, float topMargin, float rightMargin, float bottomMargin);
+    TSelf Padding(float leftPadding, float topPadding, float rightPadding, float bottomPadding);
 
-    TSelf Margins(DefaultMarginType defaultMarginType);
+    TSelf Padding(DefaultPagePaddingType defaultPaddingType);
 
     TSelf BackgroundColor(Color backgroundColor);
 

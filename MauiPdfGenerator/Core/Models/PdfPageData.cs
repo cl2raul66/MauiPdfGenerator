@@ -6,7 +6,7 @@ namespace MauiPdfGenerator.Core.Models;
 internal record PdfPageData(
     PageSizeType Size,
     PageOrientationType Orientation,
-    Thickness Margins,
+    Thickness Padding,
     Color? BackgroundColor,
     IReadOnlyList<PdfElement> Elements,
     float PageDefaultSpacing,

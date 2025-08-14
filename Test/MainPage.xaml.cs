@@ -30,7 +30,7 @@ public partial class MainPage : ContentPage
                 {
                     cfg.PageSize(PageSizeType.Letter);
                     cfg.PageOrientation(PageOrientationType.Landscape);
-                    cfg.Margins(DefaultMarginType.Wide);
+                    cfg.Padding(DefaultPagePaddingType.Wide);
                 })
                 .Configuration(cfg =>
                 {

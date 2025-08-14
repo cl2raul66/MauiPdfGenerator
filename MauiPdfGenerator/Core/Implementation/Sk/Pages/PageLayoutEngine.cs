@@ -13,7 +13,7 @@ internal class PageLayoutEngine
         var elementsToProcess = new Queue<PdfElement>(context.PageData.Elements);
 
         SKSize pageSize = SkiaUtils.GetSkPageSize(context.PageData.Size, context.PageData.Orientation);
-        var pageMargins = context.PageData.Margins;
+        var pageMargins = context.PageData.Padding;
         var contentRect = new SKRect(
             (float)pageMargins.Left, (float)pageMargins.Top,
             pageSize.Width - (float)pageMargins.Right, pageSize.Height - (float)pageMargins.Bottom

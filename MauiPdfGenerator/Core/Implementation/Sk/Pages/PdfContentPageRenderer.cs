@@ -19,7 +19,7 @@ internal class PdfContentPageRenderer : IPageRenderer
         canvas.Clear(pageDef.BackgroundColor is not null ? SkiaUtils.ConvertToSkColor(pageDef.BackgroundColor) : SKColors.White);
 
         SKSize pageSize = SkiaUtils.GetSkPageSize(pageDef.Size, pageDef.Orientation);
-        var pageMargins = pageDef.Margins;
+        var pageMargins = pageDef.Padding;
         var contentRect = new SKRect(
             (float)pageMargins.Left, (float)pageMargins.Top,
             pageSize.Width - (float)pageMargins.Right, pageSize.Height - (float)pageMargins.Bottom

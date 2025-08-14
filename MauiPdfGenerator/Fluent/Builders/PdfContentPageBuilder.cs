@@ -14,7 +14,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     private readonly PdfConfigurationBuilder _documentConfiguration;
 
     private PageSizeType? _pageSizeOverride;
-    private Thickness? _marginsOverride;
+    private Thickness? _paddingOverride;
     private Color? _backgroundColorOverride;
     private PageOrientationType? _pageOrientationOverride;
 
@@ -90,24 +90,24 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         _pageOrientationOverride = pageOrientationType;
         return this;
     }
-    public IPdfContentPage Margins(float uniformMargin)
+    public IPdfContentPage Padding(float uniformPadding)
     {
-        _marginsOverride = new Thickness(uniformMargin);
+        _paddingOverride = new Thickness(uniformPadding);
         return this;
     }
-    public IPdfContentPage Margins(float verticalMargin, float horizontalMargin)
+    public IPdfContentPage Padding(float verticalPadding, float horizontalPadding)
     {
-        _marginsOverride = new Thickness(horizontalMargin, verticalMargin);
+        _paddingOverride = new Thickness(horizontalPadding, verticalPadding);
         return this;
     }
-    public IPdfContentPage Margins(float leftMargin, float topMargin, float rightMargin, float bottomMargin)
+    public IPdfContentPage Padding(float leftPadding, float topPadding, float rightPadding, float bottomPadding)
     {
-        _marginsOverride = new Thickness(leftMargin, topMargin, rightMargin, bottomMargin);
+        _paddingOverride = new Thickness(leftPadding, topPadding, rightPadding, bottomPadding);
         return this;
     }
-    public IPdfContentPage Margins(DefaultMarginType defaultMarginType)
+    public IPdfContentPage Padding(DefaultPagePaddingType defaultPaddingType)
     {
-        _marginsOverride = MarginCalculator.GetThickness(defaultMarginType);
+        _paddingOverride = PagePaddingTypeCalculator.GetThickness(defaultPaddingType);
         return this;
     }
     public IPdfContentPage BackgroundColor(Color backgroundColor)
@@ -137,7 +137,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     }
     public IPdfDocument Build() { return _documentBuilder; }
     public PageSizeType GetEffectivePageSize() => _pageSizeOverride ?? _documentConfiguration.GetPageSize;
-    public Thickness GetEffectiveMargin() => _marginsOverride ?? _documentConfiguration.GetMargin;
+    public Thickness GetEffectivePadding() => _paddingOverride ?? _documentConfiguration.GetPadding;
     public PageOrientationType GetEffectivePageOrientation() => _pageOrientationOverride ?? _documentConfiguration.GetPageOrientation;
     public Color? GetEffectiveBackgroundColor() => _backgroundColorOverride;
     public IReadOnlyList<PdfElement> GetElements() => _pageElements.AsReadOnly();
@@ -148,10 +148,10 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
 
     IPdfContentPage IPdfPage<IPdfContentPage>.PageSize(PageSizeType pageSizeType) => PageSize(pageSizeType);
     IPdfContentPage IPdfPage<IPdfContentPage>.PageOrientation(PageOrientationType pageOrientationType) => PageOrientation(pageOrientationType);
-    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(float uniformMargin) => Margins(uniformMargin);
-    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(float verticalMargin, float horizontalMargin) => Margins(verticalMargin, horizontalMargin);
-    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(float leftMargin, float topMargin, float rightMargin, float bottomMargin) => Margins(leftMargin, topMargin, rightMargin, bottomMargin);
-    IPdfContentPage IPdfPage<IPdfContentPage>.Margins(DefaultMarginType defaultMarginType) => Margins(defaultMarginType);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Padding(float uniformPadding) => Padding(uniformPadding);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Padding(float verticalPadding, float horizontalPadding) => Padding(verticalPadding, horizontalPadding);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Padding(float leftPadding, float topPadding, float rightPadding, float bottomPadding) => Padding(leftPadding, topPadding, rightPadding, bottomPadding);
+    IPdfContentPage IPdfPage<IPdfContentPage>.Padding(DefaultPagePaddingType defaultPaddingType) => Padding(defaultPaddingType);
     IPdfContentPage IPdfPage<IPdfContentPage>.BackgroundColor(Color backgroundColor) => BackgroundColor(backgroundColor);
     IPdfDocument IPdfPage<IPdfContentPage>.Build() => Build();
 }

@@ -230,7 +230,19 @@ La jerarquía de resolución de valores predeterminados sigue este orden de prio
 
 > **NOTA CRÍTICA DE DEPENDENCIA:** MauiPdfGenerator depende obligatoriamente de `MauiPdfGenerator.SourceGenerators` para el sistema de fuentes. Esta dependencia es fundamental para la funcionalidad de identificación de fuentes con seguridad de tipos. Después de configurar las fuentes en `MauiProgram.cs` mediante `PdfConfigureFonts()`, **se debe compilar el proyecto** para que el Source Generator genere automáticamente las propiedades estáticas de tipo `PdfFontIdentifier`, haciendo disponibles referencias como `PdfFonts.OpenSansRegular`.
 
-La biblioteca incluye un **generador de código fuente** que inspecciona las llamadas a `AddFont()` en `MauiProgram.cs`. Por cada fuente registrada, crea automáticamente una clase estática `public static class PdfFonts` con propiedades estáticas de tipo `PdfFontIdentifier`. Este diseño arquitectónico elimina el uso de "magic strings" (ej. `"OpenSans-Regular"`) y lo reemplaza por un acceso seguro en tiempo de compilación (ej. `PdfFonts.OpenSans_Regular`), proporcionando IntelliSense y evitando errores de tipeo.
+La biblioteca incluye un **generador de código fuente** que inspecciona las llamadas a `AddFont()` dentro del método de extensión `PdfConfigureFonts()` en `MauiProgram.cs`. Por cada fuente registrada, crea automáticamente una clase estática `public static class PdfFonts` con propiedades estáticas de tipo `PdfFontIdentifier`. Este diseño arquitectónico elimina el uso de "magic strings" (ej. `"OpenSans-Regular"`) y lo reemplaza por un acceso seguro en tiempo de compilación (ej. `PdfFonts.OpenSans_Regular`), proporcionando IntelliSense y evitando errores de tipeo.
+
+#### Gestión de Recursos de Fuentes con `FontDestinationType`
+
+Para ofrecer un control granular sobre los recursos, el método `PdfConfigureFonts()` permite especificar el propósito del **conjunto de fuentes que se están registrando en esa llamada**. Esta es una decisión arquitectónica clave que permite al desarrollador optimizar la carga de memoria y el tamaño del paquete de la aplicación. El destino se especifica a través de la enumeración `FontDestinationType`.
+
+| Valor de `FontDestinationType` | Descripción Arquitectónica |
+| :--- | :--- |
+| `OnlyUI` | Las fuentes registradas en este bloque solo estarán disponibles para la UI de .NET MAUI. El motor de PDF no las conocerá. |
+| `OnlyPDF` | Las fuentes registradas en este bloque solo estarán disponibles para el motor de PDF. Es ideal para fuentes pesadas o con licencias específicas que no se necesitan en la UI. |
+| `Both` | (Predeterminado) Las fuentes registradas en este bloque estarán disponibles tanto en la UI como en el motor de PDF. |
+
+Si se omite el parámetro, la biblioteca asume de forma predeterminada el valor `FontDestinationType.Both`, siguiendo una filosofía de "valores predeterminados inteligentes" para mantener el código de configuración limpio y conciso.
 
 #### Estándar de Nomenclatura de Aliases
 
@@ -293,16 +305,6 @@ public static class PdfFonts
 *   **Caracteres Especiales**: La conversión a un identificador C# válido es automática. Sin embargo, seguir el estándar de nomenclatura evita resultados inesperados (ej. `"Open Sans-Regular"` se convierte en `Open_Sans_Regular`).
 *   **Palabras Reservadas de C#**: Si un alias resulta en una palabra reservada (ej. `class`), el generador le antepondrá el prefijo `@` para que sea un identificador válido (ej. `@class`).
 *   **Diagnóstico y Debugging**: El generador puede emitir advertencias de compilación para aliases problemáticos, ayudando al desarrollador a corregir la configuración.
-
-El generador se alimenta a través del método de extensión `PdfConfigureFonts()`. Este método permite especificar el propósito de cada fuente a través de la enumeración `FontDestinationType`.
-
-| Valor de `FontDestinationType` | Descripción |
-| :--- | :--- |
-| `OnlyUI` | La fuente solo estará disponible para los controles de la UI de .NET MAUI. |
-| `OnlyPDF` | La fuente solo estará disponible para la generación de documentos PDF. Ideal para fuentes pesadas o con licencias específicas. |
-| `Both` | La fuente se registra tanto en la UI como en el motor de PDF. |
-
-> **NOTA:** Si se omite, la biblioteca asume de forma predeterminada el valor `FontDestinationType.Both`, siguiendo una filosofía de "valores predeterminados inteligentes" para mantener el código de configuración limpio y conciso.
 
 ## 4. Gestión de Recursos y Performance
 
@@ -458,6 +460,36 @@ La biblioteca se adhiere a los patrones modernos de .NET, integrándose de forma
 
 Este enfoque garantiza que la creación de PDFs sea una capacidad intrínseca de la aplicación, accesible desde cualquier parte de la misma de una manera limpia, desacoplada y testeable.
 
+> **NOTA CRÍTICA DE CONFIGURACIÓN:** El orden de las llamadas de registro es fundamental. La llamada a `.UseMauiPdfGenerator()` **debe** realizarse siempre **antes** de la llamada a `.PdfConfigureFonts()`. `UseMauiPdfGenerator()` registra los servicios necesarios que `PdfConfigureFonts()` consume. Invertir el orden provocará una `InvalidOperationException` en tiempo de ejecución.
+
+**Correcto:**
+```csharp
+builder
+    .UseMauiPdfGenerator()
+    .PdfConfigureFonts(...);
+```
+
+**Incorrecto:**
+```csharp
+builder
+    .PdfConfigureFonts(...) // ¡ERROR!
+    .UseMauiPdfGenerator();
+```
+
+#### Funcionamiento Interno de `PdfConfigureFonts`
+
+Es importante entender que el método `PdfConfigureFonts()` no es un sistema de fuentes paralelo, sino un **envoltorio inteligente (wrapper)** del método `ConfigureFonts()` estándar de .NET MAUI. Al utilizar nuestro método, no solo registras las fuentes para la UI (si así lo deseas), sino que también permites que la biblioteca intercepte estas definiciones para alimentar el motor de PDF y el generador de código `PdfFonts`. Por lo tanto, `PdfConfigureFonts` debe ser tu **único punto de configuración de fuentes** en el proyecto.
+
+El método `PdfConfigureFonts` acepta un segundo parámetro opcional de tipo `FontDestinationType`, que controla dónde estará disponible el **conjunto de fuentes** registrado en esa llamada.
+
+| Valor de `FontDestinationType` | Descripción |
+| :--- | :--- |
+| `OnlyUI` | Todas las fuentes en este bloque solo estarán disponibles para la UI de .NET MAUI. |
+| `OnlyPDF` | Todas las fuentes en este bloque solo estarán disponibles para la generación de PDF. |
+| `Both` | (Valor predeterminado) Todas las fuentes en este bloque se registran en ambos sistemas. |
+
+Si se omite el parámetro, la biblioteca asume `FontDestinationType.Both`. Si necesitas registrar diferentes conjuntos de fuentes para diferentes destinos, simplemente **encadena múltiples llamadas a `PdfConfigureFonts`**.
+
 #### Flujo de Desarrollo con Source Generators
 
 1.  **Configuración Inicial:** Agregar `UseMauiPdfGenerator()` y `PdfConfigureFonts()` en `MauiProgram.cs`
@@ -474,6 +506,7 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 using Microsoft.Maui.Controls;
 using MauiPdfGenerator;
+using MauiPdfGenerator.Fluent.Enums; // Necesario para FontDestinationType
 
 namespace Test;
 
@@ -487,12 +520,19 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiPdfGenerator() // 1. Registrar la biblioteca
-            .PdfConfigureFonts(fonts => // 2. Configurar fuentes (Obligatorio para Source Generator)
+            
+            // 2. Configurar fuentes que estarán disponibles tanto en la UI como en el PDF
+            .PdfConfigureFonts(fonts => 
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+            }) // Se usa el valor por defecto: FontDestinationType.Both
+
+            // 3. Configurar fuentes que solo se usarán para generar PDFs
+            .PdfConfigureFonts(fonts =>
+            {
                 fonts.AddFont("comic.ttf", "Comic");
-            });
+            }, FontDestinationType.OnlyPDF);
 
         builder.Services.AddTransient<MainPage>();
         return builder.Build();
@@ -648,18 +688,49 @@ El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para
 ### 3.2. Pages
 
 #### PdfContentPage
-La `IPdfContentPage` es el tipo de `Page` más simple y común. `PdfContentPage` es su implementación concreta. Su propósito es mostrar un único `Layout` hijo, que a su vez contiene otras `Views`.
+La `IPdfContentPage` es el tipo de `Page` más común. Su propósito es mostrar contenido visual.
 
-> **NOTA:** Utiliza valores predeterminados del documento: `BackgroundColor` es transparente por defecto. Las páginas utilizan las configuraciones globales del documento (PageSize A4, PageOrientation Portrait, Padding Normal) establecidas en `IPdfDocumentConfigurator`.
+##### El Layout Raíz: Convención sobre Configuración
 
-##### Creación y Uso Práctico
-Se crea una instancia de página llamando al método `.ContentPage()` en un objeto `IPdfDocument`. Esto devuelve una interfaz `IPdfContentPage` que permite configurar propiedades específicas de la página (como `BackgroundColor` o propiedades disponibles a través de `IPdfPage`) y definir su contenido.
+Por diseño, para maximizar la simplicidad, `PdfContentPage` sigue un principio de **convención sobre configuración**.
+
+**Convención (Uso Implícito):**
+Si añades elementos directamente en el constructor `.Content()`, la biblioteca asume por convención que deben organizarse en un `PdfVerticalStackLayout` con sus valores predeterminados (ej. `Spacing` de 0). Esta es la forma más rápida de crear contenido simple.
+
+*Ejemplo de uso por convención (layout implícito):*
+```csharp
+// El desarrollador no necesita definir un layout.
+// Los párrafos se apilan verticalmente con espaciado predeterminado (0).
+.ContentPage()
+    .Content(c => 
+    {
+        c.Paragraph("Párrafo 1");
+        c.Paragraph("Párrafo 2");
+    })
+```
+
+**Configuración (Uso Explícito):**
+
+Si necesitas configurar propiedades del layout (como el espaciado) o usar un layout diferente (`PdfGrid`, `PdfHorizontalStackLayout`), debes ser explícito. Para ello, define un único `PdfLayoutElement` como raíz dentro del constructor `.Content()`. Esto te da control total sobre la estructura y apariencia del contenido.
+
+*Ejemplo de uso por configuración (layout explícito):*
+
+```csharp
+// Para cambiar el espaciado, el desarrollador debe definir el layout explícitamente.
+.ContentPage()
+    .Content(c => c.VerticalStackLayout(vsl =>
+    {
+        vsl.Paragraph("Párrafo 1");
+        vsl.Paragraph("Párrafo 2");
+    }).Spacing(12)) // El espaciado ahora se aplica al layout explícito.
+```
+
+Este enfoque mantiene la API simple para los casos comunes, pero ofrece total flexibilidad para los casos avanzados, manteniendo siempre un modelo mental claro y predecible.
 
 ##### Propiedades Principales
 | Propiedad | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
-| `Content` | `PdfLayout` | Define el `Layout` único que representa el contenido de la página. |
-| Propiedades disponibles a través de `IPdfPage<TSelf>` | Varios | Incluye métodos para configurar `Padding`, `PageSize`, `PageOrientation`, `BackgroundColor`. |
+| Propiedades de `IPdfPage<TSelf>` | Varios | Incluye métodos para configurar `Padding`, `PageSize`, `PageOrientation`, `BackgroundColor` a nivel de página. Las propiedades de layout como el espaciado pertenecen al layout hijo, no a la página. |
 
 ### 3.3. Layouts (Contenedores)
 

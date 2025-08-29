@@ -339,12 +339,19 @@ Por diseño arquitectónico, cada componente de la biblioteca posee un conjunto 
 - **`FontFamily`**: `Helvetica` - Fuente sans-serif legible y ampliamente soportada en PDF.
 - **`FontSize`**: `12pt` - Tamaño estándar para texto de documento.
 - **`TextColor`**: `Colors.Black` - Color de texto tradicional para máxima legibilidad.
-- **`MetaData`**: Se crea automáticamente un bloque de metadatos con los siguientes valores predeterminados:
-    - **`Title`**: "New PDF"
-    - **`Author`**: "MauiPdfGenerator"
-    - **`Subject`**: `null`
-    - **`Keywords`**: `null`
-    - **`CustomProperties`**: Colección vacía.
+- **`MetaData`**: Se crea automáticamente un bloque de metadatos con valores predeterminados y fijos para garantizar la conformidad y la calidad. La siguiente tabla detalla cada propiedad, su valor, la capa arquitectónica responsable y la justificación de la decisión.
+
+| Propiedad | Valor Predeterminado / Fijo | Capa Responsable | Justificación Arquitectónica y Técnica |
+| :--- | :--- | :--- | :--- |
+| **`Title`** | "New PDF" | `Fluent` | **Garantía de Completitud.** Asegura que ningún documento sea anónimo, facilitando su identificación. El valor se define en la capa de API para ser independiente del motor de renderizado. |
+| **`Author`** | "MauiPdfGenerator" | `Fluent` | **Identidad de la Herramienta.** Atribuye la autoría del documento (a nivel de herramienta) a la biblioteca, manteniendo la consistencia sin importar el motor. |
+| **`Subject`** | `null` | `Fluent` | Se deja nulo ya que es un campo muy específico del contenido y un valor predeterminado genérico no aportaría valor. |
+| **`Keywords`** | `null` | `Fluent` | Similar a `Subject`, se deja al desarrollador la responsabilidad de añadir palabras clave relevantes. |
+| **`Producer`** | "MauiPdfGenerator (SkiaSharp)" | `Core.Implementation.Sk` | **Precisión Técnica (ISO 32000).** El `Producer` es el software que convierte los datos al formato PDF. Este valor es establecido por la implementación concreta del motor, reflejando con precisión la tecnología utilizada. |
+| **`Modified`** | `DateTime.Now` | `Core.Implementation.Sk` | **Estándar de la Industria.** Campo no configurable. Refleja la fecha y hora de la generación del archivo, un comportamiento esperado en sistemas de ficheros. |
+| **`RasterDpi`** | 300 | `Core.Implementation.Sk` | **Calidad de Impresión.** Campo no configurable en v1.0. Se fija a 300 DPI, el estándar para imágenes rasterizadas de alta calidad en documentos destinados a impresión. |
+| **`EncodingQuality`** | 100 | `Core.Implementation.Sk` | **Máxima Calidad Visual.** Campo no configurable en v1.0. Se utiliza la máxima calidad (100%) para la compresión de imágenes (ej. JPEG), priorizando la fidelidad visual sobre el tamaño del fichero. |
+| **`PdfA`** | `false` | `Core.Implementation.Sk` | **Compatibilidad General.** Campo no configurable en v1.0. Se establece en `false` por defecto, generando un PDF estándar. La conformidad con PDF/A (archivado a largo plazo) requiere restricciones adicionales que no son el objetivo principal en esta versión. |
 
 #### Sistema Automático de Registro de Fuentes
 
@@ -356,7 +363,7 @@ Las fuentes configuradas en `MauiProgram.cs` mediante `PdfConfigureFonts()` con 
 
 #### Propósito de ConfigureFontRegistry
 
-El método `ConfigureFontRegistry()` es específicamente para configurar el embebido de fuentes:
+El método `ConfigureFontRegistry()` es específicamente para configurar el embebido de fuentes y establecer la fuente predeterminada:
 
 ```csharp
 .Configuration(cfg =>
@@ -364,12 +371,13 @@ El método `ConfigureFontRegistry()` es específicamente para configurar el embe
     cfg.ConfigureFontRegistry(cfr =>
     {
         cfr.Font(PdfFonts.Comic).EmbeddedFont();
+        cfr.Font(PdfFonts.Comic).Default();
     });
 })
 ```
 
 #### Justificación Arquitectónica
-Estos valores fueron seleccionados basándose en estándares de la industria editorial y garantizan que cualquier documento generado sea inmediatamente legible y profesional sin configuración adicional. La creación automática de metadatos con un `Title` y `Author` predeterminados garantiza que ningún documento generado sea anónimo, facilitando su identificación y gestión. Se dejan como `null` los campos más específicos (`Subject`, `Keywords`) para evitar añadir información irrelevante por defecto, pero se anima al desarrollador a poblarlos para mejorar la accesibilidad y capacidad de búsqueda del documento.
+Estos valores fueron seleccionados basándose en estándares de la industria editorial y garantizan que cualquier documento generado sea inmediatamente legible y profesional sin configuración adicional. La creación automática de metadatos con valores predeterminados y fijos garantiza que ningún documento generado sea anónimo o de baja calidad, facilitando su identificación y gestión. Se dejan como `null` los campos más específicos (`Subject`, `Keywords`) para evitar añadir información irrelevante por defecto, pero se anima al desarrollador a poblarlos para mejorar la accesibilidad y capacidad de búsqueda del documento.
 
 ### 6.2. Páginas (`PdfContentPage`)
 
@@ -632,23 +640,29 @@ En caso de no establecer una fuente predeterminada explícitamente con `.Default
 })
 ```
 
-> **Nota:** Por lógica, solo se debe establecer una fuente predeterminada para el documento. Si el usuario especifica más de una llamada a `.Default()`, la biblioteca tomará la primera que fue configurada.
+> **Nota:** Por lógica, solo se debe establecer una fuente predeterminada para el documento. Si el usuario especifica más de una llamada a `.Default()`, la biblioteca tomará la última que fue configurada, sobrescribiendo las anteriores.
 
 ### 2.3. Enriquecimiento con Metadatos
 
-Por diseño, cada documento PDF se crea automáticamente con un conjunto básico de metadatos. El método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite **sobrescribir o complementar** estos valores predeterminados.
+Por diseño, cada documento PDF se crea con un conjunto robusto de metadatos para garantizar la calidad y la trazabilidad. La biblioteca distingue entre metadatos **gestionados por el desarrollador** y metadatos **fijados por la biblioteca**.
 
-**Valores Predeterminados de Metadatos (Aplicados Automáticamente):**
+El método `.MetaData(Action<IPdfMetaData> metaDataAction)` permite **sobrescribir o complementar** los valores predeterminados configurables.
 
-| Propiedad | Valor Predeterminado | Descripción |
-| :--- | :--- | :--- |
-| `Title` | "New PDF" | Título genérico del documento. |
-| `Author` | "MauiPdfGenerator" | Identificador de la biblioteca como autor. |
-| `Subject` | `null` | Sin asunto predeterminado. |
-| `Keywords` | `null` | Sin palabras clave predeterminadas. |
-| `CustomProperties` | `empty` | Colección vacía de propiedades personalizadas. |
+**Metadatos Gestionados por la Biblioteca:**
 
-> **Nota:** Se recomienda encarecidamente establecer explícitamente los metadatos para mejorar la indexación y accesibilidad del documento PDF. Los valores predeterminados son un respaldo funcional.
+La biblioteca aplica automáticamente los siguientes valores, algunos de los cuales son configurables y otros fijos para garantizar la calidad.
+
+| Propiedad | Valor Predeterminado / Fijo | Configurable | Descripción |
+| :--- | :--- | :--- | :--- |
+| `Title` | "New PDF" | **Sí** | Título del documento. Se recomienda establecer un título descriptivo. |
+| `Author` | "MauiPdfGenerator" | **Sí** | Identifica la herramienta de autoría. Puede ser sobrescrito por el nombre del autor del contenido. |
+| `Subject` | `null` | **Sí** | Asunto del documento. |
+| `Keywords` | `null` | **Sí** | Palabras clave separadas por comas. |
+| `CustomProperties` | `empty` | **Sí** | Colección de propiedades personalizadas. |
+| `Producer` | "MauiPdfGenerator (SkiaSharp)" | No | Identifica el software que convirtió el contenido a PDF. Fijado por el motor de renderizado. |
+| `Modified` | Fecha y hora actual | No | Fecha de la última modificación, establecida automáticamente durante la generación. |
+
+> **Nota:** Se recomienda encarecidamente establecer explícitamente los metadatos como `Title`, `Author`, y `Subject` para mejorar la indexación, accesibilidad y profesionalismo del documento PDF. Los valores predeterminados son un respaldo funcional.
 
 *Ejemplo de cómo sobrescribir los metadatos:*
 

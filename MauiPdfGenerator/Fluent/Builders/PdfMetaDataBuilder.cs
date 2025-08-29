@@ -5,31 +5,39 @@ namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PdfMetaDataBuilder : IPdfMetaData
 {
-    public DateTime? GetCreationDate { get; private set; }
-    public string? GetTitle { get; private set; }
-    public string? GetAuthor { get; private set; }
-    public string? GetCreator { get; private set; }
-    public string? GetKeywords { get; private set; }
-    public string? GetSubject { get; private set; }
-    public string? GetProducer { get; private set; }
+    private DateTime? _creationDate;
+    private string? _title;
+    private string? _author;
+    private string? _creator;
+    private string? _keywords;
+    private string? _subject;
+    private string? _producer;
+
+    public DateTime? GetCreationDate => _creationDate;
+    public string GetTitle => _title ?? "New PDF";
+    public string GetAuthor => _author ?? "MauiPdfGenerator";
+    public string? GetCreator => _creator;
+    public string? GetKeywords => _keywords;
+    public string? GetSubject => _subject;
+    public string? GetProducer => _producer;
     private readonly Dictionary<string, string> _customProperties = [];
     public IReadOnlyDictionary<string, string> GetCustomProperties => _customProperties;
 
     public IPdfMetaData Author(string author)
     {
-        GetAuthor = author;
+        _author = author;
         return this;
     }
 
     public IPdfMetaData CreationDate(DateTime creationDate)
     {
-        GetCreationDate = creationDate;
+        _creationDate = creationDate;
         return this;
     }
 
     public IPdfMetaData Creator(string creator)
     {
-        GetCreator = creator;
+        _creator = creator;
         return this;
     }
 
@@ -44,25 +52,25 @@ internal class PdfMetaDataBuilder : IPdfMetaData
 
     public IPdfMetaData Keywords(string keywords)
     {
-        GetKeywords = keywords;
+        _keywords = keywords;
         return this;
     }
 
     public IPdfMetaData Producer(string producer)
     {
-        GetProducer = producer;
+        _producer = producer;
         return this;
     }
 
     public IPdfMetaData Subject(string subject)
     {
-        GetSubject = subject;
+        _subject = subject;
         return this;
     }
 
     public IPdfMetaData Title(string title)
     {
-        GetTitle = title;
+        _title = title;
         return this;
     }
 

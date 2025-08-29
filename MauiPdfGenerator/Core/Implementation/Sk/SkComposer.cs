@@ -24,7 +24,7 @@ internal class SkComposer : IPdfCoreGenerator
                 Subject = documentData.Subject ?? string.Empty,
                 Keywords = documentData.Keywords ?? string.Empty,
                 Creator = documentData.Creator ?? string.Empty,
-                Producer = documentData.Producer ?? "MauiPdfGenerator (SkiaSharp)",
+                Producer = documentData.Producer ?? "MauiPdfGenerator (SkiaSharp)", 
                 Creation = documentData.CreationDate ?? DateTime.Now,
                 Modified = DateTime.Now,
                 RasterDpi = 300,

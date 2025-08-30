@@ -336,7 +336,11 @@ Por diseño arquitectónico, cada componente de la biblioteca posee un conjunto 
 - **`PageSize`**: `PageSizeType.A4` - Formato estándar internacional más utilizado globalmente.
 - **`PageOrientation`**: `PageOrientationType.Portrait` - Orientación vertical estándar para documentos.
 - **`Padding`**: `DefaultPagePaddingType.Normal` - Padding equilibrado que proporciona espacio de lectura cómodo.
-- **`FontFamily`**: `Helvetica` - Fuente sans-serif legible y ampliamente soportada en PDF.
+- **`FontFamily`**: No hay una fuente predeterminada fija. La biblioteca utiliza un sistema de resolución jerárquico:
+    1.  **Fuente Específica de la `View`**: (p. ej. `.FontFamily(PdfFonts.Roboto)`)
+    2.  **Fuente Predeterminada de la Página**: (Configurada en `IPdfContentPage`)
+    3.  **Fuente Predeterminada del Documento**: (Configurada en `IPdfDocumentConfigurator`)
+    4.  **Fallback Automático**: La primera fuente registrada en `MauiProgram.cs` mediante `PdfConfigureFonts()`.
 - **`FontSize`**: `12pt` - Tamaño estándar para texto de documento.
 - **`TextColor`**: `Colors.Black` - Color de texto tradicional para máxima legibilidad.
 - **`MetaData`**: Se crea automáticamente un bloque de metadatos con valores predeterminados y fijos para garantizar la conformidad y la calidad. La siguiente tabla detalla cada propiedad, su valor, la capa arquitectónica responsable y la justificación de la decisión.
@@ -355,7 +359,7 @@ Por diseño arquitectónico, cada componente de la biblioteca posee un conjunto 
 
 #### Sistema Automático de Registro de Fuentes
 
-Las fuentes configuradas en `MauiProgram.cs` mediante `PdfConfigureFonts()` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` se registran automáticamente en el documento utilizando el método `Default()`. Esto significa que:
+Las fuentes configuradas en `MauiProgram.cs` mediante `PdfConfigureFonts()` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` se registran automáticamente en el documento. Esto significa que:
 
 1.  **Registro Automático**: Estas fuentes están disponibles para uso inmediato en el documento.
 2.  **No Embebidas por Defecto**: Las fuentes registradas automáticamente no se embeben en el PDF.
@@ -382,10 +386,10 @@ Estos valores fueron seleccionados basándose en estándares de la industria edi
 ### 6.2. Páginas (`PdfContentPage`)
 
 #### Valores Predeterminados de Página
-- **`BackgroundColor`**: `Colors.Transparent` - Fondo transparente que respeta el color del papel PDF.
+- **`BackgroundColor`**: Blanco. Por defecto, la página no especifica un color de fondo, resultando en el blanco estándar del medio PDF.
 
 #### Justificación Arquitectónica
-Las páginas actúan como contenedores neutros. El fondo transparente evita interferir con el diseño del contenido. Los valores de `Padding` se heredan automáticamente de `IPdfPage<TSelf>`, eliminando redundancia.
+Las páginas actúan como contenedores neutros. Un fondo no especificado (blanco) es el comportamiento predeterminado y más versátil, evitando interferir con el diseño del contenido. Los valores de `Padding` y las propiedades de fuente se heredan de la configuración del documento, eliminando redundancia.
 
 ### 6.3. Layouts
 

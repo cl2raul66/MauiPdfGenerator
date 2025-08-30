@@ -46,11 +46,6 @@ internal class PageLayoutEngine
                 currentPageLayouts.Add(layoutInfo);
                 currentY += layoutInfo.Height;
 
-                if (elementsToProcess.Count > 0)
-                {
-                    currentY += context.PageData.PageDefaultSpacing;
-                }
-
                 if (layoutInfo.RemainingElement is not null)
                 {
                     var tempList = new List<PdfElement> { layoutInfo.RemainingElement };

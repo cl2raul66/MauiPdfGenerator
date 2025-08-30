@@ -369,34 +369,37 @@ public partial class MainPage : ContentPage
                     });
                 })
                 .ContentPage()
-                .Spacing(16)
                 .Content(c =>
                 {
-                    c.HorizontalStackLayout(hsl =>
+                    c.VerticalStackLayout(vsl =>
                     {
-                        hsl.Paragraph("texto horizontal 1");
-                        hsl.Paragraph("texto horizontal 2");
-                    });
+                        vsl.HorizontalStackLayout(hsl =>
+                        {
+                            hsl.Paragraph("texto horizontal 1");
+                            hsl.Paragraph("texto horizontal 2");
+                        });
 
-                    c.HorizontalStackLayout(hsl =>
-                    {
-                        hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
-                        hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
-                    });
+                        vsl.HorizontalStackLayout(hsl =>
+                        {
+                            hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
+                            hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
+                        });
 
-                    c.HorizontalStackLayout(hsl =>
-                    {
-                        hsl.PdfImage(new MemoryStream(imageData));
-                        hsl.PdfImage(new MemoryStream(imageData));
-                    }).WidthRequest(300);
+                        vsl.HorizontalStackLayout(hsl =>
+                        {
+                            hsl.PdfImage(new MemoryStream(imageData));
+                            hsl.PdfImage(new MemoryStream(imageData));
+                        }).WidthRequest(300);
 
-                    c.HorizontalStackLayout(hsl =>
-                    {
-                        hsl.Paragraph("texto horizontal 1").Margin(8f);
-                        hsl.Paragraph("texto horizontal 2").Padding(8).BackgroundColor(Colors.LightPink);
-                    }).Spacing(8).BackgroundColor(Colors.LightGoldenrodYellow);
+                        vsl.HorizontalStackLayout(hsl =>
+                        {
+                            hsl.Paragraph("texto horizontal 1").Margin(8f);
+                            hsl.Paragraph("texto horizontal 2").Padding(8).BackgroundColor(Colors.LightPink);
+                        }).Spacing(8).BackgroundColor(Colors.LightGoldenrodYellow);
 
-                    c.HorizontalLine();
+                        vsl.HorizontalLine();
+                    })
+                    .Spacing(16);                    
                 }).Build()
             .SaveAsync(targetFilePath);
 

@@ -68,7 +68,6 @@ internal class PdfDocumentBuilder : IPdfDocument
                     contentPageBuilder.GetEffectivePadding(),
                     contentPageBuilder.GetEffectiveBackgroundColor(),
                     contentPageBuilder.GetElements(),
-                    contentPageBuilder.GetPageSpacing(),
                     contentPageBuilder.GetPageDefaultFontFamily(),
                     contentPageBuilder.GetPageDefaultFontSize(),
                     contentPageBuilder.GetPageDefaultTextColor(),

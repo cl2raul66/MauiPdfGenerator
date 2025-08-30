@@ -47,10 +47,6 @@ internal class PdfContentPageRenderer : IPageRenderer
             await renderer.RenderAsync(canvas, renderRect, elementContext);
 
             currentY += layoutInfo.Height;
-            if (i < pageBlock.Count - 1)
-            {
-                currentY += pageDef.PageDefaultSpacing;
-            }
         }
 
         canvas.Restore();

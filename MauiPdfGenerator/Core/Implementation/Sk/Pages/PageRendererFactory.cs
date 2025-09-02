@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Core.Models;
+﻿using MauiPdfGenerator.Common.Models;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
 

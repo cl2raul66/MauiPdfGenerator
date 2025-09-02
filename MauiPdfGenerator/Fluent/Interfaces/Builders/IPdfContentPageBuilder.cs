@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
@@ -9,7 +10,7 @@ internal interface IPdfContentPageBuilder : IPdfPageBuilder
     Thickness GetEffectivePadding();
     PageOrientationType GetEffectivePageOrientation();
     Color? GetEffectiveBackgroundColor();
-    IReadOnlyList<PdfElement> GetElements();
+    IReadOnlyList<PdfElementData> GetElements();
     PdfFontIdentifier? GetPageDefaultFontFamily();
     float GetPageDefaultFontSize();
     Color GetPageDefaultTextColor();

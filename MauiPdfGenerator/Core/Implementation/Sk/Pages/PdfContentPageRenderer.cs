@@ -1,5 +1,5 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Common.Models;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
@@ -32,7 +32,7 @@ internal class PdfContentPageRenderer : IPageRenderer
         for (int i = 0; i < pageBlock.Count; i++)
         {
             var layoutInfo = pageBlock[i];
-            var element = (PdfElement)layoutInfo.Element;
+            var element = (PdfElementData)layoutInfo.Element;
             var renderer = context.RendererFactory.GetRenderer(element);
 
             float offsetX = element.GetHorizontalOptions switch

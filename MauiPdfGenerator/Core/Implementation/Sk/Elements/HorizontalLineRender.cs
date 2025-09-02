@@ -1,5 +1,5 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Common.Models.Elements;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -11,8 +11,8 @@ internal class HorizontalLineRender : IElementRenderer
 
     public Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        if (context.Element is not PdfHorizontalLine line)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLine)} or is null.");
+        if (context.Element is not PdfHorizontalLineData line)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLineData)} or is null.");
 
         float boxWidth;
         if (line.GetWidthRequest.HasValue)
@@ -52,8 +52,8 @@ internal class HorizontalLineRender : IElementRenderer
 
     public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        if (context.Element is not PdfHorizontalLine line)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLine)} or is null.");
+        if (context.Element is not PdfHorizontalLineData line)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLineData)} or is null.");
 
         if (!context.LayoutState.TryGetValue(line, out var state) || state is not LineLayoutCache cache)
         {

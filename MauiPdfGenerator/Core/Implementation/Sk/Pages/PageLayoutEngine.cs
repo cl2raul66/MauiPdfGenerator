@@ -1,5 +1,5 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Common.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -10,7 +10,7 @@ internal class PageLayoutEngine
     public async Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(PdfGenerationContext context)
     {
         var pageBlocks = new List<IReadOnlyList<LayoutInfo>>();
-        var elementsToProcess = new Queue<PdfElement>(context.PageData.Elements);
+        var elementsToProcess = new Queue<PdfElementData>(context.PageData.Elements);
 
         SKSize pageSize = SkiaUtils.GetSkPageSize(context.PageData.Size, context.PageData.Orientation);
         var pageMargins = context.PageData.Padding;
@@ -48,9 +48,9 @@ internal class PageLayoutEngine
 
                 if (layoutInfo.RemainingElement is not null)
                 {
-                    var tempList = new List<PdfElement> { layoutInfo.RemainingElement };
+                    var tempList = new List<PdfElementData> { layoutInfo.RemainingElement };
                     tempList.AddRange(elementsToProcess);
-                    elementsToProcess = new Queue<PdfElement>(tempList);
+                    elementsToProcess = new Queue<PdfElementData>(tempList);
                 }
             }
 

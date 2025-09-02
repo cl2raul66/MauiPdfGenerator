@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models;
-using MauiPdfGenerator.Fluent.Models.Layouts;
+using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Layouts;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -10,8 +10,8 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
 {
     public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        if (context.Element is not PdfHorizontalStackLayout hsl)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayout)} or is null.");
+        if (context.Element is not PdfHorizontalStackLayoutData hsl)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
         var childMeasures = new List<LayoutInfo>();
         foreach (var child in hsl.GetChildren)
@@ -45,8 +45,8 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
 
     public async Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        if (context.Element is not PdfHorizontalStackLayout hsl)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayout)} or is null.");
+        if (context.Element is not PdfHorizontalStackLayoutData hsl)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
         if (!context.LayoutState.TryGetValue(hsl, out var state) || state is not List<LayoutInfo> childMeasures)
         {
@@ -76,7 +76,7 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
         for (int i = 0; i < childMeasures.Count; i++)
         {
             var measure = childMeasures[i];
-            var child = (PdfElement)measure.Element;
+            var child = (PdfElementData)measure.Element;
             var renderer = context.RendererFactory.GetRenderer(child);
 
             float offsetY = child.GetVerticalOptions switch

@@ -1,6 +1,5 @@
-using MauiPdfGenerator.Fluent.Enums;
-using Microsoft.Maui.Graphics;
-using MauiPdfGenerator.Fluent.Models.Layouts;
+using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Models;
 
@@ -41,13 +40,11 @@ public class PdfLayoutDefaultOptions
 
     public static DefaultOptions GetDefaultOptions(Type parentType, Type elementType)
     {
-        if (parentType == typeof(PdfGrid))
-            return GridCellDefaults;
-        else if (parentType == typeof(PdfVerticalStackLayout))
+        if (parentType == typeof(PdfVerticalStackLayoutData))
             return VerticalStackLayoutDefaults;
-        else if (parentType == typeof(PdfHorizontalStackLayout))
+        else if (parentType == typeof(PdfHorizontalStackLayoutData))
             return HorizontalStackLayoutDefaults;
-        else if (elementType.IsAssignableTo(typeof(PdfLayoutElement)))
+        else if (elementType.IsAssignableTo(typeof(PdfLayoutElementData)))
             return GridDefaults;
 
         return ContentPageDefaults;

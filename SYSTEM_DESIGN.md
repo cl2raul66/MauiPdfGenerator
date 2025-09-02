@@ -32,42 +32,42 @@ Durante el diseño de la biblioteca surgió un conflicto fundamental entre la te
 
 ### 1.3. Jerarquía Conceptual: Pages → Layouts → Views
 
-La interfaz de un documento PDF se construye con una jerarquía que mapea conceptualmente a la de .NET MAUI. La terminología correcta es la siguiente:
+La interfaz de un documento PDF se construye con una jerarquía que mapea conceptualmente a la de .NET MAUI. La interacción del desarrollador con cada nivel de esta jerarquía (Páginas, Layouts y Vistas) se realiza a través de un conjunto consistente de **interfaces públicas y builders fluidos**, garantizando una API predecible y desacoplada.
 
 **MAUI → PDF (Analogía Jerárquica)**
-- **Pages** → `Page` (Páginas del documento PDF)
-- **Layouts** → `Layout` (Estructuras de organización visual en PDF)
-- **Views** → `View` (Elementos de contenido visual en PDF)
+- **Pages** → `IPdfContentPage` (Páginas del documento PDF)
+- **Layouts** → `IVerticalStackLayout`, `IHorizontalStackLayout` (Estructuras de organización visual en PDF)
+- **Views** → `IPdfParagraph`, `IPdfImage`, `IPdfHorizontalLine` (Elementos de contenido visual en PDF)
 
 #### Pages
 
 Los documentos PDF constan de una o varias páginas. Cada página contiene al menos un `Layout`. MauiPdfGenerator contiene los siguientes tipos de Pages:
 
-|Page|Descripción|
+|Interface|Descripción|
 |---|---|
-|PdfContentPage|Muestra un `Layout` principal y es el tipo de página más común en documentos PDF.|
+|IPdfContentPage|Define una página que muestra un `Layout` principal y es el tipo más común en documentos PDF.|
 
 > **NOTA:** Para el futuro, se agregarán otros tipos de páginas especializadas.
 
 #### Layouts
 
-Los `Layouts` en MauiPdfGenerator se usan para organizar `Views` en estructuras jerárquicas. Cada `Layout` normalmente contiene varios hijos, que pueden ser otras `Views` o `Layouts` anidados.
+Los `Layouts` en MauiPdfGenerator se usan para organizar `Views` en estructuras jerárquicas. La API expone interfaces como `IVerticalStackLayout` que permiten anidar `Views` u otros `Layouts`.
 
-|Layout|Descripción|
+|Interface / Clase|Descripción|
 |---|---|
-|PdfGrid|Coloca sus `Views` hijas en una cuadrícula de filas y columnas.|
-|PdfHorizontalStackLayout|Coloca las `Views` hijas en una pila horizontal.|
-|PdfVerticalStackLayout|Coloca las `Views` hijas en una pila vertical.|
+|IVerticalStackLayout|Coloca las `Views` hijas en una pila vertical.|
+|IHorizontalStackLayout|Coloca las `Views` hijas en una pila horizontal.|
+|`PdfGrid`|Coloca sus `Views` hijas en una cuadrícula de filas y columnas.|
 
 #### Views
 
-Las `Views` de MauiPdfGenerator son los componentes que renderizan contenido específico en el documento PDF, como párrafos, imágenes y figuras geométricas.
+Las `Views` de MauiPdfGenerator son los componentes que renderizan contenido específico. Se interactúa con ellas a través de interfaces como `IPdfParagraph` e `IPdfImage`.
 
-|View|Descripción|
+|Interface|Descripción|
 |---|---|
-|PdfImage|Renderiza una imagen que se puede cargar desde un archivo, URI o secuencia.|
-|PdfParagraph|Renderiza texto plano y enriquecido de una o varias líneas.|
-|PdfHorizontalLine|Renderiza una línea horizontal, usada comúnmente como separador.|
+|IPdfImage|Renderiza una imagen que se puede cargar desde un archivo, URI o secuencia.|
+|IPdfParagraph|Renderiza texto plano y enriquecido de una o varias líneas.|
+|IPdfHorizontalLine|Renderiza una línea horizontal, usada comúnmente como separador.|
 
 > **NOTA sobre Colores:** Todas las propiedades que aceptan un color (ej. `TextColor`, `BackgroundColor`) utilizan el tipo `Microsoft.Maui.Graphics.Color`. Esto permite a los desarrolladores usar las mismas constantes (`Colors.Blue`) y estructuras que ya utilizan en sus aplicaciones.
 
@@ -136,12 +136,12 @@ La arquitectura se basa en una clara **Separación de Capas (SoC)**.
 
 ### 1.1. Capa `Fluent` (API Pública)
 
-*   **Propósito:** Única puerta de entrada para el desarrollador. Su misión es ofrecer una experiencia declarativa, legible y fácil de usar.
+*   **Propósito:** Única puerta de entrada para el desarrollador. Su misión es ofrecer una experiencia declarativa, legible y fácil de usar a través de un conjunto de **interfaces públicas**.
 *   **Responsabilidades:**
-    *   **API Guiada:** Utiliza el patrón Type-State para prevenir errores en tiempo de compilación.
-    *   **Fluidez Contextual:** Métodos encadenables que exponen solo opciones válidas.
-    *   **Encapsulación de Complejidad:** Oculta completamente la implementación interna.
-    *   **Garantía de Completitud:** Es responsable de aplicar valores predeterminados sensibles a todas las propiedades opcionales. Cuando el desarrollador no especifica un valor (ej. `FontSize`), la capa `Fluent` asegura que el DTO correspondiente se cree con un valor predeterminado válido, evitando que el motor reciba datos incompletos.
+    *   **API Guiada por Interfaces:** La superficie pública de la API está compuesta enteramente por interfaces (`IPdfDocument`, `IPdfContentPage`, `IPdfParagraph`, etc.). Esto desacopla el código del cliente de los detalles de implementación, garantizando la estabilidad de la API a largo plazo.
+    *   **Fluidez Contextual:** Los métodos encadenables exponen solo opciones válidas a través del patrón Type-State.
+    *   **Encapsulación de Complejidad:** Las clases `builder` internas implementan las interfaces y gestionan la construcción de los modelos de datos, ocultando completamente la implementación.
+    *   **Garantía de Completitud:** Es responsable de aplicar valores predeterminados sensibles a todas las propiedades opcionales. Cuando el desarrollador no especifica un valor, la capa `Fluent` asegura que el DTO correspondiente se cree con un valor válido.
 
 ### 1.2. Capa `Core` (Motor de Layout y Renderizado)
 
@@ -149,16 +149,19 @@ Sigue el **Principio de Inversión de Dependencias**.
 
 #### Subcapa `Core.Integration` (Abstracciones)
 *   **Propósito:** Contiene la lógica de layout independiente del motor de renderizado.
-*   **Responsabilidades:** Lógica de `MeasureAsync` y `ArrangeAsync`, contratos de medición (`ILayoutMetrics`), orquestación de pasadas y algoritmos de contenedores.
+*   **Responsabilidades:** Lógica de `MeasureAsync` y `ArrangeAsync`, orquestación de pasadas y algoritmos de contenedores.
 
 #### Subcapa `Core.Implementation.Sk` (Implementación Concreta)
 *   **Propósito:** Implementa el renderizado usando SkiaSharp. Es la **primera y única implementación concreta** para la v1.0, pero la arquitectura permite que sea intercambiable.
-*   **Responsabilidades:** Lógica de `RenderAsync`, implementación de `ILayoutMetrics` y gestión de recursos de SkiaSharp.
+*   **Responsabilidades:** Lógica de `RenderAsync` y gestión de recursos de SkiaSharp.
 
 ### 1.3. Capa `Common` (Contratos Compartidos)
 
 *   **Propósito:** Define el "lenguaje común" entre capas.
-*   **Contenido Principal:** DTOs (`PdfDocumentData`, `PdfPageData`), Value Objects, Enumeraciones (`DefaultPagePaddingType`, `PageSizeType`), utilidades de cálculo (`PaddingCalculator`), e interfaces de comunicación como `ILayoutMetrics`.
+*   **Contenido Principal:**
+    *   **Modelos de Datos (DTOs):** Contiene las clases de modelo de datos internas, identificables por el sufijo `...Data` (ej. `PdfParagraphData`), que actúan como el contrato inmutable entre la capa `Fluent` y la capa `Core`.
+    *   **Tipos Compartidos:** Value Objects, Enumeraciones (`DefaultPagePaddingType`, `PageSizeType`).
+    *   **Utilidades:** Lógica de negocio compartida y sin estado, como `PagePaddingTypeCalculator`.
 
 #### Utilidades de Cálculo Compartidas
 
@@ -168,10 +171,9 @@ La capa `Common` incluye utilidades que implementan lógica de negocio compartid
 
 ### 1.4. Flujo de Datos y Comunicación Entre Capas
 
-1.  **`Fluent` -> `Common`:** La API `Fluent` mapea sus objetos de construcción a un árbol de DTOs puros en `Common`, aplicando valores predeterminados.
+1.  **`Fluent` -> `Common`:** La API de interfaces y `builders` de la capa `Fluent` mapea las llamadas del usuario a un árbol de DTOs puros en `Common`, aplicando valores predeterminados en el proceso.
 2.  **`Common` -> `Core.Integration`:** El orquestador del `Core` recibe los DTOs y crea los `IElementRenderer` correspondientes.
-3.  **`Core.Integration` <-> `Core.Implementation`:** Durante `MeasureAsync`, la lógica de layout abstracta consulta las métricas de la implementación concreta a través de `ILayoutMetrics`.
-4.  **`Core.Integration` -> `Core.Implementation`:** El "plano de layout" final se pasa a la fase `RenderAsync` de la implementación para el dibujado final.
+3.  **`Core.Integration` -> `Core.Implementation`:** Durante el layout, la capa de integración invoca a la implementación concreta para realizar el dibujado final en el lienzo.
 
 ## 2. Implementación del Sistema de Layout
 
@@ -688,32 +690,32 @@ La biblioteca aplica automáticamente los siguientes valores, algunos de los cua
 
 Una vez configurado el documento, se procede a definir su contenido. El proceso sigue una secuencia lógica:
 
-1.  Se añade una página usando el método `.ContentPage()`, que devuelve un objeto `IPdfContentPage`.
+1.  Se añade una página usando el método `.ContentPage()`, que devuelve una interfaz `IPdfContentPage`.
 2.  Se define el contenido de la página mediante el método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método proporciona un constructor de contenido (`IPageContentBuilder`) que actúa como una caja de herramientas completa para añadir `Views` y `Layouts`.
 3.  Finalmente, se llama al método `Build()`, que devuelve un `IPdfDocument` listo para ser guardado o procesado.
 
-El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para crear todos los elementos visuales soportados, permitiendo una construcción intuitiva y declarativa del documento.
+El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para crear todos los elementos visuales soportados, devolviendo interfaces para una construcción intuitiva y estable.
 
-| Método en `IPageContentBuilder` | Descripción |
-| :--- | :--- |
-| `.Paragraph(string text)` | Añade una `View` de texto. |
-| `.PdfImage(Stream stream)` | Añade una `View` de imagen desde un `Stream`. |
-| `.HorizontalLine()` | Añade una `View` de línea horizontal. |
-| `.VerticalStackLayout(...)` | Añade un `Layout` de pila vertical y proporciona un constructor para su contenido. |
-| `.HorizontalStackLayout(...)` | Añade un `Layout` de pila horizontal y proporciona un constructor para su contenido. |
-| `.PdfGrid()` | Añade un `Layout` de rejilla configurable. |
+| Método en `IPageContentBuilder` | Descripción | Retorna |
+| :--- | :--- | :--- |
+| `.Paragraph(string text)` | Añade un elemento de texto. | `IPdfParagraph` |
+| `.PdfImage(Stream stream)` | Añade un elemento de imagen desde un `Stream`. | `IPdfImage` |
+| `.HorizontalLine()` | Añade un elemento de línea horizontal. | `IPdfHorizontalLine` |
+| `.VerticalStackLayout(...)` | Añade un layout de pila vertical. | `IVerticalStackLayout` |
+| `.HorizontalStackLayout(...)` | Añade un layout de pila horizontal. | `IHorizontalStackLayout` |
+| `.PdfGrid()` | Añade un layout de rejilla configurable. | `PdfGrid` |
 
 ### 3.2. Pages
 
 #### PdfContentPage
-La `IPdfContentPage` es el tipo de `Page` más común. Su propósito es mostrar contenido visual.
+La `IPdfContentPage` es la interfaz para el tipo de `Page` más común. Su propósito es mostrar contenido visual.
 
 ##### El Layout Raíz: Convención sobre Configuración
 
 Por diseño, para maximizar la simplicidad, `PdfContentPage` sigue un principio de **convención sobre configuración**.
 
 **Convención (Uso Implícito):**
-Si añades elementos directamente en el constructor `.Content()`, la biblioteca asume por convención que deben organizarse en un `PdfVerticalStackLayout` con sus valores predeterminados (ej. `Spacing` de 0). Esta es la forma más rápida de crear contenido simple.
+Si añades elementos directamente en el constructor `.Content()`, la biblioteca asume por convención que deben organizarse en un `IVerticalStackLayout` con sus valores predeterminados (ej. `Spacing` de 0).
 
 *Ejemplo de uso por convención (layout implícito):*
 ```csharp
@@ -752,7 +754,7 @@ Este enfoque mantiene la API simple para los casos comunes, pero ofrece total fl
 
 ### 3.3. Layouts (Contenedores)
 
-Un `Layout` se utiliza para componer las `Views` en una estructura visual. Las clases de `Layout` en MauiPdfGenerator derivan de la clase `PdfLayout`.
+Un `Layout` se utiliza para componer las `Views` en una estructura visual. Las clases de `Layout` en MauiPdfGenerator derivan de la clase `IPdfLayoutElement`.
 
 #### PdfVerticalStackLayout
 El `PdfVerticalStackLayout` organiza sus `Views` hijas en una única columna vertical.
@@ -857,18 +859,18 @@ c.PdfGrid()
 
 ### 3.4. Views (Elementos Visuales)
 
-#### PdfParagraph
-Un `PdfParagraph` muestra texto de una sola línea y de varias líneas.
+#### Paragraph
+La interfaz `IPdfParagraph` representa un elemento que  muestra texto de una sola línea y de varias líneas.
 
-> **NOTA:** Utiliza valores predeterminados del documento: fuente Helvetica a 12pt, color negro, alineación a la izquierda y ajuste de línea por palabras. Las propiedades de fuente y color se heredan de la configuración global del documento.
+> **NOTA:** Utiliza valores predeterminados del documento: familia de fuente predeterminada por la cnfiguracion del documento o la pagina, tamanio a 12pt, color negro, alineación a la izquierda y ajuste de línea por palabras. Las propiedades de fuente y color se heredan de la configuración global del documento.
 
-> **Comportamiento de Paginación:** Esta `View` es **divisible**. Si su contenido excede el espacio disponible, será partido y continuará en la página siguiente.
+> **Comportamiento de Paginación:** Esta `View` es **divisible**. 
 
 ##### Propiedades:
 - `CharacterSpacing`: `double`, establece el espaciado entre caracteres.
 - `FontAttributes`: `Microsoft.Maui.Controls.FontAttributes`, determina el estilo del texto (negrita, cursiva).
 - `FontFamily`: `PdfFontIdentifier`, define la familia de fuentes. Se debe utilizar la clase estática `PdfFonts` generada automáticamente.
-- `FontSize`: `double`, define el tamaño de la fuente.
+- `FontSize`: `float`, define el tamaño de la fuente.
 - `FormattedText`: `FormattedString`, permite texto con múltiples estilos usando `PdfSpan`.
 - `HorizontalTextAlignment`: `Microsoft.Maui.TextAlignment`, define la alineación horizontal.
 - `LineBreakMode`: `Microsoft.Maui.LineBreakMode`, determina el comportamiento de ajuste y truncamiento.
@@ -881,7 +883,7 @@ Un `PdfParagraph` muestra texto de una sola línea y de varias líneas.
 - `TextTransform`: `Microsoft.Maui.TextTransform`, especifica la transformación a mayúsculas o minúsculas.
 - `VerticalTextAlignment`: `Microsoft.Maui.TextAlignment`, define la alineación vertical.
 
-*Ejemplo de Uso de PdfParagraph:*
+*Ejemplo de Uso de IPdfParagraph:*
 
 ```csharp
 c.Paragraph("[P1] Texto simple con propiedades predeterminadas");
@@ -902,8 +904,8 @@ c.Paragraph("[P4] Estilo Completo: Subrayado, Negrita, Itálica y fuente Comic."
     .TextDecorations(TextDecorations.Underline);
 ```
 
-#### PdfImage
-Muestra una imagen que se puede cargar desde un archivo local, un URI o una secuencia.
+#### Image
+La interfaz `IPdfImage` muestra una imagen que se puede cargar desde un archivo local, un URI o una secuencia.
 
 > **NOTA:** Utiliza valores predeterminados: `Aspect.AspectFit` para mantener las proporciones de la imagen, y opciones de layout configuradas en `Fill` para adaptarse al espacio disponible.
 
@@ -913,12 +915,11 @@ Muestra una imagen que se puede cargar desde un archivo local, un URI o una secu
 - `Aspect`: `Microsoft.Maui.Aspect`, define el modo de escalado de la imagen (`AspectFit`, `AspectFill`, `Fill`, `Center`).
 - `Source`: `PdfImageSource`, especifica el origen de la imagen.
 
-*Ejemplo de Uso de PdfImage:*
+*Ejemplo de Uso de IPdfImage:*
 
 ```csharp
 // Asumiendo que 'imageData' es un byte[]
-c.Paragraph("Imagen con AspectFit y fondo para ver el área");
-c.PdfImage(new MemoryStream(imageData))
+c.Image(new MemoryStream(imageData))
     .WidthRequest(150)
     .HeightRequest(75)
     .Aspect(Aspect.AspectFit)
@@ -926,8 +927,8 @@ c.PdfImage(new MemoryStream(imageData))
     .BackgroundColor(Colors.LightBlue);
 ```
 
-#### PdfHorizontalLine
-Es una `View` pública cuyo propósito es dibujar una línea horizontal, comúnmente usada como separador visual. Internamente, es una implementación especializada de la clase base `PdfShape`.
+#### HorizontalLine
+La interfaz `IPdfHorizontalLine` es una `View` pública cuyo propósito es dibujar una línea horizontal, comúnmente usada como separador visual. Internamente, es una implementación especializada de la clase base `IPdfShape`.
 
 > **NOTA:** Utiliza valores predeterminados: color negro y grosor de 1.0, con `HorizontalOptions` configurado en `Fill` para ocupar todo el ancho disponible.
 
@@ -937,14 +938,14 @@ Es una `View` pública cuyo propósito es dibujar una línea horizontal, comúnm
 - `Color`: `Microsoft.Maui.Graphics.Color`, el color de la línea.
 - `Thickness`: `double`, el grosor de la línea.
 
-*Ejemplo de Uso de PdfHorizontalLine:*
+*Ejemplo de Uso de IPdfHorizontalLine:*
 
 ```csharp
 c.Paragraph("Texto sobre la línea.");
 c.HorizontalLine()
     .Color(Colors.Green)
     .Thickness(3)
-    .Margin(0, 10); // Espacio vertical alrededor de la línea
+    .Margin(0, 10);
 c.Paragraph("Texto debajo de la línea.");
 ```
 

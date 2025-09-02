@@ -1,5 +1,5 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Common.Models.Elements;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -11,8 +11,8 @@ internal class ImageRenderer : IElementRenderer
 
     public Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        if (context.Element is not PdfImage image)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfImage)} or is null.");
+        if (context.Element is not PdfImageData image)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfImageData)} or is null.");
 
         SKImage? skImage = null;
         try
@@ -91,8 +91,8 @@ internal class ImageRenderer : IElementRenderer
 
     public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        if (context.Element is not PdfImage image)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfImage)} or is null.");
+        if (context.Element is not PdfImageData image)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfImageData)} or is null.");
 
         if (!context.LayoutState.TryGetValue(image, out var state) || state is not ImageLayoutCache cache)
         {

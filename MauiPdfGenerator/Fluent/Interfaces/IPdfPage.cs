@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Fluent.Enums;
 
-namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
+namespace MauiPdfGenerator.Fluent.Interfaces;
 
 public interface IPdfPage<TSelf> where TSelf : IPdfPage<TSelf>
 {

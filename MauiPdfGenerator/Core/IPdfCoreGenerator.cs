@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Core.Models;
+﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Fluent.Builders;
 using Microsoft.Extensions.Logging;
 

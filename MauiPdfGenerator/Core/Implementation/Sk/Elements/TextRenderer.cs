@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Fluent.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
+using MauiPdfGenerator.Common.Models.Elements;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -22,8 +22,8 @@ internal class TextRenderer : IElementRenderer
 
     public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        if (context.Element is not PdfParagraph paragraph)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraph)} or is null.");
+        if (context.Element is not PdfParagraphData paragraph)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
 
         var (font, paint, textToRender, horizontalAlignment, lineBreakMode, textDecorations, textTransform) = await GetTextPropertiesAsync(paragraph, context);
 
@@ -63,8 +63,8 @@ internal class TextRenderer : IElementRenderer
 
     public Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        if (context.Element is not PdfParagraph paragraph)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraph)} or is null.");
+        if (context.Element is not PdfParagraphData paragraph)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
 
         if (!context.LayoutState.TryGetValue(paragraph, out var cachedState) || cachedState is not TextLayoutCache textCache)
         {
@@ -169,7 +169,7 @@ internal class TextRenderer : IElementRenderer
         }
     }
 
-    private async Task<(SKFont font, SKPaint paint, string textToRender, TextAlignment horizontalAlignment, LineBreakMode lineBreakMode, TextDecorations textDecorations, TextTransform textTransform)> GetTextPropertiesAsync(PdfParagraph paragraph, PdfGenerationContext context)
+    private async Task<(SKFont font, SKPaint paint, string textToRender, TextAlignment horizontalAlignment, LineBreakMode lineBreakMode, TextDecorations textDecorations, TextTransform textTransform)> GetTextPropertiesAsync(PdfParagraphData paragraph, PdfGenerationContext context)
     {
         var pageDefinition = context.PageData;
         var fontRegistry = context.FontRegistry;
@@ -185,7 +185,7 @@ internal class TextRenderer : IElementRenderer
 
         TextAlignment horizontalAlignment = paragraph.CurrentHorizontalTextAlignment;
 
-        LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraph.DefaultLineBreakMode;
+        LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraphData.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
         TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform;
         FontRegistration? fontRegistration = paragraph.ResolvedFontRegistration;
@@ -216,7 +216,7 @@ internal class TextRenderer : IElementRenderer
             },
             filePathToLoad
         );
-        if (fontSize <= 0) fontSize = PdfParagraph.DefaultFontSize;
+        if (fontSize <= 0) fontSize = PdfParagraphData.DefaultFontSize;
         var font = new SKFont(typeface, fontSize);
         var paint = new SKPaint
         {

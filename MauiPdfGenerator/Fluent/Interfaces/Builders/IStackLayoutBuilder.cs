@@ -1,14 +1,13 @@
-﻿using MauiPdfGenerator.Fluent.Models.Elements;
-using MauiPdfGenerator.Fluent.Models.Layouts;
+﻿using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
 public interface IStackLayoutBuilder
 {
-    PdfParagraph Paragraph(string text);
-    PdfHorizontalLine HorizontalLine();
-    PdfImage PdfImage(Stream stream);
-    PdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content);
-    PdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content);
-    PdfGrid PdfGrid();
+    IPdfParagraph Paragraph(string text);
+    IPdfHorizontalLine HorizontalLine();
+    IPdfImage PdfImage(Stream stream);
+    IPdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content);
+    IPdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content);
 }

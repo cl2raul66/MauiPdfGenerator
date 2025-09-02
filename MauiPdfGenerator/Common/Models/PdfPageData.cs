@@ -1,14 +1,14 @@
 ﻿using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Models;
 
-namespace MauiPdfGenerator.Core.Models;
+namespace MauiPdfGenerator.Common.Models;
 
 internal record PdfPageData(
     PageSizeType Size,
     PageOrientationType Orientation,
     Thickness Padding,
     Color? BackgroundColor,
-    IReadOnlyList<PdfElement> Elements,
+    IReadOnlyList<PdfElementData> Elements,
     PdfFontIdentifier? PageDefaultFontFamily,
     float PageDefaultFontSize,
     Color PageDefaultTextColor,

@@ -181,17 +181,17 @@ public partial class MainPage : ContentPage
 
                     // Caso 1: Imagen simple, tamaño intrínseco
                     c.Paragraph("1. Imagen simple (tamaño intrínseco)");
-                    c.PdfImage(new MemoryStream(imageData));
+                    c.Image(new MemoryStream(imageData));
 
                     // Caso 2: Imagen con WidthRequest y alineación
                     c.Paragraph("2. Imagen con WidthRequest(100) y HorizontalOptions(End)");
-                    c.PdfImage(new MemoryStream(imageData))
+                    c.Image(new MemoryStream(imageData))
                         .WidthRequest(100)
                         .HorizontalOptions(LayoutAlignment.End);
 
                     // Caso 3: Aspect.Fill (estirada)
                     c.Paragraph("3. Aspect(Fill) con tamaño fijo (150x75)");
-                    c.PdfImage(new MemoryStream(imageData))
+                    c.Image(new MemoryStream(imageData))
                         .WidthRequest(150)
                         .HeightRequest(75)
                         .Aspect(Aspect.Fill)
@@ -199,7 +199,7 @@ public partial class MainPage : ContentPage
 
                     // Caso 4: Aspect.AspectFill (recortada para llenar)
                     c.Paragraph("4. Aspect(AspectFill) con tamaño fijo (150x75)");
-                    c.PdfImage(new MemoryStream(imageData))
+                    c.Image(new MemoryStream(imageData))
                         .WidthRequest(150)
                         .HeightRequest(75)
                         .Aspect(Aspect.AspectFill)
@@ -208,7 +208,7 @@ public partial class MainPage : ContentPage
 
                     // Caso 5: Aspect.AspectFit (ajustada sin recortar)
                     c.Paragraph("5. Aspect(AspectFit) con tamaño fijo (150x75)");
-                    c.PdfImage(new MemoryStream(imageData))
+                    c.Image(new MemoryStream(imageData))
                         .WidthRequest(150)
                         .HeightRequest(75)
                         .Aspect(Aspect.AspectFit)
@@ -217,7 +217,7 @@ public partial class MainPage : ContentPage
 
                     // Caso 6: Con Padding y BackgroundColor
                     c.Paragraph("6. Imagen con Padding(20) y BackgroundColor");
-                    c.PdfImage(new MemoryStream(imageData))
+                    c.Image(new MemoryStream(imageData))
                         .WidthRequest(120)
                         .Padding(20)
                         .Margin(16)

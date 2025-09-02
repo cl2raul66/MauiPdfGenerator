@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models;
-using MauiPdfGenerator.Fluent.Models.Layouts;
+using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Layouts;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -10,8 +10,8 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
 {
     public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
-        if (context.Element is not PdfVerticalStackLayout vsl)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayout)} or is null.");
+        if (context.Element is not PdfVerticalStackLayoutData vsl)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayoutData)} or is null.");
 
         float totalHeight = 0;
         float maxWidth = 0;
@@ -49,8 +49,8 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
 
     public async Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
     {
-        if (context.Element is not PdfVerticalStackLayout vsl)
-            throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayout)} or is null.");
+        if (context.Element is not PdfVerticalStackLayoutData vsl)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayoutData)} or is null.");
 
         if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<LayoutInfo> childMeasures)
         {
@@ -76,7 +76,7 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
 
         for (int i = 0; i < vsl.GetChildren.Count; i++)
         {
-            var child = (PdfElement)vsl.GetChildren[i];
+            var child = (PdfElementData)vsl.GetChildren[i];
             var measure = childMeasures[i];
             var renderer = context.RendererFactory.GetRenderer(child);
 

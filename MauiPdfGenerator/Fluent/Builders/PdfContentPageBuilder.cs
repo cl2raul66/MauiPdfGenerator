@@ -1,11 +1,11 @@
-﻿using MauiPdfGenerator.Common.Utils;
+﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Utils;
+using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Models;
-using MauiPdfGenerator.Fluent.Models.Elements;
-using MauiPdfGenerator.Fluent.Models.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -19,13 +19,13 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     private Color? _backgroundColorOverride;
     private PageOrientationType? _pageOrientationOverride;
 
-    private List<PdfElement> _pageElements = [];
+    private List<PdfElementData> _pageElements = [];
     private PdfFontIdentifier? _pageDefaultFontFamily;
-    private float _pageDefaultFontSize = PdfParagraph.DefaultFontSize;
-    private Color _pageDefaultTextColor = PdfParagraph.DefaultTextColor;
-    private FontAttributes _pageDefaultFontAttributes = PdfParagraph.DefaultFontAttributes;
-    private TextDecorations _pageDefaultTextDecorations = PdfParagraph.DefaultTextDecorations;
-    private TextTransform _pageDefaultTextTransform = PdfParagraph.DefaultTextTransform;
+    private float _pageDefaultFontSize = Common.Models.Elements.PdfParagraphData.DefaultFontSize;
+    private Color _pageDefaultTextColor = Common.Models.Elements.PdfParagraphData.DefaultTextColor;
+    private FontAttributes _pageDefaultFontAttributes = Common.Models.Elements.PdfParagraphData.DefaultFontAttributes;
+    private TextDecorations _pageDefaultTextDecorations = Common.Models.Elements.PdfParagraphData.DefaultTextDecorations;
+    private TextTransform _pageDefaultTextTransform = Common.Models.Elements.PdfParagraphData.DefaultTextTransform;
 
 
     public PdfContentPageBuilder(PdfDocumentBuilder documentBuilder, PdfConfigurationBuilder documentConfiguration)
@@ -117,7 +117,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     }
     public IPdfContentPage DefaultTextColor(Color color)
     {
-        _pageDefaultTextColor = color ?? PdfParagraph.DefaultTextColor;
+        _pageDefaultTextColor = color ?? Common.Models.Elements.PdfParagraphData.DefaultTextColor;
         return this;
     }
     public IPageReadyToBuild Content(Action<IPageContentBuilder> contentSetup)
@@ -125,20 +125,20 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         ArgumentNullException.ThrowIfNull(contentSetup);
         var builder = new PageContentBuilder(_documentConfiguration.FontRegistry);
         contentSetup(builder);
-        var children = builder.GetChildren();
+        var buildableChildren = builder.GetBuildableChildren();
 
-        if (children.Count == 1 && children[0] is PdfLayoutElement)
+        if (buildableChildren.Count == 1 && buildableChildren[0].GetModel() is PdfLayoutElementData)
         {
-            _pageElements = [.. children];
+            _pageElements.Add(buildableChildren[0].GetModel());
         }
         else
         {
-            var implicitRoot = new PdfVerticalStackLayout(_documentConfiguration.FontRegistry);
-            foreach (var child in children)
+            var implicitRoot = new PdfVerticalStackLayoutBuilder();
+            foreach (var child in buildableChildren)
             {
                 implicitRoot.Add(child);
             }
-            _pageElements = [implicitRoot];
+            _pageElements.Add(implicitRoot.GetModel());
         }
 
         return this;
@@ -148,7 +148,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     public Thickness GetEffectivePadding() => _paddingOverride ?? _documentConfiguration.GetPadding;
     public PageOrientationType GetEffectivePageOrientation() => _pageOrientationOverride ?? _documentConfiguration.GetPageOrientation;
     public Color? GetEffectiveBackgroundColor() => _backgroundColorOverride;
-    public IReadOnlyList<PdfElement> GetElements() => _pageElements.AsReadOnly();
+    public IReadOnlyList<PdfElementData> GetElements() => _pageElements.AsReadOnly();
     public float GetPageDefaultFontSize() => _pageDefaultFontSize;
     public Color GetPageDefaultTextColor() => _pageDefaultTextColor;
     public FontAttributes GetPageDefaultFontAttributes() => _pageDefaultFontAttributes;

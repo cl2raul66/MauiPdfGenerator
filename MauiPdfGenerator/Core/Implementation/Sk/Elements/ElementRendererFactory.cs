@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator.Core.Implementation.Sk.Layouts;
-using MauiPdfGenerator.Fluent.Models.Elements;
-using MauiPdfGenerator.Fluent.Models.Layouts;
+using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Models.Layouts;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
@@ -12,12 +12,11 @@ internal class ElementRendererFactory
     {
         _renderers = new Dictionary<Type, IElementRenderer>
         {
-            { typeof(PdfParagraph), new TextRenderer() },
-            { typeof(PdfImage), new ImageRenderer() },
-            { typeof(PdfHorizontalLine), new HorizontalLineRender() },
-            { typeof(PdfGrid), new PdfGridRender() },
-            { typeof(PdfVerticalStackLayout), new PdfVerticalStackLayoutRender() },
-            { typeof(PdfHorizontalStackLayout), new PdfHorizontalStackLayoutRender() }
+            { typeof(PdfParagraphData), new TextRenderer() },
+            { typeof(PdfImageData), new ImageRenderer() },
+            { typeof(PdfHorizontalLineData), new HorizontalLineRender() },
+            { typeof(PdfVerticalStackLayoutData), new PdfVerticalStackLayoutRender() },
+            { typeof(PdfHorizontalStackLayoutData), new PdfHorizontalStackLayoutRender() }
         };
     }
 

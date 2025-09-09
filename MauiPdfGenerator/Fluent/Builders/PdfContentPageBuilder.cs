@@ -1,6 +1,5 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Utils;
-using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
@@ -127,18 +126,21 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
         contentSetup(builder);
         var buildableChildren = builder.GetBuildableChildren();
 
+        // --- LA CORRECCIÓN CRÍTICA ---
+        // En lugar de envolver todo en un VerticalStackLayout, pasamos la lista
+        // de elementos directamente. El PageLayoutEngine está diseñado para
+        // manejar una cola de elementos, no un único contenedor.
+        // La única excepción es si el usuario define explícitamente UN layout como raíz.
         if (buildableChildren.Count == 1 && buildableChildren[0].GetModel() is PdfLayoutElementData)
         {
             _pageElements.Add(buildableChildren[0].GetModel());
         }
         else
         {
-            var implicitRoot = new PdfVerticalStackLayoutBuilder();
             foreach (var child in buildableChildren)
             {
-                implicitRoot.Add(child);
+                _pageElements.Add(child.GetModel());
             }
-            _pageElements.Add(implicitRoot.GetModel());
         }
 
         return this;

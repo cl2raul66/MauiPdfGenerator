@@ -56,6 +56,10 @@ internal class PdfParagraphData : PdfElementData
         this.CurrentTextDecorations = originalStyleSource.CurrentTextDecorations;
         this.CurrentTextTransform = originalStyleSource.CurrentTextTransform;
         this.Margin(originalStyleSource.GetMargin.Left, originalStyleSource.GetMargin.Top, originalStyleSource.GetMargin.Right, originalStyleSource.GetMargin.Bottom);
+        this.Padding(originalStyleSource.GetPadding.Left, originalStyleSource.GetPadding.Top, originalStyleSource.GetPadding.Right, originalStyleSource.GetPadding.Bottom);
+        this.BackgroundColor(originalStyleSource.GetBackgroundColor);
+        this.HorizontalOptions(originalStyleSource.GetHorizontalOptions);
+        this.VerticalOptions(originalStyleSource.GetVerticalOptions);
         this.IsContinuation = true;
     }
 }

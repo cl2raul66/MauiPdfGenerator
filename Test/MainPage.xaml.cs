@@ -28,17 +28,6 @@ public partial class MainPage : ContentPage
             await doc
                 .Configuration(cfg =>
                 {
-                    cfg.PageSize(PageSizeType.Letter);
-                    cfg.PageOrientation(PageOrientationType.Landscape);
-                    cfg.Padding(DefaultPagePaddingType.Wide);
-                })
-                .Configuration(cfg =>
-                {
-                    cfg.ConfigureFontRegistry(cfr =>
-                    {
-                        cfr.Font(PdfFonts.OpenSansRegular).EmbeddedFont();
-                        cfr.Font(PdfFonts.Comic).EmbeddedFont();
-                    });
                     cfg.MetaData(data =>
                     {
                         data.Title("MauiPdfGenerator sample - Experimental Paragraphs");

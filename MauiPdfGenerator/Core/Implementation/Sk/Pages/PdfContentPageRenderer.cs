@@ -13,7 +13,7 @@ internal class PdfContentPageRenderer : IPageRenderer
         return await _layoutEngine.LayoutAsync(context);
     }
 
-    public async Task RenderPageBlockAsync(SKCanvas canvas, IReadOnlyList<LayoutInfo> pageBlock, PdfGenerationContext context)
+    public async Task RenderPageBlockAsync(SKCanvas canvas, IReadOnlyList<LayoutInfo> arrangedPageBlock, PdfGenerationContext context)
     {
         var pageDef = context.PageData;
         canvas.Clear(pageDef.BackgroundColor is not null ? SkiaUtils.ConvertToSkColor(pageDef.BackgroundColor) : SKColors.White);
@@ -27,26 +27,13 @@ internal class PdfContentPageRenderer : IPageRenderer
 
         canvas.Save();
         canvas.ClipRect(contentRect);
-
-        float currentY = contentRect.Top;
-        for (int i = 0; i < pageBlock.Count; i++)
+        foreach (var layoutInfo in arrangedPageBlock)
         {
-            var layoutInfo = pageBlock[i];
             var element = (PdfElementData)layoutInfo.Element;
             var renderer = context.RendererFactory.GetRenderer(element);
-
-            float offsetX = element.GetHorizontalOptions switch
-            {
-                LayoutAlignment.Center => (contentRect.Width - layoutInfo.Width) / 2f,
-                LayoutAlignment.End => contentRect.Width - layoutInfo.Width,
-                _ => 0f
-            };
-
-            var renderRect = SKRect.Create(contentRect.Left + offsetX, currentY, layoutInfo.Width, layoutInfo.Height);
             var elementContext = context with { Element = element };
-            await renderer.RenderAsync(canvas, renderRect, elementContext);
 
-            currentY += layoutInfo.Height;
+            await renderer.RenderAsync(canvas, elementContext);
         }
 
         canvas.Restore();

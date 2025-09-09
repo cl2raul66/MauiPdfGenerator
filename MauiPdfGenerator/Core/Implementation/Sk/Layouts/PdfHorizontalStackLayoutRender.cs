@@ -18,19 +18,16 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
         {
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
-            // El HSL simplemente pasa las restricciones de su padre a sus hijos.
             var measure = await renderer.MeasureAsync(childContext, availableRect);
             childMeasures.Add(measure);
         }
 
-        // El ancho del contenido es la suma de las "huellas" totales de los hijos.
         float contentWidth = childMeasures.Sum(m => m.Width);
         if (childMeasures.Count > 1)
         {
             contentWidth += hsl.GetSpacing * (childMeasures.Count - 1);
         }
-        // La altura es la del hijo con la "huella" más alta.
-        float contentHeight = childMeasures.Any() ? childMeasures.Max(m => m.Height) : 0;
+        float contentHeight = childMeasures.Count != 0 ? childMeasures.Max(m => m.Height) : 0;
 
         float boxWidth = contentWidth + (float)hsl.GetPadding.HorizontalThickness;
         float boxHeight = contentHeight + (float)hsl.GetPadding.VerticalThickness;
@@ -43,22 +40,77 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
         return new LayoutInfo(hsl, totalWidth, totalHeight);
     }
 
-    public async Task RenderAsync(SKCanvas canvas, SKRect renderRect, PdfGenerationContext context)
+    public async Task<LayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
         if (context.Element is not PdfHorizontalStackLayoutData hsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
         if (!context.LayoutState.TryGetValue(hsl, out var state) || state is not List<LayoutInfo> childMeasures)
         {
-            context.Logger.LogError("HorizontalStackLayout state was not calculated before rendering.");
+            context.Logger.LogError("HorizontalStackLayout measure state was not found before arranging.");
+            return new LayoutInfo(hsl, finalRect.Width, finalRect.Height, finalRect);
+        }
+
+        var elementBox = new PdfRect(
+            finalRect.Left + (float)hsl.GetMargin.Left,
+            finalRect.Top + (float)hsl.GetMargin.Top,
+            finalRect.Width - (float)hsl.GetMargin.HorizontalThickness,
+            finalRect.Height - (float)hsl.GetMargin.VerticalThickness
+        );
+
+        float contentHeight = elementBox.Height - (float)hsl.GetPadding.VerticalThickness;
+        float currentX = elementBox.Left + (float)hsl.GetPadding.Left;
+
+        var arrangedChildren = new List<LayoutInfo>();
+        for (int i = 0; i < childMeasures.Count; i++)
+        {
+            var measure = childMeasures[i];
+            var child = (PdfElementData)measure.Element;
+            var renderer = context.RendererFactory.GetRenderer(child);
+
+            float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? contentHeight : measure.Height;
+            float offsetY = child.GetVerticalOptions switch
+            {
+                LayoutAlignment.Center => (contentHeight - childHeight) / 2f,
+                LayoutAlignment.End => contentHeight - childHeight,
+                _ => 0f
+            };
+
+            float y = elementBox.Top + (float)hsl.GetPadding.Top + offsetY;
+
+            var childRect = new PdfRect(currentX, y, measure.Width, childHeight);
+            var childContext = context with { Element = child };
+
+            var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
+            arrangedChildren.Add(arrangedChild);
+
+            currentX += measure.Width;
+            if (i < childMeasures.Count - 1)
+            {
+                currentX += hsl.GetSpacing;
+            }
+        }
+
+        context.LayoutState[hsl] = (arrangedChildren, finalRect);
+        return new LayoutInfo(hsl, finalRect.Width, finalRect.Height, finalRect);
+    }
+
+    public async Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)
+    {
+        if (context.Element is not PdfHorizontalStackLayoutData hsl)
+            throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
+
+        if (!context.LayoutState.TryGetValue(hsl, out var state) || state is not (List<LayoutInfo> arrangedChildren, PdfRect finalRect))
+        {
+            context.Logger.LogError("HorizontalStackLayout arranged state was not found before rendering.");
             return;
         }
 
         var elementBox = new SKRect(
-            renderRect.Left + (float)hsl.GetMargin.Left,
-            renderRect.Top + (float)hsl.GetMargin.Top,
-            renderRect.Right - (float)hsl.GetMargin.Right,
-            renderRect.Bottom - (float)hsl.GetMargin.Bottom
+            finalRect.Left + (float)hsl.GetMargin.Left,
+            finalRect.Top + (float)hsl.GetMargin.Top,
+            finalRect.Right - (float)hsl.GetMargin.Right,
+            finalRect.Bottom - (float)hsl.GetMargin.Bottom
         );
 
         canvas.Save();
@@ -70,34 +122,11 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
             canvas.DrawRect(elementBox, bgPaint);
         }
 
-        float contentHeight = elementBox.Height - (float)hsl.GetPadding.VerticalThickness;
-        float currentX = elementBox.Left + (float)hsl.GetPadding.Left;
-
-        for (int i = 0; i < childMeasures.Count; i++)
+        foreach (var childInfo in arrangedChildren)
         {
-            var measure = childMeasures[i];
-            var child = (PdfElementData)measure.Element;
-            var renderer = context.RendererFactory.GetRenderer(child);
-
-            float offsetY = child.GetVerticalOptions switch
-            {
-                LayoutAlignment.Center => (contentHeight - measure.Height) / 2f,
-                LayoutAlignment.End => contentHeight - measure.Height,
-                _ => 0f
-            };
-
-            float y = elementBox.Top + (float)hsl.GetPadding.Top + offsetY;
-
-            var childRect = SKRect.Create(currentX, y, measure.Width, measure.Height);
-            var childContext = context with { Element = child };
-
-            await renderer.RenderAsync(canvas, childRect, childContext);
-
-            currentX += measure.Width;
-            if (i < childMeasures.Count - 1)
-            {
-                currentX += hsl.GetSpacing;
-            }
+            var renderer = context.RendererFactory.GetRenderer(childInfo.Element);
+            var childContext = context with { Element = (PdfElementData)childInfo.Element };
+            await renderer.RenderAsync(canvas, childContext);
         }
 
         canvas.Restore();

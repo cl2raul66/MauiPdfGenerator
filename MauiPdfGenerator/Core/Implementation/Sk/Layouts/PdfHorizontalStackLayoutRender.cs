@@ -14,11 +14,16 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
         var childMeasures = new List<LayoutInfo>();
+
+        // El ancho disponible para los hijos está limitado por el WidthRequest del propio HSL.
+        var constrainedWidth = (float?)hsl.GetWidthRequest ?? availableRect.Width;
+        var childAvailableRect = new SKRect(0, 0, constrainedWidth, availableRect.Height);
+
         foreach (var child in hsl.GetChildren)
         {
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
-            var measure = await renderer.MeasureAsync(childContext, availableRect);
+            var measure = await renderer.MeasureAsync(childContext, childAvailableRect);
             childMeasures.Add(measure);
         }
 
@@ -27,9 +32,13 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
         {
             contentWidth += hsl.GetSpacing * (childMeasures.Count - 1);
         }
-        float contentHeight = childMeasures.Count != 0 ? childMeasures.Max(m => m.Height) : 0;
+        float contentHeight = childMeasures.Any() ? childMeasures.Max(m => m.Height) : 0;
 
-        float boxWidth = contentWidth + (float)hsl.GetPadding.HorizontalThickness;
+        // El ancho final del HSL es su WidthRequest o el ancho de su contenido.
+        float boxWidth = hsl.GetWidthRequest.HasValue
+            ? (float)hsl.GetWidthRequest.Value
+            : contentWidth + (float)hsl.GetPadding.HorizontalThickness;
+
         float boxHeight = contentHeight + (float)hsl.GetPadding.VerticalThickness;
 
         context.LayoutState[hsl] = childMeasures;
@@ -40,6 +49,7 @@ internal class PdfHorizontalStackLayoutRender : IElementRenderer
         return new LayoutInfo(hsl, totalWidth, totalHeight);
     }
 
+    // ... El resto del fichero (ArrangeAsync, RenderAsync) no necesita cambios ...
     public async Task<LayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
         if (context.Element is not PdfHorizontalStackLayoutData hsl)

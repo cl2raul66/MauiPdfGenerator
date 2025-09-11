@@ -25,7 +25,7 @@ internal class SkComposer : IPdfCoreGenerator
                 Subject = documentData.Subject ?? string.Empty,
                 Keywords = documentData.Keywords ?? string.Empty,
                 Creator = documentData.Creator ?? string.Empty,
-                Producer = documentData.Producer ?? "MauiPdfGenerator (SkiaSharp)", 
+                Producer = documentData.Producer ?? "MauiPdfGenerator (SkiaSharp)",
                 Creation = documentData.CreationDate ?? DateTime.Now,
                 Modified = DateTime.Now,
                 RasterDpi = 300,
@@ -38,8 +38,11 @@ internal class SkComposer : IPdfCoreGenerator
 
             var layoutState = new Dictionary<object, object>();
 
-            foreach (var pageDefinition in documentData.Pages)
+            for (int i = 0; i < documentData.Pages.Count; i++)
             {
+                var pageDefinition = documentData.Pages[i];
+                logger.LogDebug("Processing Page {PageIndex} of type {PageType}", i + 1, pageDefinition.GetType().Name);
+
                 var context = new PdfGenerationContext(pageDefinition, fontRegistry, layoutState, logger, _elementRendererFactory);
                 IPageRenderer pageRenderer = _pageRendererFactory.GetRenderer(pageDefinition);
 
@@ -49,6 +52,9 @@ internal class SkComposer : IPdfCoreGenerator
                 {
                     SKSize pageSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);
                     using var canvas = pdfDoc.BeginPage(pageSize.Width, pageSize.Height);
+
+                    // Pintar fondo de página
+                    canvas.Clear(pageDefinition.BackgroundColor is not null ? SkiaUtils.ConvertToSkColor(pageDefinition.BackgroundColor) : SKColors.White);
 
                     await pageRenderer.RenderPageBlockAsync(canvas, block, context);
 

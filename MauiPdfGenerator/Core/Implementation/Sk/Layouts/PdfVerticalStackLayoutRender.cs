@@ -17,12 +17,16 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         float maxWidth = 0;
         var childMeasures = new List<LayoutInfo>();
 
-        var childAvailableWidth = availableRect.Width - (float)vsl.GetPadding.HorizontalThickness - (float)vsl.GetMargin.HorizontalThickness;
+        // El ancho disponible para los hijos está limitado por el ancho del VSL o el de su contenedor.
+        var constrainedWidth = (float?)vsl.GetWidthRequest ?? availableRect.Width;
+        var childAvailableWidth = constrainedWidth - (float)vsl.GetPadding.HorizontalThickness - (float)vsl.GetMargin.HorizontalThickness;
 
         foreach (var child in vsl.GetChildren)
         {
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
+
+            // Pasamos el ancho restringido correcto a los hijos.
             var measure = await renderer.MeasureAsync(childContext, SKRect.Create(0, 0, childAvailableWidth, float.PositiveInfinity));
             childMeasures.Add(measure);
             totalHeight += measure.Height;
@@ -34,7 +38,11 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
             totalHeight += vsl.GetSpacing * (vsl.GetChildren.Count - 1);
         }
 
-        float boxWidth = maxWidth + (float)vsl.GetPadding.HorizontalThickness;
+        // El ancho final del VSL es su WidthRequest o el ancho de su contenido, lo que sea aplicable.
+        float boxWidth = vsl.GetWidthRequest.HasValue
+            ? (float)vsl.GetWidthRequest.Value
+            : maxWidth + (float)vsl.GetPadding.HorizontalThickness;
+
         float boxHeight = totalHeight + (float)vsl.GetPadding.VerticalThickness;
 
         context.LayoutState[vsl] = childMeasures;
@@ -45,6 +53,7 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         return new LayoutInfo(vsl, totalWidth, totalHeightWithMargin);
     }
 
+    // ... El resto del fichero (ArrangeAsync, RenderAsync) no necesita cambios ...
     public async Task<LayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
         if (context.Element is not PdfVerticalStackLayoutData vsl)

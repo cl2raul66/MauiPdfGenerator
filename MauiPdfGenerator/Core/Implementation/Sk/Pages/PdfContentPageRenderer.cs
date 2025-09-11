@@ -1,41 +1,57 @@
 ﻿using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Common.Models;
 using SkiaSharp;
+using Microsoft.Extensions.Logging;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
 
 internal class PdfContentPageRenderer : IPageRenderer
 {
-    private readonly PageLayoutEngine _layoutEngine = new();
+    private readonly ContentPageOrchestrator _orchestrator = new();
 
     public async Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(PdfGenerationContext context)
     {
-        return await _layoutEngine.LayoutAsync(context);
+        context.Logger.LogDebug("Delegating layout orchestration for PdfContentPage to ContentPageOrchestrator.");
+        var pageBlocks = new List<IReadOnlyList<LayoutInfo>>();
+        var elementsToProcess = new Queue<PdfElementData>(context.PageData.Elements);
+
+        var pageSize = SkiaUtils.GetSkPageSize(context.PageData.Size, context.PageData.Orientation);
+        var pageMargins = context.PageData.Padding;
+        var contentRect = new PdfRect(
+            (float)pageMargins.Left,
+            (float)pageMargins.Top,
+            pageSize.Width - (float)pageMargins.HorizontalThickness,
+            pageSize.Height - (float)pageMargins.VerticalThickness
+        );
+
+        while (elementsToProcess.Count > 0)
+        {
+            var (arrangedPageElements, remainingForNextPage) = await _orchestrator.ProcessPageAsync(elementsToProcess, contentRect, context);
+
+            if (arrangedPageElements.Count > 0)
+            {
+                pageBlocks.Add(arrangedPageElements.AsReadOnly());
+            }
+            else if (elementsToProcess.Count > 0 && remainingForNextPage.Count == elementsToProcess.Count)
+            {
+                var skippedElement = remainingForNextPage.Dequeue();
+                context.Logger.LogWarning("Element {ElementType} is too large to fit on a page and was skipped.", skippedElement.GetType().Name);
+            }
+
+            elementsToProcess = remainingForNextPage;
+        }
+
+        return pageBlocks;
     }
 
     public async Task RenderPageBlockAsync(SKCanvas canvas, IReadOnlyList<LayoutInfo> arrangedPageBlock, PdfGenerationContext context)
     {
-        var pageDef = context.PageData;
-        canvas.Clear(pageDef.BackgroundColor is not null ? SkiaUtils.ConvertToSkColor(pageDef.BackgroundColor) : SKColors.White);
-
-        SKSize pageSize = SkiaUtils.GetSkPageSize(pageDef.Size, pageDef.Orientation);
-        var pageMargins = pageDef.Padding;
-        var contentRect = new SKRect(
-            (float)pageMargins.Left, (float)pageMargins.Top,
-            pageSize.Width - (float)pageMargins.Right, pageSize.Height - (float)pageMargins.Bottom
-        );
-
-        canvas.Save();
-        canvas.ClipRect(contentRect);
         foreach (var layoutInfo in arrangedPageBlock)
         {
             var element = (PdfElementData)layoutInfo.Element;
             var renderer = context.RendererFactory.GetRenderer(element);
             var elementContext = context with { Element = element };
-
             await renderer.RenderAsync(canvas, elementContext);
         }
-
-        canvas.Restore();
     }
 }

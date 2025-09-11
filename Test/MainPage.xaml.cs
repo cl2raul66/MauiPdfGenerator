@@ -294,15 +294,11 @@ public partial class MainPage : ContentPage
                     // Caso 7: Con margen vertical
                     c.Paragraph("7. Línea con Margin(0, 20) para crear espacio");
                     c.HorizontalLine()
-                        .Padding(5)
-                        .BackgroundColor(Colors.LightSalmon)
                         .Margin(0, 20);
 
                     // Caso 8: Con margen horizontal (reducirá el ancho de la línea)
                     c.Paragraph("8. Línea con Margin(50, 0)");
                     c.HorizontalLine()
-                        .Padding(5)
-                        .BackgroundColor(Colors.LightSalmon)
                         .Margin(50, 0);
 
                     // Caso 9: Con padding horizontal (no debería tener efecto visual en la línea)

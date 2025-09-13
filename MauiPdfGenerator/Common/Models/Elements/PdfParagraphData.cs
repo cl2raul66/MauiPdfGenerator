@@ -25,7 +25,7 @@ internal class PdfParagraphData : PdfElementData
     internal TextTransform? CurrentTextTransform { get; set; }
     internal bool IsContinuation { get; private set; } = false;
 
-    internal FontRegistration? ResolvedFontRegistration { get; set; }
+    internal PdfFontRegistration? ResolvedFontRegistration { get; set; }
 
     internal PdfParagraphData(string text)
     {

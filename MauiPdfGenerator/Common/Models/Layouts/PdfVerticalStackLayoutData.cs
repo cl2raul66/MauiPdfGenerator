@@ -1,6 +1,6 @@
 ﻿namespace MauiPdfGenerator.Common.Models.Layouts;
 
-internal class PdfVerticalStackLayoutData : PdfLayoutElementData, ILayoutElement
+internal class PdfVerticalStackLayoutData : PdfLayoutElementData, IPdfLayoutElement
 {
     internal PdfVerticalStackLayoutData() : base()
     {
@@ -11,8 +11,8 @@ internal class PdfVerticalStackLayoutData : PdfLayoutElementData, ILayoutElement
     {
     }
 
-    IReadOnlyList<object> ILayoutElement.Children => _children.Cast<object>().ToList();
-    LayoutType ILayoutElement.LayoutType => LayoutType.VerticalStack;
-    Thickness ILayoutElement.Margin => GetMargin;
-    Thickness ILayoutElement.Padding => GetPadding;
+    IReadOnlyList<object> IPdfLayoutElement.Children => _children.Cast<object>().ToList();
+    LayoutType IPdfLayoutElement.LayoutType => LayoutType.VerticalStack;
+    Thickness IPdfLayoutElement.Margin => GetMargin;
+    Thickness IPdfLayoutElement.Padding => GetPadding;
 }

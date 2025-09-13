@@ -4,7 +4,7 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 public interface IPdfContentPage : IPdfPage<IPdfContentPage>
 {
-    IPdfContentPage DefaultFont(Action<IFontDefaultsBuilder> fontDefaults);
+    IPdfContentPage DefaultFont(Action<IPdfFontDefaultsBuilder> fontDefaults);
     IPdfContentPage DefaultTextColor(Color color);
     IPdfContentPage DefaultTextDecorations(TextDecorations decorations);
     IPdfContentPage DefaultTextTransform(TextTransform transform);

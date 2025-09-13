@@ -6,12 +6,12 @@ using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
-internal class StackLayoutContentBuilder : IStackLayoutBuilder
+internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
 {
     private readonly dynamic _layoutBuilder; // Can be VerticalStackLayoutBuilder or HorizontalStackLayoutBuilder
     private readonly PdfFontRegistryBuilder _fontRegistry;
 
-    public StackLayoutContentBuilder(dynamic layoutBuilder, PdfFontRegistryBuilder fontRegistry)
+    public PdfStackLayoutContentBuilder(dynamic layoutBuilder, PdfFontRegistryBuilder fontRegistry)
     {
         _layoutBuilder = layoutBuilder ?? throw new ArgumentNullException(nameof(layoutBuilder));
         _fontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
@@ -31,26 +31,26 @@ internal class StackLayoutContentBuilder : IStackLayoutBuilder
         return builder;
     }
 
-    public IPdfImage PdfImage(Stream stream)
+    public IPdfImage Image(Stream stream)
     {
         var builder = new PdfImageBuilder(stream);
         _layoutBuilder.Add(builder);
         return builder;
     }
 
-    public IPdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content)
+    public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content)
     {
         var stackBuilder = new PdfVerticalStackLayoutBuilder();
-        var contentBuilder = new StackLayoutContentBuilder(stackBuilder, _fontRegistry);
+        var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
         content(contentBuilder);
         _layoutBuilder.Add(stackBuilder);
         return stackBuilder;
     }
 
-    public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content)
+    public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content)
     {
         var stackBuilder = new PdfHorizontalStackLayoutBuilder();
-        var contentBuilder = new StackLayoutContentBuilder(stackBuilder, _fontRegistry);
+        var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
         content(contentBuilder);
         _layoutBuilder.Add(stackBuilder);
         return stackBuilder;

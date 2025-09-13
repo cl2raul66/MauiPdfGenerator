@@ -30,44 +30,51 @@ Durante el diseño de la biblioteca surgió un conflicto fundamental entre la te
 2.  **Modelo Mental Unificado**: Los desarrolladores MAUI ya comprenden que `ContentPage.Padding` define el espacio interno entre el borde de la página y su contenido.
 3.  **Eliminación de Redundancia**: Evita la confusión de tener tanto `Margins` como `Padding` en el mismo contexto, donde ambos conceptos serían funcionalmente idénticos.
 
-### 1.3. Jerarquía Conceptual: Pages → Layouts → Views
+#### 1.3. Jerarquía Conceptual: Pages → Layouts → Views
 
-La interfaz de un documento PDF se construye con una jerarquía que mapea conceptualmente a la de .NET MAUI. La interacción del desarrollador con cada nivel de esta jerarquía (Páginas, Layouts y Vistas) se realiza a través de un conjunto consistente de **interfaces públicas y builders fluidos**, garantizando una API predecible y desacoplada.
+La interfaz de un documento PDF se construye con una jerarquía que mapea conceptualmente a la de .NET MAUI. Sin embargo, a diferencia de una estructura rígidamente anidada, la biblioteca ofrece un **modelo de composición flexible y recursivo**. La interacción del desarrollador con cada nivel de esta jerarquía se realiza a través de un conjunto consistente de **interfaces públicas y builders fluidos**, garantizando una API predecible y desacoplada.
+
+Las reglas de composición son las siguientes:
+*   Una **Página** (`IPdfContentPage`) actúa como el contenedor raíz y puede contener directamente una secuencia de **Layouts** y/o **Views**.
+*   Un **Layout** (`IVerticalStackLayout`, `IPdfGrid`, etc.) es un contenedor organizacional que, a su vez, puede contener una mezcla de otros **Layouts** y **Views**.
+*   Una **View** (`IPdfParagraph`, `IPdfImage`, etc.) es un elemento visual terminal. Renderiza contenido específico y **no puede contener otros elementos**.
+
+Este modelo permite la creación de estructuras de documentos desde muy simples (una página con una lista de párrafos) hasta extremadamente complejas (una página con una rejilla que contiene stacks anidados, que a su vez contienen imágenes y texto).
 
 **MAUI → PDF (Analogía Jerárquica)**
 - **Pages** → `IPdfContentPage` (Páginas del documento PDF)
-- **Layouts** → `IVerticalStackLayout`, `IHorizontalStackLayout` (Estructuras de organización visual en PDF)
+- **Layouts** → `IVerticalStackLayout`, `IHorizontalStackLayout`, `PdfGrid` (Estructuras de organización visual en PDF)
 - **Views** → `IPdfParagraph`, `IPdfImage`, `IPdfHorizontalLine` (Elementos de contenido visual en PDF)
 
-#### Pages
+##### Pages
 
-Los documentos PDF constan de una o varias páginas. Cada página contiene al menos un `Layout`. MauiPdfGenerator contiene los siguientes tipos de Pages:
+Los documentos PDF constan de una o varias páginas. Cada página define el lienzo sobre el cual se organiza el contenido. MauiPdfGenerator contiene los siguientes tipos de Pages:
 
-|Interface|Descripción|
-|---|---|
-|IPdfContentPage|Define una página que muestra un `Layout` principal y es el tipo más común en documentos PDF.|
+| Interface       | Descripción                                                                                                                                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| IPdfContentPage | Define una página cuyo propósito es **organizar una lista de elementos de contenido (Layouts y/o Views) en una secuencia vertical continua**, gestionando automáticamente la paginación cuando el contenido excede el espacio disponible. Es el tipo de página más común en documentos PDF. |
 
 > **NOTA:** Para el futuro, se agregarán otros tipos de páginas especializadas.
 
-#### Layouts
+##### Layouts
 
-Los `Layouts` en MauiPdfGenerator se usan para organizar `Views` en estructuras jerárquicas. La API expone interfaces como `IVerticalStackLayout` que permiten anidar `Views` u otros `Layouts`.
+Los `Layouts` en MauiPdfGenerator se usan para organizar `Views` y otros `Layouts` en estructuras jerárquicas. Son los componentes clave para construir diseños complejos y anidados. La API expone interfaces como `IVerticalStackLayout` que permiten esta composición recursiva.
 
-|Interface / Clase|Descripción|
-|---|---|
-|IVerticalStackLayout|Coloca las `Views` hijas en una pila vertical.|
-|IHorizontalStackLayout|Coloca las `Views` hijas en una pila horizontal.|
-|`PdfGrid`|Coloca sus `Views` hijas en una cuadrícula de filas y columnas.|
+| Interface / Clase        | Descripción                                                              |
+| ------------------------ | ------------------------------------------------------------------------ |
+| IVerticalStackLayout     | Coloca sus elementos hijos en una pila vertical.                         |
+| IHorizontalStackLayout   | Coloca sus elementos hijos en una pila horizontal.                       |
+| `PdfGrid`                | Coloca sus elementos hijos en una cuadrícula de filas y columnas.        |
 
-#### Views
+##### Views
 
-Las `Views` de MauiPdfGenerator son los componentes que renderizan contenido específico. Se interactúa con ellas a través de interfaces como `IPdfParagraph` e `IPdfImage`.
+Las `Views` de MauiPdfGenerator son los componentes que renderizan contenido específico. Son los "átomos" visuales del documento y siempre actúan como nodos finales (hojas) en el árbol de composición. Se interactúa con ellas a través de interfaces como `IPdfParagraph` e `IPdfImage`.
 
-|Interface|Descripción|
-|---|---|
-|IPdfImage|Renderiza una imagen que se puede cargar desde un archivo, URI o secuencia.|
-|IPdfParagraph|Renderiza texto plano y enriquecido de una o varias líneas.|
-|IPdfHorizontalLine|Renderiza una línea horizontal, usada comúnmente como separador.|
+| Interface          | Descripción                                                              |
+| ------------------ | ------------------------------------------------------------------------ |
+| IPdfImage          | Renderiza una imagen que se puede cargar desde un archivo, URI o secuencia. |
+| IPdfParagraph      | Renderiza texto plano y enriquecido de una o varias líneas.              |
+| IPdfHorizontalLine | Renderiza una línea horizontal, usada comúnmente como separador.         |
 
 > **NOTA sobre Colores:** Todas las propiedades que aceptan un color (ej. `TextColor`, `BackgroundColor`) utilizan el tipo `Microsoft.Maui.Graphics.Color`. Esto permite a los desarrolladores usar las mismas constantes (`Colors.Blue`) y estructuras que ya utilizan en sus aplicaciones.
 
@@ -116,15 +123,17 @@ El motor emula deliberadamente el ciclo de Medición y Disposición (Measure/Arr
 
 Esta es una de las características más potentes del motor. El orquestador de layout no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición detecta que el contenido excede el espacio vertical disponible, crea una nueva página y reinicia el ciclo de layout con el contenido restante.
 
-### 2.3. Elementos Atómicos vs Divisibles
+#### 2.3. Elementos Atómicos vs Divisibles
 
-La política de paginación depende del tipo de `View`:
+Una de las características más potentes del motor de layout es su capacidad de paginar contenido automáticamente. Para gestionar esto de manera predecible, la biblioteca clasifica cada elemento de contenido en una de dos categorías, definiendo cómo interactúa con los saltos de página:
 
-*   **Atómicos:** `PdfImage`, `PdfHorizontalLine`, `PdfVerticalStackLayout`, `PdfHorizontalStackLayout`. Si una `View` atómica no cabe en el espacio restante de una página, se mueve **completa** a la página siguiente. Nunca se divide.
+*   **Elementos Atómicos:** `PdfImage`, `PdfHorizontalLine`, `PdfVerticalStackLayout`, `PdfHorizontalStackLayout`. Estos elementos son tratados como unidades indivisibles. Si un elemento atómico no cabe en el espacio restante de una página, el motor de layout lo moverá **completo** a la página siguiente. Nunca se dividirá o recortará a través de un salto de página. Esta regla garantiza la integridad visual de componentes como imágenes o grupos de elementos en un `StackLayout`.
 
-*   **Divisibles:** `PdfParagraph` y `PdfGrid`. Estos son los únicos elementos que la biblioteca puede dividir a través de un salto de página.
-    *   **División de `PdfParagraph`:** El `TextRenderer` calcula cuántas líneas de texto caben en el espacio disponible. Si no caben todas, renderiza las que sí caben y pasa el texto sobrante al orquestador para que lo coloque en la página siguiente.
+*   **Elementos Divisibles:** `PdfParagraph` y `PdfGrid`. Estos son los únicos elementos que la biblioteca puede dividir inteligentemente a través de un salto de página para crear un flujo de contenido continuo.
+    *   **División de `PdfParagraph`:** El `TextRenderer` calcula cuántas líneas de texto caben en el espacio disponible. Si no caben todas, renderiza las que sí caben y pasa el texto sobrante al orquestador para que lo coloque en la página siguiente, conservando todo el formato original.
     *   **División de `PdfGrid`:** El `GridRenderer` mide sus filas secuencialmente. Si al añadir una fila se excede el alto de la página, la división ocurre **entre la fila anterior y la actual**. La fila que no cabe, junto con todas las siguientes, se mueven a la página siguiente. La división nunca ocurre a mitad de una celda.
+
+Esta distinción es una decisión de diseño fundamental que proporciona al desarrollador un control y una previsibilidad claros sobre el flujo de sus documentos.
 
 ---
 
@@ -190,26 +199,47 @@ La capa `Common` incluye utilidades que implementan lógica de negocio compartid
 
 ### 2.2. Principios y Reglas Fundamentales de Layout
 
-*   **El Principio de Propagación de Restricciones:** Heredado directamente de MAUI: una `View` **NUNCA** asume su tamaño. Siempre opera dentro de un espacio finito (`LayoutRequest`) definido por su `Layout` padre. La única excepción es la `Page` raíz, cuyo espacio inicial es el tamaño de la página menos su padding.
+El motor de layout de MauiPdfGenerator, aunque adaptado para la generación de documentos, se basa en los mismos principios fundamentales que los sistemas de UI modernos como .NET MAUI. Comprender estas reglas es clave para predecir y controlar el comportamiento de los elementos.
 
-*   **La Dualidad de la Medición:** Una `View` debe ser capaz de responder a dos tipos de "preguntas de medición":
-    *   **Pregunta de Medición Restringida (`LayoutPassType.Constrained`):**
-        *   **Intención:** "Tienes este **ancho finito**. Adáptate a él (aplicando saltos de línea si es necesario) y dime qué altura necesitas".
-        *   **Quién la hace:** `Layouts` de naturaleza vertical como `PdfContentPage` y `PdfVerticalStackLayout`.
-    *   **Pregunta de Medición Ideal (`LayoutPassType.Ideal`):**
-        *   **Intención:** "Ignora las restricciones de ancho. Dime cuál es tu tamaño **natural** si pudieras usar todo el espacio que necesites (sin saltos de línea)".
-        *   **Quién la hace:** `Layouts` de naturaleza horizontal como `PdfHorizontalStackLayout`.
+*   **El Principio de Autoridad Parental:** Esta es la regla más importante del sistema de layout. Un elemento hijo (como un `PdfParagraph`) **no se posiciona a sí mismo**. Sus propiedades de alineación y tamaño (`HorizontalOptions`, `VerticalOptions`, `WidthRequest`) son **solicitudes** que le hace a su `Layout` padre. Es el `Layout` padre, durante su pasada de `ArrangeAsync`, quien lee estas solicitudes y tiene la autoridad final para calcular y asignar la posición y el tamaño del hijo. Esta separación de responsabilidades garantiza un flujo de layout determinista y predecible de arriba hacia abajo.
+
+*   **El Principio de Propagación de Restricciones:** Un elemento **NUNCA** decide su propio tamaño en el vacío. Siempre opera dentro de las restricciones (un tamaño disponible) que le impone su `Layout` padre. La única excepción es la `Page` raíz, cuyo espacio inicial es el tamaño de la página menos su `Padding`. La naturaleza de estas restricciones cambia según el tipo de layout:
+    *   **Layouts Verticales** (`PdfContentPage`, `PdfVerticalStackLayout`): Imponen una restricción de **ancho finito** a sus hijos, pero les ofrecen una altura conceptualmente **infinita** para que se midan. Por eso, un `PdfParagraph` dentro de un `VerticalStackLayout` aplicará saltos de línea (`WordWrap`) para ajustarse al ancho dado.
+    *   **Layouts Horizontales** (`PdfHorizontalStackLayout`): Imponen una restricción de **altura finita**, pero ofrecen un ancho conceptualmente **infinito**. Por eso, el mismo `PdfParagraph` intentará renderizarse en una sola línea.
 
 *   **El Modelo de Caja (Box Model):** Idéntico al modelo de MAUI y fundamental para el posicionamiento:
-    *   **`Margin` (Margen):** Espacio **externo** y transparente que empuja la caja lejos de sus vecinos. No forma parte del `BackgroundColor`. Es gestionado exclusivamente por el `Layout` padre durante la pasada de `ArrangeAsync`.
-    *   **`Padding` (Relleno):** Espacio **interno** que empuja el contenido lejos del borde. El `BackgroundColor` **sí** se dibuja en esta área.
-    *   **Implementación del Fondo (`BackgroundColor`):** Es fundamental entender que el `BackgroundColor` no es una propiedad del lienzo. Internamente, cuando una `View` tiene un `BackgroundColor` definido, el motor de renderizado primero dibuja una `View` de tipo `PdfRectangle` (una forma) en la posición y tamaño del elemento. Inmediatamente después, dibuja el contenido real de la `View` (texto, imagen, etc.) encima de ese rectángulo. El rectángulo de fondo abarca el área del `Contenido + Padding`, lo que explica visualmente por qué el `Padding` es un espacio interno afectado por el color de fondo, mientras que el `Margin` permanece como un espacio externo transparente.
+    *   **`Margin` (Margen):** Espacio **externo** y transparente que empuja la caja lejos de sus vecinos. No forma parte del `BackgroundColor`.
+    *   **`Padding` (Relleno):** Espacio **interno** que empuja el contenido lejos del borde del elemento. El `BackgroundColor` **sí** se dibuja en esta área.
 
-*   **Contexto de Layout y Orquestación de Fases:** Un objeto `LayoutContext` se propaga recursivamente por el árbol para comunicar información del padre a los hijos. Un orquestador centralizado en `Core.Integration` es responsable de invocar la secuencia de pasadas (`MeasureAsync`, `Arrange Async`, `RenderAsync`) en el orden correcto para todo el árbol.
+*   **El Contrato de Medición y Disposición:** El motor opera a través de un ciclo recursivo de dos fases principales antes del dibujado:
+    1.  **Pasada de Medición (`MeasureAsync`)**: El padre pregunta al hijo: "dado estas restricciones, ¿qué tamaño te gustaría tener?". Esta fase se propaga de arriba hacia abajo para comunicar las restricciones, y los resultados (el tamaño deseado) se agregan de abajo hacia arriba.
+    2.  **Pasada de Disposición (`ArrangeAsync`)**: El padre le dice al hijo: "basado en mi lógica, este es tu tamaño y posición final". Esta fase se propaga estrictamente de arriba hacia abajo, asignando a cada elemento su lugar definitivo en la página.
 
-### 2.3. Sistema de Paginación Automática (Implementación)
+#### 2.3. Sistema de Paginación Automática (Implementación)
 
-*   **Orquestación Iterativa:** El orquestador de layout no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición detecta que el contenido excede el espacio vertical disponible, crea una nueva página y reinicia el ciclo de layout con el contenido restante.
+El mecanismo de paginación automática, especialmente para elementos divisibles, se basa en un contrato de datos claro gestionado por el orquestador de layout (`ContentPageOrquestrator`) y los renderizadores de elementos.
+
+*   **Orquestación Iterativa:** El orquestador no procesa el árbol de elementos una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la disposición de un elemento detecta que este excede el espacio vertical disponible, inicia el proceso de paginación.
+
+*   **El Contrato `LayoutInfo`:** La comunicación entre el orquestador y los renderizadores se realiza a través de la estructura `LayoutInfo`. Esta estructura contiene no solo el tamaño y la posición final del elemento, sino también una propiedad crucial:
+    ```csharp
+    internal readonly record struct LayoutInfo(
+        object Element,
+        float Width,
+        float Height,
+        PdfRect? FinalRect = null,
+        PdfElementData? RemainingElement = null // La clave de la paginación
+    );
+    ```
+
+*   **El Patrón de "Elemento de Continuación"**:
+    1.  Cuando el orquestador llama a `ArrangeAsync` en un elemento divisible (como un `PdfParagraph`) con un espacio limitado, el renderizador del elemento es responsable de dividirse.
+    2.  El renderizador calcula qué parte de su contenido cabe en el espacio proporcionado.
+    3.  Crea una **nueva instancia de su propio modelo de datos** (e.g., un nuevo `PdfParagraphData`) que contiene solo el contenido sobrante, pero hereda todas las propiedades de estilo del original.
+    4.  Devuelve un `LayoutInfo` donde `FinalRect` describe el espacio ocupado en la página actual, y `RemainingElement` contiene el nuevo "elemento de continuación".
+    5.  El orquestador recibe este `LayoutInfo`, renderiza la parte actual, y coloca el `RemainingElement` al frente de la cola de procesamiento para la siguiente página.
+
+Este patrón garantiza que el proceso de paginación sea sin estado, robusto y desacoplado, ya que cada ciclo de página opera sobre una nueva cola de DTOs inmutables.
 
 ## 3. Implementación de Principios de Diseño
 
@@ -338,11 +368,13 @@ Por diseño arquitectónico, cada componente de la biblioteca posee un conjunto 
 - **`PageSize`**: `PageSizeType.A4` - Formato estándar internacional más utilizado globalmente.
 - **`PageOrientation`**: `PageOrientationType.Portrait` - Orientación vertical estándar para documentos.
 - **`Padding`**: `DefaultPagePaddingType.Normal` - Padding equilibrado que proporciona espacio de lectura cómodo.
-- **`FontFamily`**: No hay una fuente predeterminada fija. La biblioteca utiliza un sistema de resolución jerárquico:
-    1.  **Fuente Específica de la `View`**: (p. ej. `.FontFamily(PdfFonts.Roboto)`)
-    2.  **Fuente Predeterminada de la Página**: (Configurada en `IPdfContentPage`)
-    3.  **Fuente Predeterminada del Documento**: (Configurada en `IPdfDocumentConfigurator`)
-    4.  **Fallback Automático**: La primera fuente registrada en `MauiProgram.cs` mediante `PdfConfigureFonts()`.
+- **`FontFamily`**: La biblioteca no tiene una fuente predeterminada fija y codificada. En su lugar, utiliza un sistema de **resolución jerárquica en cascada** para determinar qué fuente usar cuando no se especifica explícitamente en un `PdfParagraph`. El orden de prioridad es el siguiente:
+    1.  **Fuente Específica de la `View`**: El valor establecido directamente en el elemento (p. ej. `.FontFamily(PdfFonts.Roboto)`).
+    2.  **Fuente Predeterminada de la Página**: El valor configurado a nivel de `IPdfContentPage` mediante `.DefaultFont(...)`.
+    3.  **Fuente Predeterminada del Documento**: La fuente designada como `.Default()` en la configuración global del documento (`.ConfigureFontRegistry(...)`).
+    4.  **Fallback Automático al Primer Registro**: Como último recurso, la biblioteca utilizará **la primera fuente registrada en `MauiProgram.cs`** a través de `PdfConfigureFonts()`.
+    
+    Este sistema garantiza que la biblioteca siempre priorice las elecciones del desarrollador, proporcionando un comportamiento predecible y eliminando la necesidad de configurar fuentes en cada elemento de texto.
 - **`FontSize`**: `12pt` - Tamaño estándar para texto de documento.
 - **`TextColor`**: `Colors.Black` - Color de texto tradicional para máxima legibilidad.
 - **`MetaData`**: Se crea automáticamente un bloque de metadatos con valores predeterminados y fijos para garantizar la conformidad y la calidad. La siguiente tabla detalla cada propiedad, su valor, la capa arquitectónica responsable y la justificación de la decisión.
@@ -358,32 +390,6 @@ Por diseño arquitectónico, cada componente de la biblioteca posee un conjunto 
 | **`RasterDpi`** | 300 | `Core.Implementation.Sk` | **Calidad de Impresión.** Campo no configurable en v1.0. Se fija a 300 DPI, el estándar para imágenes rasterizadas de alta calidad en documentos destinados a impresión. |
 | **`EncodingQuality`** | 100 | `Core.Implementation.Sk` | **Máxima Calidad Visual.** Campo no configurable en v1.0. Se utiliza la máxima calidad (100%) para la compresión de imágenes (ej. JPEG), priorizando la fidelidad visual sobre el tamaño del fichero. |
 | **`PdfA`** | `false` | `Core.Implementation.Sk` | **Compatibilidad General.** Campo no configurable en v1.0. Se establece en `false` por defecto, generando un PDF estándar. La conformidad con PDF/A (archivado a largo plazo) requiere restricciones adicionales que no son el objetivo principal en esta versión. |
-
-#### Sistema Automático de Registro de Fuentes
-
-Las fuentes configuradas en `MauiProgram.cs` mediante `PdfConfigureFonts()` con `FontDestinationType.Both` o `FontDestinationType.OnlyPDF` se registran automáticamente en el documento. Esto significa que:
-
-1.  **Registro Automático**: Estas fuentes están disponibles para uso inmediato en el documento.
-2.  **No Embebidas por Defecto**: Las fuentes registradas automáticamente no se embeben en el PDF.
-3.  **Configuración Adicional**: Para embeber fuentes específicas, se debe utilizar `ConfigureFontRegistry()` explícitamente.
-
-#### Propósito de ConfigureFontRegistry
-
-El método `ConfigureFontRegistry()` es específicamente para configurar el embebido de fuentes y establecer la fuente predeterminada:
-
-```csharp
-.Configuration(cfg =>
-{
-    cfg.ConfigureFontRegistry(cfr =>
-    {
-        cfr.Font(PdfFonts.Comic).EmbeddedFont();
-        cfr.Font(PdfFonts.Comic).Default();
-    });
-})
-```
-
-#### Justificación Arquitectónica
-Estos valores fueron seleccionados basándose en estándares de la industria editorial y garantizan que cualquier documento generado sea inmediatamente legible y profesional sin configuración adicional. La creación automática de metadatos con valores predeterminados y fijos garantiza que ningún documento generado sea anónimo o de baja calidad, facilitando su identificación y gestión. Se dejan como `null` los campos más específicos (`Subject`, `Keywords`) para evitar añadir información irrelevante por defecto, pero se anima al desarrollador a poblarlos para mejorar la accesibilidad y capacidad de búsqueda del documento.
 
 ### 6.2. Páginas (`PdfContentPage`)
 
@@ -691,102 +697,107 @@ La biblioteca aplica automáticamente los siguientes valores, algunos de los cua
 Una vez configurado el documento, se procede a definir su contenido. El proceso sigue una secuencia lógica:
 
 1.  Se añade una página usando el método `.ContentPage()`, que devuelve una interfaz `IPdfContentPage`.
-2.  Se define el contenido de la página mediante el método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método proporciona un constructor de contenido (`IPageContentBuilder`) que actúa como una caja de herramientas completa para añadir `Views` y `Layouts`.
+2.  Se define el contenido de la página mediante el método `.Content(Action<IPageContentBuilder> contentSetup)`. Este método proporciona un constructor de contenido (`IPageContentBuilder`) que actúa como una caja de herramientas para construir el **árbol de elementos visuales** de la página.
 3.  Finalmente, se llama al método `Build()`, que devuelve un `IPdfDocument` listo para ser guardado o procesado.
 
-El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para crear todos los elementos visuales soportados, devolviendo interfaces para una construcción intuitiva y estable.
+El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para crear todos los elementos visuales soportados. La capacidad de anidar llamadas a constructores de `Layout` permite la creación de jerarquías de contenido complejas de manera declarativa e intuitiva.
 
-| Método en `IPageContentBuilder` | Descripción | Retorna |
-| :--- | :--- | :--- |
-| `.Paragraph(string text)` | Añade un elemento de texto. | `IPdfParagraph` |
-| `.PdfImage(Stream stream)` | Añade un elemento de imagen desde un `Stream`. | `IPdfImage` |
-| `.HorizontalLine()` | Añade un elemento de línea horizontal. | `IPdfHorizontalLine` |
-| `.VerticalStackLayout(...)` | Añade un layout de pila vertical. | `IVerticalStackLayout` |
-| `.HorizontalStackLayout(...)` | Añade un layout de pila horizontal. | `IHorizontalStackLayout` |
-| `.PdfGrid()` | Añade un layout de rejilla configurable. | `PdfGrid` |
+| Método en `IPageContentBuilder` | Descripción                                                              | Retorna                   |
+| :------------------------------ | :----------------------------------------------------------------------- | :------------------------ |
+| `.Paragraph(string text)`       | Añade un elemento de texto (View).                                       | `IPdfParagraph`           |
+| `.Image(Stream stream)`         | Añade un elemento de imagen desde un `Stream` (View).                    | `IPdfImage`               |
+| `.HorizontalLine()`             | Añade un elemento de línea horizontal (View).                            | `IPdfHorizontalLine`      |
+| `.VerticalStackLayout(...)`     | Añade un layout de pila vertical (Layout).                               | `IVerticalStackLayout`    |
+| `.HorizontalStackLayout(...)`   | Añade un layout de pila horizontal (Layout).                             | `IHorizontalStackLayout`  |
+| `.PdfGrid()`                    | Añade un layout de rejilla configurable (Layout).                        | `PdfGrid`                 |
 
 ### 3.2. Pages
 
 #### PdfContentPage
 La `IPdfContentPage` es la interfaz para el tipo de `Page` más común. Su propósito es mostrar contenido visual.
 
-##### El Layout Raíz: Convención sobre Configuración
+##### El Comportamiento de Layout de `PdfContentPage`
 
-Por diseño, para maximizar la simplicidad, `PdfContentPage` sigue un principio de **convención sobre configuración**.
+Por diseño arquitectónico, `PdfContentPage` no es un simple contenedor pasivo; **su responsabilidad principal es organizar una secuencia de elementos de contenido en un flujo vertical continuo.** Este comportamiento es inherente a su tipo y es fundamental para habilitar la paginación automática de manera eficiente. Los elementos hijos directos de la página, que pueden ser una mezcla de `Views` y `Layouts`, se apilan verticalmente.
 
-**Convención (Uso Implícito):**
-Si añades elementos directamente en el constructor `.Content()`, la biblioteca asume por convención que deben organizarse en un `IVerticalStackLayout` con sus valores predeterminados (ej. `Spacing` de 0).
+Esta decisión de diseño cumple varios objetivos:
+1.  **Rendimiento**: Evita la creación de un objeto de layout (`VerticalStackLayout`) adicional e innecesario en el árbol de datos para el caso de uso más común, manteniendo el procesamiento más ligero.
+2.  **Paginación Automática**: El orquestador de layout del `Core` puede operar sobre una lista simple de elementos para calcular los saltos de página, un algoritmo mucho más directo que navegar un árbol de layouts anidados.
+3.  **Claridad de API**: El desarrollador no necesita pensar en el layout raíz para un documento simple, cumpliendo con el "Principio de Garantía de Completitud".
 
-*Ejemplo de uso por convención (layout implícito):*
+En la práctica, esto se traduce en dos escenarios de uso:
+
+**1. Caso de Uso Común (Flujo Vertical Implícito):**
+Cuando se añaden múltiples elementos (sean `Views` o `Layouts`) directamente en el constructor `.Content()`, estos se incorporan a la lista de contenido de la página. El motor de renderizado los procesará y los apilará verticalmente uno tras otro.
+
+*Ejemplo de flujo vertical implícito con elementos mixtos:*
 ```csharp
-// El desarrollador no necesita definir un layout.
-// Los párrafos se apilan verticalmente con espaciado predeterminado (0).
+// La página se encarga de apilar verticalmente el párrafo, la línea y el layout.
 .ContentPage()
     .Content(c => 
     {
-        c.Paragraph("Párrafo 1");
-        c.Paragraph("Párrafo 2");
-    })
-```
+        c.Paragraph("Título de la sección");
+        c.HorizontalLine();
+        c.HorizontalStackLayout(hsl => { /* ... contenido del stack ... */ });
+    })```
 
-**Configuración (Uso Explícito):**
+**2. Caso de Uso Avanzado (Layout Único como Raíz):**
+Si necesitas un control total sobre la estructura, como un espaciado específico entre elementos, un layout horizontal o una rejilla como contenedor principal, debes definir **un único `Layout` como el elemento raíz** dentro del constructor `.Content()`. En este escenario, `PdfContentPage` delega la responsabilidad de organizar el contenido a ese único elemento hijo, que ocupará todo el espacio disponible de la página.
 
-Si necesitas configurar propiedades del layout (como el espaciado) o usar un layout diferente (`PdfGrid`, `PdfHorizontalStackLayout`), debes ser explícito. Para ello, define un único `PdfLayoutElement` como raíz dentro del constructor `.Content()`. Esto te da control total sobre la estructura y apariencia del contenido.
-
-*Ejemplo de uso por configuración (layout explícito):*
-
+*Ejemplo de layout explícito como raíz:*
 ```csharp
-// Para cambiar el espaciado, el desarrollador debe definir el layout explícitamente.
+// Para controlar el espaciado global, el desarrollador define un VerticalStackLayout explícito.
+// La página ahora solo tiene un hijo, y es este layout el que gestiona los párrafos.
 .ContentPage()
     .Content(c => c.VerticalStackLayout(vsl =>
     {
         vsl.Paragraph("Párrafo 1");
         vsl.Paragraph("Párrafo 2");
-    }).Spacing(12)) // El espaciado ahora se aplica al layout explícito.
+    }).Spacing(12)) // El espaciado se aplica al layout explícito.
 ```
 
 Este enfoque mantiene la API simple para los casos comunes, pero ofrece total flexibilidad para los casos avanzados, manteniendo siempre un modelo mental claro y predecible.
 
 ##### Propiedades Principales
-| Propiedad | Tipo de Dato | Descripción |
-| :--- | :--- | :--- |
-| Propiedades de `IPdfPage<TSelf>` | Varios | Incluye métodos para configurar `Padding`, `PageSize`, `PageOrientation`, `BackgroundColor` a nivel de página. Las propiedades de layout como el espaciado pertenecen al layout hijo, no a la página. |
+| Propiedad                       | Tipo de Dato | Descripción                                                                                                                                                           |
+| :------------------------------ | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Propiedades de `IPdfPage<TSelf>` | Varios       | Incluye métodos para configurar `Padding`, `PageSize`, `PageOrientation`, `BackgroundColor` a nivel de página. Las propiedades de layout pertenecen a los layouts hijos. |
 
 ### 3.3. Layouts (Contenedores)
 
-Un `Layout` se utiliza para componer las `Views` en una estructura visual. Las clases de `Layout` en MauiPdfGenerator derivan de la clase `IPdfLayoutElement`.
+Un `Layout` se utiliza para componer `Views` en una estructura visual. Una característica fundamental de los `Layouts` en MauiPdfGenerator es su **capacidad de contener no solo `Views`, sino también otros `Layouts`**. Esto permite la creación de jerarquías de diseño profundamente anidadas y complejas.
+
+Todos los layouts se rigen por los principios de **Propagación de Restricciones** y el **Modelo de Caja** descritos en la Parte II de esta documentación.
 
 #### PdfVerticalStackLayout
-El `PdfVerticalStackLayout` organiza sus `Views` hijas en una única columna vertical.
+El `PdfVerticalStackLayout` organiza sus elementos hijos (sean `Views` u otros `Layouts`) en una única columna vertical.
 
-> **NOTA:** Utiliza valores predeterminados: `Spacing` de 0, `Padding` y `Margin` en cero, y `HorizontalOptions` configurado en `Fill` para ocupar todo el ancho disponible.
-
-> **Comportamiento de Paginación:** Este `Layout` es **atómico**. Si no cabe en el espacio restante de la página actual, la biblioteca lo moverá completo a la siguiente página.
+> **Comportamiento de Paginación:** Este `Layout` es **atómico**. Esto tiene una implicación importante: si el `VerticalStackLayout` y todo su contenido no caben en el espacio restante de una página, la **unidad completa** se moverá a la página siguiente. La biblioteca no dividirá el contenido de un `StackLayout` a través de un salto de página. Para contenido que debe fluir y dividirse a través de las páginas, los elementos deben ser hijos directos de `IPdfContentPage` o de un `PdfGrid`.
 
 ##### Creación y Uso Práctico
 Se instancia a través del método `.VerticalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido. El patrón de `Action` proporciona un nuevo constructor anidado (`IStackLayoutBuilder`) para definir los elementos hijos dentro del `Layout`.
 
 ##### Propiedades clave:
-| Propiedad | Tipo de Dato | Descripción |
-| :--- | :--- |
-| `Spacing` | `double` | Define el espacio entre cada `View` hija. El valor predeterminado es 0. |
+| Propiedad | Tipo de Dato | Descripción                                                              |
+| :-------- | :----------- | :----------------------------------------------------------------------- |
+| `Spacing` | `double`     | Define el espacio entre cada elemento hijo. El valor predeterminado es 0. |
 
 #### PdfHorizontalStackLayout
-El `PdfHorizontalStackLayout` organiza sus `Views` hijas en una única fila horizontal.
+El `PdfHorizontalStackLayout` organiza sus elementos hijos en una única fila horizontal.
 
-> **NOTA:** Comparte los mismos valores predeterminados que `PdfVerticalStackLayout` para mantener consistencia en el comportamiento de los layouts.
+> **Comportamiento de Paginación:** Este `Layout` es **atómico**, siguiendo la misma regla "todo o nada" que el `VerticalStackLayout`.
 
-> **Comportamiento de Paginación:** Este `Layout` es **atómico**.
+> **Característica de Depuración (Overflow):** El `HorizontalStackLayout` incluye un mecanismo avanzado de depuración. Si durante la disposición de sus hijos detecta que un elemento excede el ancho disponible, en lugar de simplemente recortarlo o esconderlo, le indicará al renderizador de ese hijo que dibuje un estado de error visual (por ejemplo, un recuadro rojo para una imagen). Este renderizado de error se realiza en la **posición y tamaño ideales** que el elemento habría ocupado si hubiera tenido espacio suficiente, proporcionando una retroalimentación visual invaluable para corregir problemas de layout.
 
 ##### Creación y Uso Práctico
-Se instancia a través del método `.HorizontalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido, siguiendo el mismo patrón que el `PdfVerticalStackLayout`.
+Se instancia a través del método `.HorizontalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido.
 
 ##### Propiedades clave:
-| Propiedad | Tipo de Dato | Descripción |
-| :--- | :--- | :--- |
-| `Spacing` | `double` | Define el espacio entre cada `View` hija. El valor predeterminado es 0. |
+| Propiedad | Tipo de Dato | Descripción                                                              |
+| :-------- | :----------- | :----------------------------------------------------------------------- |
+| `Spacing` | `double`     | Define el espacio entre cada elemento hijo. El valor predeterminado es 0. |
 
-*Ejemplo de Uso de StackLayouts:*
+*Ejemplo de Uso de StackLayouts Anidados:*
 
 ```csharp
 c.VerticalStackLayout(vsl => 
@@ -794,6 +805,7 @@ c.VerticalStackLayout(vsl =>
     vsl.Spacing(10);
     vsl.Paragraph("Elemento 1 en VerticalStack");
     
+    // Layout anidado
     vsl.HorizontalStackLayout(hsl =>
     {
         hsl.Spacing(8);
@@ -801,32 +813,29 @@ c.VerticalStackLayout(vsl =>
         hsl.Paragraph("Texto anidado 1");
         hsl.Paragraph("Texto anidado 2");
     });
-});
-```
+});```
 
 #### PdfGrid
-El `PdfGrid` es un `Layout` potente para mostrar `Views` en filas y columnas.
+El `PdfGrid` es un `Layout` potente para mostrar `Views` y otros `Layouts` en filas y columnas.
 
-> **NOTA:** Los valores predeterminados incluyen `RowSpacing` y `ColumnSpacing` de 0, permitiendo diseños precisos sin espaciado no deseado.
-
-> **Comportamiento de Paginación:** Este `Layout` es **divisible**. Si su contenido excede el espacio disponible en la página actual, la biblioteca lo dividirá automáticamente, continuando las filas restantes en la siguiente página. La división siempre ocurre entre filas.
+> **Comportamiento de Paginación:** Este `Layout` es **divisible**. Si su contenido excede el espacio disponible en la página actual, la biblioteca lo dividirá automáticamente, continuando las filas restantes en la siguiente página. La división siempre ocurre entre filas, nunca a mitad de una celda.
 
 ##### Creación y Uso Práctico
 Se instancia con el método `.PdfGrid()` en un constructor de contenido. La configuración de filas, columnas y la adición de hijos se realiza mediante una API fluida directamente sobre el objeto `PdfGrid` devuelto.
 
 ##### Posicionamiento y Expansión de Vistas:
-Las `Views` se colocan en celdas específicas utilizando las propiedades adjuntas `.Row(int)` y `.Column(int)`. Para que una `View` ocupe múltiples filas o columnas, se utilizan `.RowSpan(int)` y `.ColumnSpan(int)`.
+Los elementos hijos se colocan en celdas específicas utilizando las propiedades adjuntas `.Row(int)` y `.Column(int)`. Para que un elemento ocupe múltiples filas o columnas, se utilizan `.RowSpan(int)` y `.ColumnSpan(int)`.
 
 ##### Definición de Tamaño:
 El tamaño de las filas y columnas se controla a través de `RowDefinitions` y `ColumnDefinitions`, usando `GridLength` con valores `Auto`, un valor numérico explícito, o un valor proporcional (`Star`).
 
 ##### Propiedades clave:
-| Propiedad | Tipo de Dato | Descripción |
-| :--- | :--- | :--- |
-| `RowDefinitions` | `RowDefinitionCollection` | La colección de objetos `RowDefinition` que definen las filas. |
-| `ColumnDefinitions` | `ColumnDefinitionCollection` | La colección de objetos `ColumnDefinition` que definen las columnas. |
-| `RowSpacing` | `double` | El espacio vertical entre las filas del grid. |
-| `ColumnSpacing` | `double` | El espacio horizontal entre las columnas del grid. |
+| Propiedad           | Tipo de Dato               | Descripción                                                              |
+| :------------------ | :------------------------- | :----------------------------------------------------------------------- |
+| `RowDefinitions`    | `RowDefinitionCollection`  | La colección de objetos `RowDefinition` que definen las filas.           |
+| `ColumnDefinitions` | `ColumnDefinitionCollection` | La colección de objetos `ColumnDefinition` que definen las columnas.     |
+| `RowSpacing`        | `double`                   | El espacio vertical entre las filas del grid.                            |
+| `ColumnSpacing`     | `double`                   | El espacio horizontal entre las columnas del grid.                       |
 
 *Ejemplo de Uso de PdfGrid:*
 
@@ -859,61 +868,55 @@ c.PdfGrid()
 
 ### 3.4. Views (Elementos Visuales)
 
+Las `Views` son los componentes que renderizan el contenido final en la página del PDF. Son los "átomos" visuales del documento y siempre actúan como nodos finales (hojas) en el árbol de composición.
+
 #### Paragraph
-La interfaz `IPdfParagraph` representa un elemento que  muestra texto de una sola línea y de varias líneas.
+La interfaz `IPdfParagraph` representa un elemento que muestra texto de una sola línea y de varias líneas.
 
-> **NOTA:** Utiliza valores predeterminados del documento: familia de fuente predeterminada por la cnfiguracion del documento o la pagina, tamanio a 12pt, color negro, alineación a la izquierda y ajuste de línea por palabras. Las propiedades de fuente y color se heredan de la configuración global del documento.
+> **Valores Predeterminados:** `HorizontalOptions` y `VerticalOptions` se establecen en `LayoutAlignment.Fill`. Otras propiedades de estilo como `FontFamily` se heredan a través de la jerarquía de resolución en cascada.
 
-> **Comportamiento de Paginación:** Esta `View` es **divisible**. 
+> **Comportamiento de Paginación:** Esta `View` es **divisible**. Si un párrafo no cabe completamente en el espacio restante de una página, la biblioteca lo dividirá automáticamente. Las líneas que caben se renderizarán en la página actual, y el texto restante se transferirá a la página siguiente, conservando todo el estilo original.
 
 ##### Propiedades:
-- `CharacterSpacing`: `double`, establece el espaciado entre caracteres.
-- `FontAttributes`: `Microsoft.Maui.Controls.FontAttributes`, determina el estilo del texto (negrita, cursiva).
 - `FontFamily`: `PdfFontIdentifier`, define la familia de fuentes. Se debe utilizar la clase estática `PdfFonts` generada automáticamente.
 - `FontSize`: `float`, define el tamaño de la fuente.
-- `FormattedText`: `FormattedString`, permite texto con múltiples estilos usando `PdfSpan`.
-- `HorizontalTextAlignment`: `Microsoft.Maui.TextAlignment`, define la alineación horizontal.
-- `LineBreakMode`: `Microsoft.Maui.LineBreakMode`, determina el comportamiento de ajuste y truncamiento.
-- `LineHeight`: `double`, especifica un multiplicador para la altura de línea.
-- `MaxLines`: `int`, indica el número máximo de líneas.
-- `Padding`: `Microsoft.Maui.Thickness`, determina el relleno interno.
-- `Text`: `string`, define el contenido de texto.
 - `TextColor`: `Microsoft.Maui.Graphics.Color`, define el color del texto.
+- `FontAttributes`: `Microsoft.Maui.Controls.FontAttributes`, determina el estilo del texto (negrita, cursiva).
+- `HorizontalTextAlignment`: `Microsoft.Maui.TextAlignment`, define la alineación horizontal del texto dentro de su contenedor.
+- `VerticalTextAlignment`: `Microsoft.Maui.TextAlignment`, define la alineación vertical del texto (útil cuando el párrafo tiene un `HeightRequest` fijo).
+- `LineBreakMode`: `Microsoft.Maui.LineBreakMode`, determina el comportamiento de ajuste y truncamiento (`WordWrap`, `CharacterWrap`, `TailTruncation`, etc.).
 - `TextDecorations`: `Microsoft.Maui.TextDecorations`, aplica decoraciones como `Underline` y `Strikethrough`.
 - `TextTransform`: `Microsoft.Maui.TextTransform`, especifica la transformación a mayúsculas o minúsculas.
-- `VerticalTextAlignment`: `Microsoft.Maui.TextAlignment`, define la alineación vertical.
+- Además de las propiedades de `IPdfElement` (`Margin`, `Padding`, `BackgroundColor`, etc.).
 
 *Ejemplo de Uso de IPdfParagraph:*
 
 ```csharp
-c.Paragraph("[P1] Texto simple con propiedades predeterminadas");
+c.Paragraph("Texto simple con propiedades predeterminadas");
 
-c.Paragraph("[P2] Texto azul, centrado y con un tamaño de fuente mayor.")
+c.Paragraph("Texto azul, centrado y con un tamaño de fuente mayor.")
     .TextColor(Colors.Blue)
     .HorizontalTextAlignment(TextAlignment.Center)
     .FontSize(16);
 
-c.Paragraph("[P3] Este párrafo tiene un fondo, padding y margin.")
-    .Padding(10, 20)
-    .Margin(0, 10)
-    .BackgroundColor(Colors.LightCoral);
-
-c.Paragraph("[P4] Estilo Completo: Subrayado, Negrita, Itálica y fuente Comic.")
+c.Paragraph("Estilo Completo: Subrayado, Negrita, Itálica y fuente Comic.")
     .FontFamily(PdfFonts.Comic)
     .FontAttributes(FontAttributes.Bold | FontAttributes.Italic)
     .TextDecorations(TextDecorations.Underline);
 ```
 
 #### Image
-La interfaz `IPdfImage` muestra una imagen que se puede cargar desde un archivo local, un URI o una secuencia.
+La interfaz `IPdfImage` muestra una imagen que se puede cargar desde un `Stream`.
 
-> **NOTA:** Utiliza valores predeterminados: `Aspect.AspectFit` para mantener las proporciones de la imagen, y opciones de layout configuradas en `Fill` para adaptarse al espacio disponible.
+> **Valores Predeterminados:** `HorizontalOptions` y `VerticalOptions` se establecen en `LayoutAlignment.Fill`. `Aspect` se establece en `Aspect.AspectFit`.
 
-> **Comportamiento de Paginación:** Esta `View` es **atómica**.
+> **Comportamiento de Paginación:** Esta `View` es **atómica**. Si la imagen no cabe en el espacio restante de la página, se moverá completa a la página siguiente. Nunca será recortada por un salto de página.
+
+> **Característica de Depuración (Overflow):** Para facilitar el diseño, si una imagen se coloca en un contenedor con espacio horizontal limitado (como un `HorizontalStackLayout`) y su tamaño excede el espacio disponible, el renderizador dibujará un recuadro rojo con un mensaje de error en el PDF generado. Esto proporciona una retroalimentación visual inmediata sobre problemas de layout.
 
 ##### Propiedades:
-- `Aspect`: `Microsoft.Maui.Aspect`, define el modo de escalado de la imagen (`AspectFit`, `AspectFill`, `Fill`, `Center`).
-- `Source`: `PdfImageSource`, especifica el origen de la imagen.
+- `Aspect`: `Microsoft.Maui.Aspect`, define el modo de escalado de la imagen (`AspectFit`, `AspectFill`, `Fill`).
+- Además de las propiedades de `IPdfElement` (`Margin`, `Padding`, `BackgroundColor`, etc.).
 
 *Ejemplo de Uso de IPdfImage:*
 
@@ -928,15 +931,16 @@ c.Image(new MemoryStream(imageData))
 ```
 
 #### HorizontalLine
-La interfaz `IPdfHorizontalLine` es una `View` pública cuyo propósito es dibujar una línea horizontal, comúnmente usada como separador visual. Internamente, es una implementación especializada de la clase base `IPdfShape`.
+La interfaz `IPdfHorizontalLine` es una `View` cuyo propósito es dibujar una línea horizontal, comúnmente usada como separador visual.
 
-> **NOTA:** Utiliza valores predeterminados: color negro y grosor de 1.0, con `HorizontalOptions` configurado en `Fill` para ocupar todo el ancho disponible.
+> **Valores Predeterminados:** `HorizontalOptions` se establece en `LayoutAlignment.Fill`. `VerticalOptions` se establece en `LayoutAlignment.Center`.
 
 > **Comportamiento de Paginación:** Esta `View` es **atómica**.
 
 ##### Propiedades:
 - `Color`: `Microsoft.Maui.Graphics.Color`, el color de la línea.
 - `Thickness`: `double`, el grosor de la línea.
+- Además de las propiedades de `IPdfElement` (`Margin`, `Padding`, `BackgroundColor`, etc.).
 
 *Ejemplo de Uso de IPdfHorizontalLine:*
 
@@ -949,46 +953,66 @@ c.HorizontalLine()
 c.Paragraph("Texto debajo de la línea.");
 ```
 
-#### PdfShape
-Es una clase base que permite dibujar formas en la página. Aunque los desarrolladores pueden derivar de ella para crear formas personalizadas, la biblioteca proporciona `Views` listas para usar, como `PdfHorizontalLine`, que se basan en este sistema. El `BackgroundColor` de todas las `Views` se implementa internamente dibujando un `PdfRectangle` (una `PdfShape`) debajo del contenido.
-
-##### Propiedades de Estilo:
-- `Fill`: `Brush`, indica el pincel para pintar el interior de la forma.
-- `Stroke`: `Brush`, indica el pincel para pintar el contorno.
-- `StrokeThickness`: `double`, indica el ancho del contorno.
-- `StrokeDashArray`: `DoubleCollection`, define un patrón de guiones y espacios.
-- `StrokeLineCap`: `PenLineCap`, describe la forma al principio y al final de una línea.
-- `StrokeLineJoin`: `PenLineJoin`, especifica el tipo de unión en los vértices.
-- `Aspect`: `Stretch`, describe cómo la forma llena su espacio asignado.
+#### Nota Arquitectónica sobre `PdfShape`
+Internamente, elementos como `HorizontalLine` derivan de un sistema de formas más genérico. Una aplicación visible de esto es la propiedad `BackgroundColor`. Cuando se establece un `BackgroundColor` en cualquier `View`, el motor de renderizado primero dibuja una forma `PdfRectangle` en la posición y tamaño del elemento, y luego dibuja el contenido real (texto, imagen, etc.) encima. Esto asegura un comportamiento consistente y predecible del modelo de caja.
 
 ## 4. Guías Prácticas y Patrones de Uso (Cookbook)
 
-### 4.1. Sistema de Layout en la Práctica
+Esta sección profundiza en los conceptos prácticos de alineación y espaciado para ayudarte a dominar el diseño de tus documentos.
 
-#### Alineación y Posicionamiento
+### 4.1. Alineación y Posicionamiento: El Principio de Autoridad Parental
 
-Cada `View` o `Layout` tiene propiedades `HorizontalOptions` y `VerticalOptions` de tipo `Microsoft.Maui.Controls.LayoutAlignment`. Esta estructura determina su posición y tamaño dentro de su `Layout` padre cuando este contiene espacio no utilizado.
+Como se detalla en la Parte II, un elemento no se posiciona a sí mismo. Sus propiedades `HorizontalOptions` y `VerticalOptions` son **solicitudes** a su `Layout` padre.
 
-#### Opciones de Alineación
-- **`Start`**: Alinea a la izquierda o arriba.
-- **`Center`**: Centra horizontal o verticalmente.
-- **`End`**: Alinea a la derecha o abajo.
-- **`Fill`**: Asegura que el elemento llene el espacio disponible.
+*   **`LayoutAlignment.Fill` (Predeterminado):** La solicitud es "ocupa todo el espacio que tu padre me asigne en este eje". Por eso, un `Paragraph` dentro de un `VerticalStackLayout` se estira horizontalmente por defecto.
+*   **`LayoutAlignment.Start`, `Center`, `End`:** La solicitud es "mide mi tamaño natural y luego posicióname al inicio, centro o final del espacio que mi padre me asigne".
 
-> **Nota**: El valor predeterminado de `HorizontalOptions` y `VerticalOptions` es `LayoutAlignment.Fill`.
+Este principio explica por qué la alineación de un elemento siempre es relativa a su contenedor directo.
 
-#### Posicionamiento con Margin y Padding
+### 4.2. La Diferencia Crucial: ...Options vs. ...TextAlignment
 
-Las propiedades `Margin` y `Padding`, de tipo `Microsoft.Maui.Thickness`, controlan el espaciado.
+Es fundamental entender la diferencia entre estas dos familias de propiedades para alinear el contenido correctamente.
 
-- **`Margin`**: Distancia **externa** entre un elemento y sus vecinos (aplicable a elementos individuales dentro de layouts).
-- **`Padding`**: Para páginas y documentos, define el espacio **interno** entre el borde y el contenido. Para elementos individuales, es la distancia interna entre el borde del elemento y su contenido.
+*   **`HorizontalOptions` / `VerticalOptions`:** Estas propiedades posicionan la **caja completa del elemento** (incluyendo su `Padding` y `BackgroundColor`) dentro del espacio que le asigna su `Layout` padre.
+*   **`HorizontalTextAlignment` / `VerticalTextAlignment`:** Estas propiedades posicionan el **contenido del texto** dentro de la propia caja del `PdfParagraph`, específicamente dentro de su área de `Padding`.
 
-### 4.2. Aplicación Práctica
+Imagina dos cajas anidadas:
+1.  **Caja Exterior (El Elemento):** `HorizontalOptions` la mueve a la izquierda, centro o derecha del `Layout`.
+2.  **Caja Interior (El Contenido):** `HorizontalTextAlignment` mueve el texto a la izquierda, centro o derecha *dentro* de la Caja Exterior.
 
-Al diseñar un PDF:
+*Ejemplo práctico:* Para tener un texto centrado en medio de la página, necesitarías:
+```csharp
+c.Paragraph("Texto Centrado")
+    // No es necesario, porque el VSL padre ya ocupa todo el ancho.
+    // .HorizontalOptions(LayoutAlignment.Fill) 
+    
+    // Esto centra el TEXTO DENTRO de la caja del párrafo.
+    .HorizontalTextAlignment(TextAlignment.Center);
+```
 
-1.  **Planifica las `Pages`**: Define el número y tipo de páginas.
-2.  **Diseña los `Layouts`**: Estructura la organización visual en cada página.
-3.  **Selecciona las `Views`**: Elige los componentes visuales para el contenido.
-4.  **Compón la jerarquía**: Organiza la estructura completa del documento.
+Para tener una caja de color de 200px de ancho centrada en la página, con el texto alineado a la derecha dentro de ella:
+```csharp
+c.Paragraph("Caja centrada, texto a la derecha")
+    .WidthRequest(200)
+    // Esto centra la CAJA COMPLETA en el layout padre.
+    .HorizontalOptions(LayoutAlignment.Center) 
+    // Esto alinea el TEXTO a la derecha DENTRO de la caja de 200px.
+    .HorizontalTextAlignment(TextAlignment.End) 
+    .BackgroundColor(Colors.LightYellow);
+```
+
+### 4.3. Espaciado: Margin vs. Padding vs. Spacing
+
+Estos tres mecanismos controlan el espacio en el documento, pero cada uno tiene un propósito específico.
+
+*   **`Margin`:** Es el espacio **exterior** de un elemento. Crea un "campo de fuerza" transparente a su alrededor que empuja a los elementos vecinos. Es la herramienta principal para crear espacio *entre* dos elementos específicos.
+
+*   **`Padding`:** Es el espacio **interior** de un elemento, entre su borde y su contenido. El `BackgroundColor` de un elemento se extiende por su área de `Padding`. Es la herramienta para dar "aire" al contenido dentro de un borde o fondo.
+
+*   **`Spacing`:** Es una propiedad de conveniencia que solo existe en los `Layouts` (`VerticalStackLayout`, `HorizontalStackLayout`, etc.). Internamente, el `Layout` aplica un `Margin` uniforme a sus hijos para crear un espaciado consistente *entre todos* ellos. Es la herramienta para un espaciado rítmico y regular dentro de un grupo de elementos.
+
+| Propiedad | Dónde se aplica | Propósito                                       | Afectado por `BackgroundColor` |
+| :-------- | :--------------- | :---------------------------------------------- | :----------------------------- |
+| `Margin`  | En cualquier `View` o `Layout` | Espacio **entre** este elemento y sus vecinos.  | No                             |
+| `Padding` | En cualquier `View` o `Layout` | Espacio **dentro** de un elemento.              | Sí                             |
+| `Spacing` | Solo en `Layouts`              | Espacio **entre todos los hijos** de un layout. | No (porque aplica `Margin`)    |

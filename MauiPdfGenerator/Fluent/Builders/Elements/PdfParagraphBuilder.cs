@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace MauiPdfGenerator.Fluent.Builders.Elements;
 
-internal class PdfParagraphBuilder : IPdfParagraph, IBuildableElement
+internal class PdfParagraphBuilder : IPdfParagraph, IBuildablePdfElement
 {
     private readonly PdfParagraphData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;

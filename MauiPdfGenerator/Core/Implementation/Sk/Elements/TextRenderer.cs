@@ -23,7 +23,7 @@ internal class TextRenderer : IElementRenderer
         PdfRect? FinalArrangedRect = null
     );
 
-    public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
         if (context.Element is not PdfParagraphData paragraph)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
@@ -59,10 +59,10 @@ internal class TextRenderer : IElementRenderer
         var totalWidth = boxWidth + (float)paragraph.GetMargin.HorizontalThickness;
         var totalHeight = boxHeight + (float)paragraph.GetMargin.VerticalThickness;
 
-        return new LayoutInfo(paragraph, totalWidth, totalHeight);
+        return new PdfLayoutInfo(paragraph, totalWidth, totalHeight);
     }
 
-    public Task<LayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
+    public Task<PdfLayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
         if (context.Element is not PdfParagraphData paragraph)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
@@ -70,7 +70,7 @@ internal class TextRenderer : IElementRenderer
         if (!context.LayoutState.TryGetValue(paragraph, out var state))
         {
             context.Logger.LogError("Text layout cache not found for element. MeasureAsync was likely not called or failed.");
-            return Task.FromResult(new LayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
+            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
         var (allLines, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight) =
@@ -81,7 +81,7 @@ internal class TextRenderer : IElementRenderer
         if (totalTextHeight <= availableHeight)
         {
             context.LayoutState[paragraph] = new TextLayoutCache(allLines, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight, allLines, finalRect);
-            return Task.FromResult(new LayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
+            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
         SKFontMetrics fontMetrics = font.Metrics;
@@ -95,7 +95,7 @@ internal class TextRenderer : IElementRenderer
         if (linesThatFit <= 0 || linesThatFit >= allLines.Count)
         {
             var remainingParagraph = new PdfParagraphData(paragraph.Text, paragraph);
-            return Task.FromResult(new LayoutInfo(paragraph, finalRect.Width, 0, PdfRect.Empty, remainingParagraph));
+            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, 0, PdfRect.Empty, remainingParagraph));
         }
 
         var linesForThisPage = allLines.Take(linesThatFit).ToList();
@@ -116,7 +116,7 @@ internal class TextRenderer : IElementRenderer
 
         context.LayoutState[paragraph] = new TextLayoutCache(allLines, font, paint, fontLineSpacing, horizontalAlignment, textDecorations, totalTextHeight, linesForThisPage, arrangedRectForThisPage);
 
-        return Task.FromResult(new LayoutInfo(paragraph, finalRect.Width, finalHeightForThisPage, arrangedRectForThisPage, continuationParagraph));
+        return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalHeightForThisPage, arrangedRectForThisPage, continuationParagraph));
     }
 
 
@@ -203,6 +203,13 @@ internal class TextRenderer : IElementRenderer
         return Task.CompletedTask;
     }
 
+    public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)
+    {
+        // Por ahora, el texto desbordado simplemente no se dibuja.
+        // Se podría implementar una visualización de error similar a la de la imagen.
+        return Task.CompletedTask;
+    }
+
     private void DrawTextDecorations(SKCanvas canvas, SKFont font, SKPaint paint, TextDecorations decorations, float x, float y, float width)
     {
         float decorationThickness = Math.Max(1f, font.Size / 12f);
@@ -254,7 +261,7 @@ internal class TextRenderer : IElementRenderer
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraphData.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
         TextTransform textTransform = paragraph.CurrentTextTransform ?? pageDefinition.PageDefaultTextTransform;
-        FontRegistration? fontRegistration = paragraph.ResolvedFontRegistration;
+        PdfFontRegistration? fontRegistration = paragraph.ResolvedFontRegistration;
         if (fontRegistration is null && fontIdentifierToUse.HasValue)
         {
             fontRegistration = fontRegistry.GetFontRegistration(fontIdentifierToUse.Value);

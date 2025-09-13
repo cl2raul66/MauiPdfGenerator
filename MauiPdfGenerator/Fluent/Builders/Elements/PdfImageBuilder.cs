@@ -5,7 +5,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Elements;
 
 namespace MauiPdfGenerator.Fluent.Builders.Elements;
 
-internal class PdfImageBuilder : IPdfImage, IBuildableElement
+internal class PdfImageBuilder : IPdfImage, IBuildablePdfElement
 {
     private readonly PdfImageData _model;
 

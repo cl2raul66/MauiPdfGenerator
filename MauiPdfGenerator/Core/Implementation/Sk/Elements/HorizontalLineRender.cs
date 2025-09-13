@@ -9,7 +9,7 @@ internal class HorizontalLineRender : IElementRenderer
 {
     private record LineLayoutCache(SKPoint RelativeStart, SKPoint RelativeEnd, PdfRect FinalRect);
 
-    public Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
         if (context.Element is not PdfHorizontalLineData line)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLineData)} or is null.");
@@ -31,10 +31,10 @@ internal class HorizontalLineRender : IElementRenderer
         var totalWidth = boxWidth + (float)line.GetMargin.HorizontalThickness;
         var totalHeight = boxHeight + (float)line.GetMargin.VerticalThickness;
 
-        return Task.FromResult(new LayoutInfo(line, totalWidth, totalHeight));
+        return Task.FromResult(new PdfLayoutInfo(line, totalWidth, totalHeight));
     }
 
-    public Task<LayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
+    public Task<PdfLayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
         if (context.Element is not PdfHorizontalLineData line)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLineData)} or is null.");
@@ -51,7 +51,7 @@ internal class HorizontalLineRender : IElementRenderer
 
         context.LayoutState[line] = new LineLayoutCache(startPoint, endPoint, finalRect);
 
-        return Task.FromResult(new LayoutInfo(line, finalRect.Width, finalRect.Height, finalRect));
+        return Task.FromResult(new PdfLayoutInfo(line, finalRect.Width, finalRect.Height, finalRect));
     }
 
     public Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)
@@ -97,6 +97,12 @@ internal class HorizontalLineRender : IElementRenderer
             canvas.DrawLine(finalStart, finalEnd, paint);
         }
 
+        return Task.CompletedTask;
+    }
+
+    public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)
+    {
+        // Una línea desbordada simplemente no se dibuja.
         return Task.CompletedTask;
     }
 }

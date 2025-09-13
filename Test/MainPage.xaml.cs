@@ -366,14 +366,14 @@ public partial class MainPage : ContentPage
 
                         vsl.HorizontalStackLayout(hsl =>
                         {
-                            hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
-                            hsl.PdfImage(new MemoryStream(imageData)).WidthRequest(150);
+                            hsl.Image(new MemoryStream(imageData)).WidthRequest(150);
+                            hsl.Image(new MemoryStream(imageData)).WidthRequest(150);
                         });
 
                         vsl.HorizontalStackLayout(hsl =>
                         {
-                            hsl.PdfImage(new MemoryStream(imageData));
-                            hsl.PdfImage(new MemoryStream(imageData));
+                            hsl.Image(new MemoryStream(imageData));
+                            hsl.Image(new MemoryStream(imageData));
                         }).WidthRequest(300);
 
                         vsl.HorizontalStackLayout(hsl =>

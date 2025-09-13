@@ -8,16 +8,15 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
 internal class PdfVerticalStackLayoutRender : IElementRenderer
 {
-    public async Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
         if (context.Element is not PdfVerticalStackLayoutData vsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayoutData)} or is null.");
 
         float totalHeight = 0;
         float maxWidth = 0;
-        var childMeasures = new List<LayoutInfo>();
+        var childMeasures = new List<PdfLayoutInfo>();
 
-        // El ancho disponible para los hijos está limitado por el ancho del VSL o el de su contenedor.
         var constrainedWidth = (float?)vsl.GetWidthRequest ?? availableRect.Width;
         var childAvailableWidth = constrainedWidth - (float)vsl.GetPadding.HorizontalThickness - (float)vsl.GetMargin.HorizontalThickness;
 
@@ -26,7 +25,6 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
 
-            // Pasamos el ancho restringido correcto a los hijos.
             var measure = await renderer.MeasureAsync(childContext, SKRect.Create(0, 0, childAvailableWidth, float.PositiveInfinity));
             childMeasures.Add(measure);
             totalHeight += measure.Height;
@@ -38,7 +36,6 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
             totalHeight += vsl.GetSpacing * (vsl.GetChildren.Count - 1);
         }
 
-        // El ancho final del VSL es su WidthRequest o el ancho de su contenido, lo que sea aplicable.
         float boxWidth = vsl.GetWidthRequest.HasValue
             ? (float)vsl.GetWidthRequest.Value
             : maxWidth + (float)vsl.GetPadding.HorizontalThickness;
@@ -50,19 +47,18 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         var totalWidth = boxWidth + (float)vsl.GetMargin.HorizontalThickness;
         var totalHeightWithMargin = boxHeight + (float)vsl.GetMargin.VerticalThickness;
 
-        return new LayoutInfo(vsl, totalWidth, totalHeightWithMargin);
+        return new PdfLayoutInfo(vsl, totalWidth, totalHeightWithMargin);
     }
 
-    // ... El resto del fichero (ArrangeAsync, RenderAsync) no necesita cambios ...
-    public async Task<LayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
+    public async Task<PdfLayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
         if (context.Element is not PdfVerticalStackLayoutData vsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayoutData)} or is null.");
 
-        if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<LayoutInfo> childMeasures)
+        if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<PdfLayoutInfo> childMeasures)
         {
             context.Logger.LogError("VerticalStackLayout measure state was not found before arranging.");
-            return new LayoutInfo(vsl, finalRect.Width, finalRect.Height, finalRect);
+            return new PdfLayoutInfo(vsl, finalRect.Width, finalRect.Height, finalRect);
         }
 
         var elementBox = new PdfRect(
@@ -75,7 +71,7 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         float contentWidth = elementBox.Width - (float)vsl.GetPadding.HorizontalThickness;
         float currentY = elementBox.Top + (float)vsl.GetPadding.Top;
 
-        var arrangedChildren = new List<LayoutInfo>();
+        var arrangedChildren = new List<PdfLayoutInfo>();
         for (int i = 0; i < vsl.GetChildren.Count; i++)
         {
             var child = (PdfElementData)vsl.GetChildren[i];
@@ -105,7 +101,7 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         }
 
         context.LayoutState[vsl] = (arrangedChildren, finalRect);
-        return new LayoutInfo(vsl, finalRect.Width, finalRect.Height, finalRect);
+        return new PdfLayoutInfo(vsl, finalRect.Width, finalRect.Height, finalRect);
     }
 
     public async Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)
@@ -113,7 +109,7 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
         if (context.Element is not PdfVerticalStackLayoutData vsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayoutData)} or is null.");
 
-        if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not (List<LayoutInfo> arrangedChildren, PdfRect finalRect))
+        if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not (List<PdfLayoutInfo> arrangedChildren, PdfRect finalRect))
         {
             context.Logger.LogError("VerticalStackLayout arranged state was not found before rendering.");
             return;
@@ -138,5 +134,11 @@ internal class PdfVerticalStackLayoutRender : IElementRenderer
             var childContext = context with { Element = (PdfElementData)childInfo.Element };
             await renderer.RenderAsync(canvas, childContext);
         }
+    }
+
+    public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)
+    {
+        // Un layout desbordado simplemente no se dibuja.
+        return Task.CompletedTask;
     }
 }

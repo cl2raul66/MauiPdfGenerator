@@ -1,8 +1,9 @@
 ﻿using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
-public interface IPageContentBuilder
+public interface IPdfStackLayoutBuilder
 {
     IPdfParagraph Paragraph(string text);
     IPdfHorizontalLine HorizontalLine();

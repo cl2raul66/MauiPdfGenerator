@@ -5,7 +5,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts;
 
-internal class PdfVerticalStackLayoutBuilder : IPdfVerticalStackLayout, IBuildableElement
+internal class PdfVerticalStackLayoutBuilder : IPdfVerticalStackLayout, IBuildablePdfElement
 {
     private readonly PdfVerticalStackLayoutData _model;
 
@@ -16,7 +16,7 @@ internal class PdfVerticalStackLayoutBuilder : IPdfVerticalStackLayout, IBuildab
 
     public PdfElementData GetModel() => _model;
 
-    public void Add(IBuildableElement element)
+    public void Add(IBuildablePdfElement element)
     {
         _model.Add(element.GetModel());
     }

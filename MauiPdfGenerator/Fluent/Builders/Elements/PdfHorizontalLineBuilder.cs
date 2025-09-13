@@ -5,7 +5,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Elements;
 
 namespace MauiPdfGenerator.Fluent.Builders.Elements;
 
-internal class PdfHorizontalLineBuilder : IPdfHorizontalLine, IBuildableElement
+internal class PdfHorizontalLineBuilder : IPdfHorizontalLine, IBuildablePdfElement
 {
     private readonly PdfHorizontalLineData _model;
 

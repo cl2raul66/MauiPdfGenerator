@@ -5,10 +5,10 @@ namespace MauiPdfGenerator.Core.Implementation.Sk;
 
 internal interface IPageRenderer
 {
-    Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(PdfGenerationContext context);
+    Task<List<IReadOnlyList<PdfLayoutInfo>>> LayoutAsync(PdfGenerationContext context);
 
     Task RenderPageBlockAsync(
         SKCanvas canvas,
-        IReadOnlyList<LayoutInfo> pageBlock,
+        IReadOnlyList<PdfLayoutInfo> pageBlock,
         PdfGenerationContext context);
 }

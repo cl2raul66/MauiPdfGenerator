@@ -2,7 +2,7 @@
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
-internal interface IBuildableElement
+internal interface IBuildablePdfElement
 {
     PdfElementData GetModel();
 }

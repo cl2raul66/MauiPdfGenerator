@@ -36,10 +36,10 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
                                  ?? _documentConfiguration.FontRegistry.GetFirstMauiRegisteredFontIdentifier();
     }
 
-    public IPdfContentPage DefaultFont(Action<IFontDefaultsBuilder> fontDefaults)
+    public IPdfContentPage DefaultFont(Action<IPdfFontDefaultsBuilder> fontDefaults)
     {
         ArgumentNullException.ThrowIfNull(fontDefaults);
-        var defaultsBuilder = new FontDefaultsBuilder();
+        var defaultsBuilder = new PdfFontDefaultsBuilder();
         fontDefaults(defaultsBuilder);
 
         if (defaultsBuilder.FamilyIdentifier.HasValue)
@@ -106,7 +106,7 @@ internal class PdfContentPageBuilder : IPdfContentPage, IPdfContentPageBuilder, 
     }
     public IPdfContentPage Padding(DefaultPagePaddingType defaultPaddingType)
     {
-        _paddingOverride = PagePaddingTypeCalculator.GetThickness(defaultPaddingType);
+        _paddingOverride = PdfPagePaddingTypeCalculator.GetThickness(defaultPaddingType);
         return this;
     }
     public IPdfContentPage BackgroundColor(Color backgroundColor)

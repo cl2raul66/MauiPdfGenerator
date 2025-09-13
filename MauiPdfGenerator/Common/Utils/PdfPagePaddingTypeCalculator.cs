@@ -2,7 +2,7 @@
 
 namespace MauiPdfGenerator.Common.Utils;
 
-internal class PagePaddingTypeCalculator
+internal class PdfPagePaddingTypeCalculator
 {
     private const float NormalPadding = 72f;
     private const float NarrowPadding = 36f;

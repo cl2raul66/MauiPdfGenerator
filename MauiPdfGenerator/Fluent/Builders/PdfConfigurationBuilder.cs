@@ -16,7 +16,7 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     {
         this.FontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
         this.MetaDataBuilder = new PdfMetaDataBuilder();
-        GetPadding = PagePaddingTypeCalculator.GetThickness(DefaultPagePaddingType.Normal);
+        GetPadding = PdfPagePaddingTypeCalculator.GetThickness(DefaultPagePaddingType.Normal);
         GetPageSize = PageSizeType.A4;
         GetPageOrientation = PageOrientationType.Portrait;
     }
@@ -53,7 +53,7 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
 
     public IPdfDocumentConfigurator Padding(DefaultPagePaddingType defaultPaddingType)
     {
-        GetPadding = PagePaddingTypeCalculator.GetThickness(defaultPaddingType);
+        GetPadding = PdfPagePaddingTypeCalculator.GetThickness(defaultPaddingType);
         return this;
     }
 

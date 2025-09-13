@@ -1,6 +1,6 @@
 ﻿namespace MauiPdfGenerator.Common.Models;
 
-internal abstract class PdfElementData : IGridCellInfo
+internal abstract class PdfElementData : IPdfGridCellInfo
 {
     internal PdfElementData? Parent { get; set; }
 
@@ -83,8 +83,8 @@ internal abstract class PdfElementData : IGridCellInfo
         return this;
     }
 
-    int IGridCellInfo.Row => GridRow;
-    int IGridCellInfo.Column => GridColumn;
-    int IGridCellInfo.RowSpan => GridRowSpan;
-    int IGridCellInfo.ColumnSpan => GridColumnSpan;
+    int IPdfGridCellInfo.Row => GridRow;
+    int IPdfGridCellInfo.Column => GridColumn;
+    int IPdfGridCellInfo.RowSpan => GridRowSpan;
+    int IPdfGridCellInfo.ColumnSpan => GridColumnSpan;
 }

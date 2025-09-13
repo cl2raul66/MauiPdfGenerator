@@ -9,7 +9,7 @@ internal class ImageRenderer : IElementRenderer
 {
     private record ImageLayoutCache(SKImage? SkImage, SKRect RelativeTargetRect, PdfRect FinalRect);
 
-    public Task<LayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
         if (context.Element is not PdfImageData image)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfImageData)} or is null.");
@@ -71,10 +71,10 @@ internal class ImageRenderer : IElementRenderer
         var totalWidth = boxWidth + (float)image.GetMargin.HorizontalThickness;
         var totalHeight = boxHeight + (float)image.GetMargin.VerticalThickness;
 
-        return Task.FromResult(new LayoutInfo(image, totalWidth, totalHeight));
+        return Task.FromResult(new PdfLayoutInfo(image, totalWidth, totalHeight));
     }
 
-    public Task<LayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
+    public Task<PdfLayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
         if (context.Element is not PdfImageData image)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfImageData)} or is null.");
@@ -82,7 +82,7 @@ internal class ImageRenderer : IElementRenderer
         if (!context.LayoutState.TryGetValue(image, out var state) || state is not ImageLayoutCache initialCache)
         {
             context.Logger.LogError("Image cache was not created during Measure pass.");
-            return Task.FromResult(new LayoutInfo(image, finalRect.Width, finalRect.Height, finalRect));
+            return Task.FromResult(new PdfLayoutInfo(image, finalRect.Width, finalRect.Height, finalRect));
         }
 
         var elementBoxWidth = finalRect.Width - (float)image.GetMargin.HorizontalThickness;
@@ -95,13 +95,13 @@ internal class ImageRenderer : IElementRenderer
             elementBoxHeight - (float)image.GetPadding.VerticalThickness
         );
 
-        SKRect relativeTargetRect = initialCache.SkImage is not null
+        SKRect relativeTargetRect = initialCache.SkImage != null
             ? CalculateTargetRect(initialCache.SkImage, contentRect, image.CurrentAspect)
             : SKRect.Empty;
 
         context.LayoutState[image] = initialCache with { RelativeTargetRect = relativeTargetRect, FinalRect = finalRect };
 
-        return Task.FromResult(new LayoutInfo(image, finalRect.Width, finalRect.Height, finalRect));
+        return Task.FromResult(new PdfLayoutInfo(image, finalRect.Width, finalRect.Height, finalRect));
     }
 
     public Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)
@@ -140,6 +140,13 @@ internal class ImageRenderer : IElementRenderer
         canvas.DrawImage(skImage, finalDrawRect);
         canvas.Restore();
 
+        return Task.CompletedTask;
+    }
+
+    public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)
+    {
+        var skBounds = new SKRect(bounds.Left, bounds.Top, bounds.Right, bounds.Bottom);
+        DrawImageError(canvas, skBounds, "[Imagen fuera de rango]");
         return Task.CompletedTask;
     }
 

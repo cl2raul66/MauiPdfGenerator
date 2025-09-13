@@ -1,6 +1,6 @@
 namespace MauiPdfGenerator.Common;
 
-internal interface ILayoutElement
+internal interface IPdfLayoutElement
 {
     IReadOnlyList<object> Children { get; }
     LayoutType LayoutType { get; }

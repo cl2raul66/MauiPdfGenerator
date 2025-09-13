@@ -9,10 +9,10 @@ internal class PdfContentPageRenderer : IPageRenderer
 {
     private readonly ContentPageOrchestrator _orchestrator = new();
 
-    public async Task<List<IReadOnlyList<LayoutInfo>>> LayoutAsync(PdfGenerationContext context)
+    public async Task<List<IReadOnlyList<PdfLayoutInfo>>> LayoutAsync(PdfGenerationContext context)
     {
         context.Logger.LogDebug("Delegating layout orchestration for PdfContentPage to ContentPageOrchestrator.");
-        var pageBlocks = new List<IReadOnlyList<LayoutInfo>>();
+        var pageBlocks = new List<IReadOnlyList<PdfLayoutInfo>>();
         var elementsToProcess = new Queue<PdfElementData>(context.PageData.Elements);
 
         var pageSize = SkiaUtils.GetSkPageSize(context.PageData.Size, context.PageData.Orientation);
@@ -44,7 +44,7 @@ internal class PdfContentPageRenderer : IPageRenderer
         return pageBlocks;
     }
 
-    public async Task RenderPageBlockAsync(SKCanvas canvas, IReadOnlyList<LayoutInfo> arrangedPageBlock, PdfGenerationContext context)
+    public async Task RenderPageBlockAsync(SKCanvas canvas, IReadOnlyList<PdfLayoutInfo> arrangedPageBlock, PdfGenerationContext context)
     {
         foreach (var layoutInfo in arrangedPageBlock)
         {

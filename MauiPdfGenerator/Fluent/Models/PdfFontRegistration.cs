@@ -4,14 +4,14 @@ using System.Diagnostics;
 
 namespace MauiPdfGenerator.Fluent.Models;
 
-public class FontRegistration : IFontRegistrationOptions
+public class PdfFontRegistration : IFontRegistrationOptions
 {
     public PdfFontIdentifier Identifier { get; }
     public bool ShouldEmbed { get; private set; } = false;
     public string? FilePath { get; internal set; }
     private readonly PdfFontRegistryBuilder _registryBuilder;
 
-    internal FontRegistration(PdfFontIdentifier identifier, PdfFontRegistryBuilder registryBuilder, string? filePath = null)
+    internal PdfFontRegistration(PdfFontIdentifier identifier, PdfFontRegistryBuilder registryBuilder, string? filePath = null)
     {
         ArgumentNullException.ThrowIfNull(registryBuilder);
         Identifier = identifier;

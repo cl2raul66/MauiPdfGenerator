@@ -2,7 +2,7 @@
 
 namespace MauiPdfGenerator.Core.Models;
 
-internal readonly record struct LayoutInfo(
+internal readonly record struct PdfLayoutInfo(
     object Element,
     float Width,
     float Height,

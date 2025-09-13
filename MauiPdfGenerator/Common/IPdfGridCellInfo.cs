@@ -1,6 +1,6 @@
 namespace MauiPdfGenerator.Common;
 
-internal interface IGridCellInfo
+internal interface IPdfGridCellInfo
 {
     int Row { get; }
     int Column { get; }

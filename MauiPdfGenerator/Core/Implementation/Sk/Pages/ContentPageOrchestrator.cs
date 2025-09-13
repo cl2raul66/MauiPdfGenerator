@@ -8,12 +8,12 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
 
 internal class ContentPageOrchestrator
 {
-    public async Task<(List<LayoutInfo> ArrangedElements, Queue<PdfElementData> RemainingElements)> ProcessPageAsync(
+    public async Task<(List<PdfLayoutInfo> ArrangedElements, Queue<PdfElementData> RemainingElements)> ProcessPageAsync(
         Queue<PdfElementData> elements,
         PdfRect contentRect,
         PdfGenerationContext context)
     {
-        var arrangedElementsOnPage = new List<LayoutInfo>();
+        var arrangedElementsOnPage = new List<PdfLayoutInfo>();
         var spilloverElements = new List<PdfElementData>();
         var currentY = contentRect.Top;
         var remainingHeight = contentRect.Height;
@@ -87,7 +87,7 @@ internal class ContentPageOrchestrator
         return (arrangedElementsOnPage, nextQueue);
     }
 
-    private async Task<LayoutInfo> ArrangeElementAsync(
+    private async Task<PdfLayoutInfo> ArrangeElementAsync(
         PdfElementData element,
         IElementRenderer renderer,
         PdfGenerationContext elementContext,

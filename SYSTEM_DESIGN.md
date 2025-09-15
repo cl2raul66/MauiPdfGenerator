@@ -6,41 +6,56 @@
 
 **Bienvenido a la Documentación Técnica de `MauiPdfGenerator`**
 
-Esta primera parte establece la **visión y los principios fundamentales** que guían la biblioteca. Antes de sumergirnos en la implementación técnica o en la referencia de la API, es crucial comprender el "*porqué*" detrás de su diseño. Aquí exploraremos la filosofía de ser una extensión natural de .NET MAUI, el modelo conceptual de layout y los principios arquitectónicos que garantizan una experiencia de desarrollo productiva e intuitiva. Esta sección es la base conceptual sobre la cual se construye todo lo demás.
+Esta primera parte establece la **visión y los principios fundamentales** que guían la biblioteca. Antes de sumergirnos en la implementación técnica o en la referencia de la API, es crucial comprender el *porqué* detrás de su diseño. 
+
+Aquí exploraremos:
+- La filosofía de ser una **extensión natural** de .NET MAUI
+- El modelo conceptual de layout y paginación
+- Los principios arquitectónicos que garantizan una experiencia de desarrollo **productiva e intuitiva**
+
+Esta sección es la base conceptual sobre la cual se construye todo lo demás.
 
 ## 1. Filosofía y Principios de Diseño
 
 ### 1.1. Principio Rector: Extensión Natural del Ecosistema .NET MAUI
 
-Esta biblioteca está diseñada como una **extensión natural del ecosistema .NET MAUI**, no como una herramienta externa. Su propósito es permitir que los desarrolladores MAUI generen PDFs de forma nativa utilizando conceptos familiares de .NET MAUI. Para aquellos desarrolladores con experiencia en la plataforma, les resultará más cómodo el uso de esta biblioteca, ya que su confección es similar a cuando se crea una UI de .NET MAUI, pero orientada a la generación de documentos PDF.
+Esta biblioteca está diseñada como una **extensión natural del ecosistema .NET MAUI**, no como una herramienta externa. Su propósito es permitir que los desarrolladores MAUI generen PDFs de forma nativa utilizando conceptos familiares.
 
-Para lograr esta integración profunda, la biblioteca adopta directamente tipos del ecosistema MAUI, incluyendo:
-- `Microsoft.Maui.Graphics.Color`
-- `Microsoft.Maui.Thickness`
-- `Microsoft.Maui.Controls.LayoutAlignment`
-- `Microsoft.Maui.FontAttributes`
-- `Microsoft.Maui.TextDecorations`
-- `Microsoft.Maui.TextTransform`
+**¿Por qué esta filosofía?**
+- Los desarrolladores con experiencia en MAUI se sienten **inmediatamente cómodos**
+- La curva de aprendizaje es **mínima**
+- El conocimiento existente se **reutiliza** directamente
 
-El desarrollador no aprende una nueva API desde cero, simplemente aplica su conocimiento existente de MAUI a un nuevo lienzo: el documento PDF.
+**Integración Profunda con Tipos MAUI:**
+- `Microsoft.Maui.Graphics.Color` - *Mismos colores, mismo código*
+- `Microsoft.Maui.Thickness` - *Padding y margins familiares*
+- `Microsoft.Maui.Controls.LayoutAlignment` - *Alineación conocida*
+- `Microsoft.Maui.FontAttributes` - *Estilos de texto consistentes*
+- `Microsoft.Maui.TextDecorations` - *Decoraciones unificadas*
+- `Microsoft.Maui.TextTransform` - *Transformaciones coherentes*
+
+El desarrollador **no aprende una nueva API** desde cero, simplemente aplica su conocimiento existente de MAUI a un nuevo lienzo: el documento PDF.
 
 ### 1.2. Resolución del Conflicto Conceptual: Padding vs Margins
 
-Durante el diseño de la biblioteca surgió un conflicto fundamental entre la terminología PDF tradicional (que utiliza "margins" para el espaciado de página) y la filosofía .NET MAUI (donde `ContentPage` utiliza "Padding" para el espaciado interno).
+Durante el diseño surgió un conflicto fundamental entre la terminología PDF tradicional (*"margins" para espaciado de página*) y la filosofía .NET MAUI (*`ContentPage.Padding` para espaciado interno*).
 
-**Decisión Arquitectónica**: Se adoptó `Padding` por las siguientes razones:
+**Decisión Arquitectónica:** Se adoptó **`Padding`**
 
-1.  **Coherencia con el Ecosistema MAUI**: La biblioteca se define como "una extensión natural del ecosistema .NET MAUI", por lo que debe mantener consistencia conceptual con los tipos de datos familiares.
-2.  **Modelo Mental Unificado**: Los desarrolladores MAUI ya comprenden que `ContentPage.Padding` define el espacio interno entre el borde de la página y su contenido.
-3.  **Eliminación de Redundancia**: Evita la confusión de tener tanto `Margins` como `Padding` en el mismo contexto, donde ambos conceptos serían funcionalmente idénticos.
+**¿Por qué Padding y no Margins?**
+- **Coherencia con MAUI:** Mantiene consistencia conceptual con tipos familiares
+- **Modelo Mental Unificado:** Los desarrolladores MAUI ya comprenden `ContentPage.Padding`
+- **Eliminación de Redundancia:** Evita confusión entre conceptos funcionalmente idénticos
+
+*Esta decisión refuerza el principio de ser una extensión natural, no una herramienta externa.*
 
 ### 1.3. Principio de Garantía de Completitud
 
-La biblioteca se rige por el principio de **Garantía de Completitud**, que dicta que el desarrollador nunca debe estar obligado a especificar cada detalle para obtener un resultado funcional. El objetivo es permitir la creación de documentos con el mínimo código posible, confiando en que la biblioteca aplicará valores predeterminados sensibles y estéticamente agradables.
+La biblioteca se rige por el principio de **Garantía de Completitud**: el desarrollador nunca debe estar obligado a especificar cada detalle para obtener un resultado funcional.
 
 #### ¿Qué es la Garantía de Completitud?
 
-Es la promesa arquitectónica de que cada elemento (documento, página, layout o vista) es completamente funcional desde el momento de su creación, sin necesidad de configuración adicional obligatoria. Un desarrollador puede crear un documento PDF completo con código mínimo:
+Es la **promesa arquitectónica** de que cada elemento es completamente funcional desde su creación, sin configuración adicional obligatoria.
 
 ```csharp
 var doc = pdfDocFactory.CreateDocument();
@@ -51,85 +66,119 @@ await doc
     .SaveAsync(targetFilePath);
 ```
 
-En este ejemplo, la biblioteca automáticamente aplica valores predeterminados para todas las propiedades no especificadas del documento.
+*En este ejemplo, la biblioteca automáticamente aplica valores predeterminados para todas las propiedades no especificadas.*
 
-#### ¿Para qué sirve este principio?
+#### Beneficios del Principio
 
-1.  **Maximizar la Productividad**: Permite crear documentos funcionales con líneas mínimas de código.
-2.  **Reducir la Curva de Aprendizaje**: El desarrollador puede comenzar a generar PDFs inmediatamente, sin estudiar todas las propiedades disponibles.
-3.  **Minimizar Errores**: Elimina la posibilidad de crear elementos "vacíos" o "invisibles" por falta de configuración.
-4.  **Facilitar la Iteración**: Permite al desarrollador centrarse en el contenido y la estructura, refinando el estilo progresivamente.
+- **Maximizar la Productividad** - Documentos funcionales con código mínimo
+- **Reducir la Curva de Aprendizaje** - Generación inmediata de PDFs
+- **Minimizar Errores** - Elimina elementos "vacíos" o "invisibles"
+- **Facilitar la Iteración** - Enfoque en contenido, refinamiento progresivo del estilo
 
 ## 2. Jerarquía Conceptual: Pages → Layouts → Views
 
 ### 2.1. Analogía Jerárquica: MAUI → PDF
 
-- **Pages** → `IPdfContentPage` (Páginas del documento PDF)
-- **Layouts** → `IPdfVerticalStackLayout`, `IPdfHorizontalStackLayout`, `PdfGrid` (Estructuras de organización visual en PDF)
-- **Views** → `IPdfParagraph`, `IPdfImage`, `IPdfHorizontalLine` (Elementos de contenido visual en PDF)
+**La estructura familiar de MAUI se traslada directamente al mundo PDF:**
+
+- **Pages** → `IPdfContentPage` - *Páginas del documento PDF*
+- **Layouts** → `IPdfVerticalStackLayout`, `IPdfHorizontalStackLayout`, `PdfGrid` - *Estructuras de organización visual*
+- **Views** → `IPdfParagraph`, `IPdfImage`, `IPdfHorizontalLine` - *Elementos de contenido visual*
 
 ### 2.2. Pages
 
-Los documentos PDF constan de una o varias páginas. Cada página define el lienzo sobre el cual se organiza el contenido. MauiPdfGenerator contiene los siguientes tipos de Pages:
+Los documentos PDF constan de una o varias páginas. Cada página define el **lienzo** sobre el cual se organiza el contenido.
 
-| Interface | Descripción 
-| - | - |
-| IPdfContentPage | Define una página cuyo propósito es **organizar una lista de elementos de contenido (Layouts y/o Views) en una secuencia vertical continua**, gestionando automáticamente la paginación cuando el contenido excede el espacio disponible. Es el tipo de página más común en documentos PDF. |
+**Tipos de Pages Disponibles:**
 
-> **NOTA:** Para el futuro, se agregarán otros tipos de páginas especializadas.
+- **`IPdfContentPage`** - *El tipo más común*
+  - Organiza elementos en **secuencia vertical continua**
+  - Gestiona **paginación automática** cuando el contenido excede el espacio
+  - Combina Layouts y Views de forma flexible
+
+> **Futuro:** Se agregarán otros tipos de páginas especializadas.
 
 ### 2.3. Layouts
 
-Los `Layouts` en MauiPdfGenerator se usan para organizar `Views` y otros `Layouts` en estructuras jerárquicas. Son los componentes clave para construir diseños complejos y anidados. La API expone interfaces como `IPdfVerticalStackLayout` que permiten esta composición recursiva.
+Los `Layouts` organizan `Views` y otros `Layouts` en **estructuras jerárquicas**. Son los componentes clave para construir diseños complejos y anidados con **composición recursiva**.
 
-| Interface / Clase | Descripción |
-| - | - |
-| IPdfVerticalStackLayout | Coloca sus elementos hijos en una pila vertical. |
-| IPdfHorizontalStackLayout | Coloca sus elementos hijos en una pila horizontal. |
-| `PdfGrid` | Coloca sus elementos hijos en una cuadrícula de filas y columnas. |
+**Tipos de Layouts Disponibles:**
+
+- **`IPdfVerticalStackLayout`** - *Pila vertical de elementos*
+- **`IPdfHorizontalStackLayout`** - *Pila horizontal de elementos*  
+- **`PdfGrid`** - *Cuadrícula de filas y columnas*
+
+*Cada layout puede contener Views y otros Layouts, permitiendo diseños de cualquier complejidad.*
 
 ### 2.4. Views
 
-Las `Views` de MauiPdfGenerator son los componentes que renderizan contenido específico. Son los "átomos" visuales del documento y siempre actúan como nodos finales (hojas) en el árbol de composición. Se interactúa con ellas a través de interfaces como `IPdfParagraph` e `IPdfImage`.
+Las `Views` son los **"átomos" visuales** del documento. Renderizan contenido específico y siempre actúan como nodos finales en el árbol de composición.
 
-| Interface | Descripción |
-| - | - |
-| IPdfImage | Renderiza una imagen que se puede cargar desde un fichero, URI o secuencia. |
-| IPdfParagraph | Renderiza texto plano y enriquecido de una o varias líneas. |
-| IPdfHorizontalLine | Renderiza una línea horizontal, usada comúnmente como separador. |
+**Tipos de Views Disponibles:**
 
-> **NOTA sobre Colores:** Todas las propiedades que aceptan un color (ej. `TextColor`, `BackgroundColor`) utilizan el tipo `Microsoft.Maui.Graphics.Color`. Esto permite a los desarrolladores usar las mismas constantes (`Colors.Blue`) y estructuras que ya utilizan en sus aplicaciones.
+- **`IPdfImage`** - *Imágenes desde fichero, URI o stream*
+- **`IPdfParagraph`** - *Texto plano y enriquecido, una o varias líneas*
+- **`IPdfHorizontalLine`** - *Líneas horizontales como separadores*
+
+> **Colores Familiares:** Todas las propiedades de color utilizan `Microsoft.Maui.Graphics.Color`. Usa las mismas constantes (`Colors.Blue`) que ya conoces de MAUI.
 
 ## 3. Modelo Conceptual de Layout
 
 ### 3.1. Sistema de Tres Pasadas (Concepto General)
 
-El motor emula deliberadamente el ciclo de Medición y Disposición (Measure/Arrange) de .NET MAUI, adaptándolo a un contexto de generación de documentos asíncrono y separando explícitamente el renderizado.
+El motor emula deliberadamente el **ciclo Measure/Arrange de .NET MAUI**, adaptándolo a la generación de documentos con una fase adicional de renderizado.
 
-*   **Fase 1: La Pasada de Medición (`MeasureAsync`)**
-    *   **Responsabilidad:** Calcular el tamaño que cada `View` *desea* tener (`DesiredSize`) basándose en su contenido y las restricciones recibidas de su `Layout` padre.
+**Las Tres Fases:**
 
-*   **Fase 2: La Pasada de Disposición (`ArrangeAsync`)**
-    *   **Responsabilidad:** Asignar una posición (`X`, `Y`) y un tamaño final (`Width`, `Height`) a cada `View` dentro del espacio asignado por su `Layout` padre.
+- **Fase 1: Medición (`MeasureAsync`)**
+  - Calcula el tamaño que cada `View` *desea* tener
+  - Basado en contenido y restricciones del `Layout` padre
 
-*   **Fase 3: La Pasada de Renderizado (`RenderAsync`)**
-    *   **Responsabilidad:** Dibujar cada `View` en su posición final usando las APIs específicas del motor de renderizado.
+- **Fase 2: Disposición (`ArrangeAsync`)**  
+  - Asigna posición final (`X`, `Y`) y tamaño (`Width`, `Height`)
+  - Dentro del espacio asignado por el `Layout` padre
+
+- **Fase 3: Renderizado (`RenderAsync`)**
+  - Dibuja cada `View` en su posición final
+  - Usa las APIs específicas del motor de renderizado
 
 ### 3.2. Paginación Automática (Concepto General)
 
-Esta es una de las características más potentes del motor. El orquestador de layout no procesa el árbol una sola vez. Realiza un ciclo de `Measure`/`Arrange` para el contenido de una página. Si durante la medición detecta que el contenido excede el espacio vertical disponible, crea una nueva página y reinicia el ciclo de layout con el contenido restante.
+Esta es una de las **características más potentes** del motor. El orquestador no procesa el árbol una sola vez, sino que realiza **ciclos inteligentes**:
+
+- Ejecuta `Measure`/`Arrange` para el contenido de una página
+- **Detecta** cuando el contenido excede el espacio vertical disponible  
+- **Crea automáticamente** una nueva página
+- **Reinicia** el ciclo de layout con el contenido restante
+
+*El desarrollador nunca se preocupa por los saltos de página - la biblioteca los gestiona automáticamente.*
 
 ### 3.3. Elementos Atómicos vs Divisibles
 
-Una de las características más potentes del motor de layout es su capacidad de paginar contenido automáticamente. Para gestionar esto de manera predecible, la biblioteca clasifica cada elemento de contenido en una de dos categorías, definiendo cómo interactúa con los saltos de página:
+Para gestionar la paginación de manera **predecible**, la biblioteca clasifica cada elemento en dos categorías que definen su comportamiento con los saltos de página:
 
-*   **Elementos Atómicos:** `IPdfImage`, `IPdfHorizontalLine`, `IPdfVerticalStackLayout`, `IPdfHorizontalStackLayout`. Estos elementos son tratados como unidades indivisibles. Si un elemento atómico no cabe en el espacio restante de una página, el motor de layout lo moverá **completo** a la página siguiente. Nunca se dividirá o recortará a través de un salto de página. Esta regla garantiza la integridad visual de componentes como imágenes o grupos de elementos en un `StackLayout`.
+#### Elementos Atómicos
+*Unidades indivisibles que se mueven completas a la siguiente página*
 
-*   **Elementos Divisibles:** `IPdfParagraph` y `PdfGrid`. Estos son los únicos elementos que la biblioteca puede dividir inteligentemente a través de un salto de página para crear un flujo de contenido continuo.
-    *   **División de `IPdfParagraph`:** El `ParagraphRenderer` calcula cuántas líneas de texto caben en el espacio disponible. Si no caben todas, renderiza las que sí caben y pasa el texto sobrante al orquestador para que lo coloque en la página siguiente, conservando todo el formato original.
-    *   **División de `PdfGrid`:** El `GridRenderer` mide sus filas secuencialmente. Si al añadir una fila se excede el alto de la página, la división ocurre **entre la fila anterior y la actual**. La fila que no cabe, junto con todas las siguientes, se mueven a la página siguiente. La división nunca ocurre a mitad de una celda.
+- **`IPdfImage`** - *Imágenes nunca se recortan*
+- **`IPdfHorizontalLine`** - *Líneas mantienen su integridad*  
+- **`IPdfVerticalStackLayout`** - *Grupos de elementos permanecen unidos*
+- **`IPdfHorizontalStackLayout`** - *Layouts horizontales no se dividen*
 
-Esta distinción es una decisión de diseño fundamental que proporciona al desarrollador un control y una previsibilidad claros sobre el flujo de sus documentos.
+#### Elementos Divisibles  
+*Pueden dividirse inteligentemente para crear flujo continuo*
+
+- **`IPdfParagraph`** 
+  - Calcula líneas que caben en el espacio disponible
+  - Renderiza las líneas posibles, pasa el resto a la siguiente página
+  - **Conserva todo el formato original**
+
+- **`PdfGrid`**
+  - Mide filas secuencialmente  
+  - División ocurre **entre filas**, nunca a mitad de celda
+  - Filas completas se mueven a la siguiente página
+
+*Esta distinción proporciona **control y previsibilidad** claros sobre el flujo del documento.*
 
 ---
 
@@ -137,7 +186,9 @@ Esta distinción es una decisión de diseño fundamental que proporciona al desa
 
 **Del Concepto a la Implementación**
 
-Habiendo establecido la filosofía y los conceptos rectores en la Parte I, esta sección profundiza en el "*cómo funciona*" la biblioteca internamente. Realizaremos un análisis detallado de la **arquitectura de capas**, el flujo de datos y las decisiones de diseño técnico que hacen posible la API pública. Exploraremos el motor de layout, el sistema de paginación, la gestión de recursos y la implementación de los principios de diseño. Esta parte está dirigida a quienes deseen comprender, contribuir o extender la funcionalidad de `MauiPdfGenerator`.
+Habiendo establecido la filosofía y los conceptos rectores en la Parte I, esta sección profundiza en el *cómo funciona* la biblioteca internamente. Realizaremos un análisis detallado de la arquitectura de capas, el flujo de datos y las decisiones de diseño técnico que hacen posible la API pública. 
+
+Exploraremos el motor de layout, el sistema de paginación, la gestión de recursos y la implementación de los principios de diseño. Esta parte está dirigida a quienes deseen comprender, contribuir o extender la funcionalidad de `MauiPdfGenerator`.
 
 ## 1. Arquitectura de Capas y Flujo de Datos
 
@@ -145,54 +196,57 @@ La arquitectura se basa en una clara **Separación de Capas (SoC)**.
 
 ### 1.1. Capa Fluent (API Pública)
 
-*   **Propósito:** Única puerta de entrada para el desarrollador. Su misión es ofrecer una experiencia declarativa, legible y fácil de usar a través de un conjunto de **interfaces públicas**.
-*   **Responsabilidades:**
-    *   **API Guiada por Interfaces:** La superficie pública de la API está compuesta enteramente por interfaces (`IPdfDocument`, `IPdfContentPage`, `IPdfParagraph`, etc.). Esto desacopla el código del cliente de los detalles de implementación, garantizando la estabilidad de la API a largo plazo.
-    *   **Fluidez Contextual:** Los métodos encadenables exponen solo opciones válidas a través del patrón Type-State.
-    *   **Encapsulación de Complejidad:** Las clases `builder` internas implementan las interfaces y gestionan la construcción de los modelos de datos, ocultando completamente la implementación.
-    *   **Garantía de Completitud:** Es responsable de aplicar valores predeterminados sensibles a todas las propiedades opcionales. Cuando el desarrollador no especifica un valor, la capa `Fluent` asegura que el DTO correspondiente se cree con un valor válido.
+| Aspecto | Descripción |
+|---------|-------------|
+| **Propósito** | Única puerta de entrada para el desarrollador. Ofrece experiencia declarativa, legible y fácil de usar a través de interfaces públicas. |
+| **API Guiada por Interfaces** | Superficie pública compuesta enteramente por interfaces (`IPdfDocument`, `IPdfContentPage`, `IPdfParagraph`, etc.). Desacopla el código del cliente de los detalles de implementación. |
+| **Fluidez Contextual** | Métodos encadenables exponen solo opciones válidas a través del patrón Type-State. |
+| **Encapsulación de Complejidad** | Clases `builder` internas implementan las interfaces y gestionan la construcción de modelos de datos. |
+| **Garantía de Completitud** | Aplica valores predeterminados sensibles a todas las propiedades opcionales. Asegura que todos los DTOs se creen con valores válidos. |
 
 #### Convenciones de Nomenclatura
 
-- **Interfaces (`IPdf...`):** Toda la superficie pública de la API se expone a través de interfaces con el prefijo `IPdf`. Esto refuerza el **Principio de Inversión de Dependencias**, permitiendo al consumidor depender de abstracciones, no de implementaciones. Ejemplos: `IPdfDocument`, `IPdfParagraph`, `IPdfGrid`.
-  
-- **Builders (`...Builder`):** Las clases de implementación que construyen los modelos de datos utilizan el sufijo `...Builder`. Este patrón encapsula la complejidad de la construcción y la lógica de la API fluida, dejando clara su responsabilidad. Ejemplos: `PdfDocumentBuilder`, `PdfParagraphBuilder`, `PdfGridBuilder`.
+| Patrón | Propósito | Ejemplos |
+|--------|-----------|----------|
+| **`IPdf...`** | Interfaces públicas. Refuerza el Principio de Inversión de Dependencias, permitiendo depender de abstracciones, no implementaciones. | `IPdfDocument`, `IPdfParagraph`, `IPdfGrid` |
+| **`...Builder`** | Clases de implementación que construyen modelos de datos. Encapsula complejidad de construcción y lógica de API fluida. | `PdfDocumentBuilder`, `PdfParagraphBuilder`, `PdfGridBuilder` |
 
 ### 1.2. Capa Core (Motor de Layout y Renderizado)
 
 Sigue el **Principio de Inversión de Dependencias**.
 
-#### Subcapa `Core.Integration` (Abstracciones)
-*   **Propósito:** Contiene la lógica de layout independiente del motor de renderizado.
-*   **Responsabilidades:** Lógica de `MeasureAsync` y `ArrangeAsync`, orquestación de pasadas y algoritmos de contenedores.
-
-#### Subcapa `Core.Implementation.Sk` (Implementación Concreta)
-*   **Propósito:** Implementa el renderizado usando SkiaSharp. Es la **primera y única implementación concreta** para la v1.0, pero la arquitectura permite que sea intercambiable.
-*   **Responsabilidades:** Lógica de `RenderAsync` y gestión de recursos de SkiaSharp.
+| Subcapa | Propósito | Responsabilidades |
+|---------|-----------|-------------------|
+| **`Core.Integration`** (Abstracciones) | Lógica de layout independiente del motor de renderizado | Lógica de `MeasureAsync` y `ArrangeAsync`, orquestación de pasadas y algoritmos de contenedores |
+| **`Core.Implementation.Sk`** (Implementación Concreta) | Implementa renderizado usando SkiaSharp. Primera y única implementación para v1.0, pero arquitectura permite intercambiabilidad | Lógica de `RenderAsync` y gestión de recursos de SkiaSharp |
 
 #### Convenciones de Nomenclatura
 
-- **Renderizadores (`...Renderer`):** Las clases responsables de implementar el ciclo de tres pasadas (Medición, Disposición, Renderizado) para un elemento específico utilizan el sufijo `...Renderer`. Esto define claramente el objeto como un "hacedor" en el sistema de renderizado, facilitando la depuración y la extensibilidad. Ejemplos: `TextRenderer`, `ImageRenderer`, `GridRenderer`.
- 
-- **Implementación de Motor (`Sk...`):** Las clases específicas de un motor de renderizado concreto (actualmente SkiaSharp) llevan un prefijo que identifica a dicho motor. Esto permite la coexistencia de múltiples implementaciones y una arquitectura intercambiable. Ejemplo: `SkComposer`.
+| Patrón | Propósito | Ejemplos |
+|--------|-----------|----------|
+| **`...Renderer`** | Clases responsables del ciclo de tres pasadas (Medición, Disposición, Renderizado) para elementos específicos. Define claramente el objeto como "hacedor" en el sistema de renderizado. | `TextRenderer`, `ImageRenderer`, `GridRenderer` |
+| **`Sk...`** | Clases específicas del motor de renderizado SkiaSharp. Permite coexistencia de múltiples implementaciones y arquitectura intercambiable. | `SkComposer` |
 
 ### 1.3. Capa Common (Contratos Compartidos)
 
-*   **Propósito:** Define el "lenguaje común" entre capas.
-*   **Contenido Principal:**
-    *   **Modelos de Datos (DTOs):** Contiene las clases de modelo de datos internas, identificables por el sufijo `...Data` (ej. `PdfParagraphData`), que actúan como el contrato inmutable entre la capa `Fluent` y la capa `Core`.
-    *   **Tipos Compartidos:** Value Objects, Enumeraciones (`DefaultPagePaddingType`, `PageSizeType`).
-    *   **Utilidades:** Lógica de negocio compartida y sin estado, como `PagePaddingTypeCalculator`.
+| Aspecto | Descripción |
+|---------|-------------|
+| **Propósito** | Define el "lenguaje común" entre capas |
+| **Modelos de Datos (DTOs)** | Clases internas con sufijo `...Data` que actúan como contrato inmutable entre capa `Fluent` y `Core` |
+| **Tipos Compartidos** | Value Objects, Enumeraciones (`DefaultPagePaddingType`, `PageSizeType`) |
+| **Utilidades** | Lógica de negocio compartida y sin estado |
 
 #### Utilidades de Cálculo Compartidas
 
-La capa `Common` incluye utilidades que implementan lógica de negocio compartida:
-
-- **`PaddingCalculator`**: Convierte `DefaultPagePaddingType` a valores `Thickness` específicos, centralizando los estándares de padding definidos por la biblioteca.
+| Utilidad | Función |
+|----------|---------|
+| **`PaddingCalculator`** | Convierte `DefaultPagePaddingType` a valores `Thickness` específicos, centralizando estándares de padding |
 
 #### Convenciones de Nomenclatura
 
-- **Modelos de Datos (`...Data`):** Las clases o registros que actúan como DTOs puros entre capas utilizan el sufijo `...Data`. Esto los identifica inequívocamente como contratos de datos inmutables, desprovistos de lógica de negocio, que describen el estado de un elemento. Ejemplos: `PdfParagraphData`, `PdfPageData`, `PdfGridData`.
+| Patrón | Propósito | Ejemplos |
+|--------|-----------|----------|
+| **`...Data`** | DTOs puros entre capas. Contratos de datos inmutables, sin lógica de negocio, que describen estado de elementos. | `PdfParagraphData`, `PdfPageData`, `PdfGridData` |
 
 ### 1.4. Flujo de Datos y Comunicación Entre Capas
 
@@ -553,7 +607,9 @@ Los valores predeterminados de las Views priorizan la legibilidad y la funcional
 
 **Poniendo la Biblioteca en Práctica**
 
-Con una sólida comprensión de la filosofía (Parte I) y la arquitectura interna (Parte II), esta sección final se centra en el "*cómo se usa*". Actúa como una **guía práctica y una referencia exhaustiva de la API pública**. A través de ejemplos de código, desde la configuración inicial hasta la creación de documentos complejos, aprenderás a utilizar eficazmente cada componente. Esta es la sección principal para los desarrolladores que buscan integrar `MauiPdfGenerator` en sus aplicaciones y aprovechar todo su potencial.
+Esta sección se centra en el *cómo se usa*. Actúa como guía práctica y referencia exhaustiva de la API pública. A través de ejemplos de código, desde la configuración inicial hasta la creación de documentos complejos, aprenderás a utilizar eficazmente cada componente. 
+
+Esta es la sección principal para desarrolladores que buscan integrar `MauiPdfGenerator` en sus aplicaciones.
 
 ## 1. Inicio Rápido: Tu Primer Documento
 

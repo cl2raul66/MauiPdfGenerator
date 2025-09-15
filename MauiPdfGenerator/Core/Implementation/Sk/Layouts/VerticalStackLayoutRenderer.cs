@@ -6,7 +6,7 @@ using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
-internal class PdfVerticalStackLayoutRender : IElementRenderer
+internal class VerticalStackLayoutRenderer : IElementRenderer
 {
     public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {

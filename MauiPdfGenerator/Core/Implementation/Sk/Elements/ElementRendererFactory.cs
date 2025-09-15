@@ -14,9 +14,9 @@ internal class ElementRendererFactory
         {
             { typeof(PdfParagraphData), new TextRenderer() },
             { typeof(PdfImageData), new ImageRenderer() },
-            { typeof(PdfHorizontalLineData), new HorizontalLineRender() },
-            { typeof(PdfVerticalStackLayoutData), new PdfVerticalStackLayoutRender() },
-            { typeof(PdfHorizontalStackLayoutData), new PdfHorizontalStackLayoutRender() }
+            { typeof(PdfHorizontalLineData), new HorizontalLineRenderer() },
+            { typeof(PdfVerticalStackLayoutData), new VerticalStackLayoutRenderer() },
+            { typeof(PdfHorizontalStackLayoutData), new HorizontalStackLayoutRenderer() }
         };
     }
 

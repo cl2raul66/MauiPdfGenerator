@@ -5,7 +5,7 @@ using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
-internal class HorizontalLineRender : IElementRenderer
+internal class HorizontalLineRenderer : IElementRenderer
 {
     private record LineLayoutCache(SKPoint RelativeStart, SKPoint RelativeEnd, PdfRect FinalRect);
 

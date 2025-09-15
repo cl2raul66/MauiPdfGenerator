@@ -6,7 +6,7 @@ using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
-internal class PdfHorizontalStackLayoutRender : IElementRenderer
+internal class HorizontalStackLayoutRenderer : IElementRenderer
 {
     private record HorizontalLayoutCache(
         List<PdfLayoutInfo> ArrangedChildren,

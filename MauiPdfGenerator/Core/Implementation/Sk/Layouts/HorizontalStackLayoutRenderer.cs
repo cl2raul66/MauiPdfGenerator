@@ -3,6 +3,9 @@ using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Models;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
@@ -37,7 +40,7 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
         {
             contentWidth += hsl.GetSpacing * (childMeasures.Count - 1);
         }
-        float contentHeight = childMeasures.Any() ? childMeasures.Max(m => m.Height) : 0;
+        float contentHeight = childMeasures.Count != 0 ? childMeasures.Max(m => m.Height) : 0;
 
         float boxWidth = hsl.GetWidthRequest.HasValue
             ? (float)hsl.GetWidthRequest.Value
@@ -91,7 +94,7 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
                 currentX += requiredSpacing;
                 var renderer = context.RendererFactory.GetRenderer(child);
 
-                float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? contentHeight : measure.Height;
+                float childHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? contentHeight : measure.Height;
                 float offsetY = child.GetVerticalOptions switch
                 {
                     LayoutAlignment.Center => (contentHeight - childHeight) / 2f,
@@ -110,33 +113,35 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             }
             else
             {
-                // Este hijo y todos los siguientes están desbordados.
-                // Calculamos sus posiciones ideales para que el renderizador de error sepa dónde dibujarlos.
                 currentX += requiredSpacing;
-                for (int j = i; j < childMeasures.Count; j++)
-                {
-                    var overflowMeasure = childMeasures[j];
-                    var overflowChild = (PdfElementData)overflowMeasure.Element;
+                var overflowBounds = CalculateIdealBounds(child, measure, currentX, elementBox.Top + (float)hsl.GetPadding.Top, contentHeight);
+                overflowedChildren.Add((child, overflowBounds));
 
-                    float childHeight = overflowChild.GetVerticalOptions == LayoutAlignment.Fill ? contentHeight : overflowMeasure.Height;
-                    float offsetY = overflowChild.GetVerticalOptions switch
-                    {
-                        LayoutAlignment.Center => (contentHeight - childHeight) / 2f,
-                        LayoutAlignment.End => contentHeight - childHeight,
-                        _ => 0f
-                    };
-                    float y = elementBox.Top + (float)hsl.GetPadding.Top + offsetY;
+                context.DiagnosticSink.Submit(new DiagnosticMessage(
+                    DiagnosticSeverity.Warning,
+                    DiagnosticCodes.LayoutOverflow,
+                    $"Element '{child.GetType().Name}' with desired width {measure.Width} overflows the available space of {spaceAvailable} in the HorizontalStackLayout.",
+                    new DiagnosticRect(overflowBounds.X, overflowBounds.Y, overflowBounds.Width, overflowBounds.Height)
+                ));
 
-                    var overflowBounds = new PdfRect(currentX, y, overflowMeasure.Width, childHeight);
-                    overflowedChildren.Add((overflowChild, overflowBounds));
-                    currentX += overflowMeasure.Width + (j < childMeasures.Count - 1 ? hsl.GetSpacing : 0);
-                }
-                break;
+                currentX += measure.Width;
             }
         }
 
         context.LayoutState[hsl] = new HorizontalLayoutCache(arrangedChildren, overflowedChildren, finalRect);
         return new PdfLayoutInfo(hsl, finalRect.Width, finalRect.Height, finalRect);
+    }
+
+    private PdfRect CalculateIdealBounds(PdfElementData child, PdfLayoutInfo measure, float currentX, float topY, float contentHeight)
+    {
+        float childHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? contentHeight : measure.Height;
+        float offsetY = child.GetVerticalOptions switch
+        {
+            LayoutAlignment.Center => (contentHeight - childHeight) / 2f,
+            LayoutAlignment.End => contentHeight - childHeight,
+            _ => 0f
+        };
+        return new PdfRect(currentX, topY + offsetY, measure.Width, childHeight);
     }
 
     public async Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)
@@ -173,17 +178,9 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             await renderer.RenderAsync(canvas, childContext);
         }
 
-        foreach (var (overflowChild, overflowBounds) in cache.OverflowedChildren)
-        {
-            var renderer = context.RendererFactory.GetRenderer(overflowChild);
-            var childContext = context with { Element = overflowChild };
-
-            // --- LA CORRECCIÓN CRÍTICA ---
-            // No pasamos el overflowBounds directamente.
-            // El renderizador de error debe dibujar dentro de los límites del layout.
-            // No necesitamos recortar aquí porque el ClipRect del canvas ya se encarga.
-            await renderer.RenderOverflowAsync(canvas, overflowBounds, childContext);
-        }
+        // Nota: El renderizado de los elementos desbordados (si se desea) se gestionará
+        // en la capa de visualización de diagnósticos, no aquí.
+        // Esta capa solo se encarga de renderizar lo que sí cabe.
 
         canvas.Restore();
     }

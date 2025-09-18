@@ -2,6 +2,7 @@
 using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Core.Implementation.Sk;
+using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
@@ -17,14 +18,16 @@ internal class PdfDocumentBuilder : IPdfDocument
     private readonly List<IPdfPageBuilder> _pages;
     private readonly IPdfCoreGenerator _pdfGenerationService;
     private readonly ILogger _logger;
+    private readonly IDiagnosticSink _diagnosticSink;
 
-    public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, ILoggerFactory loggerFactory, string? defaultPath = null)
+    public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, ILoggerFactory loggerFactory, IDiagnosticSink diagnosticSink, IPdfCoreGenerator pdfGenerationService, string? defaultPath = null)
     {
         _filePath = defaultPath;
         _pages = [];
         _configurationBuilder = new PdfConfigurationBuilder(fontRegistry);
-        _pdfGenerationService = new SkComposer();
+        _pdfGenerationService = pdfGenerationService;
         _logger = loggerFactory.CreateLogger<IPdfDocument>();
+        _diagnosticSink = diagnosticSink;
     }
 
     public IPdfDocument Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)
@@ -98,7 +101,7 @@ internal class PdfDocumentBuilder : IPdfDocument
 
         try
         {
-            await _pdfGenerationService.GenerateAsync(documentData, path, _configurationBuilder.FontRegistry, _logger);
+            await _pdfGenerationService.GenerateAsync(documentData, path, _configurationBuilder.FontRegistry);
         }
         catch (PdfGenerationException genEx)
         {

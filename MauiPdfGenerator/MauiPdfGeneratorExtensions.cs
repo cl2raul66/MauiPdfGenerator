@@ -1,6 +1,10 @@
 ﻿using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Core;
+using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Integration;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Interfaces;
+using MauiPdfGenerator.Diagnostics.Listeners;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Enums;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -26,9 +30,32 @@ public static class MauiPdfGeneratorExtensions
         builder.Services.AddSingleton<IPdfDocumentFactory>(sp =>
             new PdfDocumentFactory(
                 sp.GetRequiredService<PdfFontRegistryBuilder>(),
-                sp.GetRequiredService<ILoggerFactory>()
+                sp.GetRequiredService<ILoggerFactory>(),
+                sp.GetRequiredService<IDiagnosticSink>(),
+                sp.GetRequiredService<IPdfCoreGenerator>()
             )
         );
+
+        // Registro de la infraestructura de diagnóstico base
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDiagnosticListener, ConsoleDiagnosticListener>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDiagnosticListener, LoggingDiagnosticListener>(sp =>
+            new LoggingDiagnosticListener(sp.GetRequiredService<ILoggerFactory>())
+        ));
+        builder.Services.TryAddSingleton<IDiagnosticSink, DiagnosticSink>();
+
+        // Registro del motor de renderizado
+        builder.Services.TryAddSingleton<IPdfCoreGenerator, SkComposer>();
+
+        return builder;
+    }
+
+    public static MauiAppBuilder EnableDiagnosticVisualizer(this MauiAppBuilder builder)
+    {
+        builder.Services.TryAddSingleton<VisualDiagnosticsConfiguration>();
+        builder.Services.TryAddSingleton<IVisualDiagnosticStore, VisualDiagnosticListener>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDiagnosticListener, VisualDiagnosticListener>(sp =>
+            (VisualDiagnosticListener)sp.GetRequiredService<IVisualDiagnosticStore>()));
+        builder.Services.TryAddSingleton<IDiagnosticVisualizer, DefaultDiagnosticVisualizer>();
 
         return builder;
     }

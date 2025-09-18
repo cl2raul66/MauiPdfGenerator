@@ -261,6 +261,18 @@ La biblioteca no solo adopta tipos de .NET MAUI, sino también su filosofía de 
 - **Consistencia Transversal:** Los patrones de nomenclatura se aplican rigurosamente en todas las capas, desde la API pública (`Fluent`) hasta el motor interno (`Core`).
 - **Documentación Viva:** La nomenclatura coherente hace que el propio código actúe como una forma de documentación, reflejando fielmente los conceptos definidos en este documento.
 
+### 1.6. Flujo de Diagnósticos: El Patrón Sink/Listener
+
+Para proporcionar retroalimentación robusta sin acoplar el motor a los mecanismos de logging o UI, la biblioteca utiliza un patrón de `Sink` (sumidero) y `Listener` (oyente) desacoplado.
+
+-   **`IDiagnosticSink`**: Es la única puerta de entrada para los mensajes. El motor `Core` solo conoce esta interfaz. Cuando detecta una anomalía, crea un `DiagnosticMessage` y lo envía al `Sink`.
+-   **`IDiagnosticListener`**: Son los consumidores. Se pueden registrar múltiples listeners. Por defecto, se registran oyentes para la consola y el sistema de `ILogger`.
+-   **Visualización Opcional**: Al llamar a `.EnableDiagnosticVisualizer()`, se añade un `VisualDiagnosticListener` especial que almacena los mensajes con datos espaciales, y un `IDiagnosticVisualizer` que sabe cómo dibujarlos en el lienzo.
+
+Esta arquitectura asegura que el motor `Core` solo se preocupa de *emitir* problemas, mientras que la capa de configuración de la aplicación decide *cómo* y *dónde* se presentan esos problemas al desarrollador.
+
+> **NOTA:** Para una guía práctica sobre cómo utilizar esta característica, consulta la sección **[5. Sistema de Diagnóstico](#5-sistema-de-diagnóstico-depuración-visual-e-interactiva)** en la Parte III.
+
 ## 2. Implementación del Sistema de Layout
 
 ### 2.1. Principios y Reglas Fundamentales de Layout
@@ -1189,3 +1201,57 @@ Estos tres mecanismos controlan el espacio en el documento, pero cada uno tiene 
 | `Margin` | En cualquier `View` o `Layout` | Espacio **entre** este elemento y sus vecinos. | No |
 | `Padding` | En cualquier `View` o `Layout` | Espacio **dentro** de un elemento. | Sí |
 | `Spacing` | Solo en `Layouts` | Espacio **entre todos los hijos** de un layout. | No (porque aplica `Margin`) |
+
+## 5. Sistema de Diagnóstico: Depuración Visual e Interactiva
+
+### 5.1. Filosofía: De Errores Silenciosos a Retroalimentación Accionable
+
+La generación de layouts complejos puede ser un desafío. Un elemento que no aparece o se posiciona incorrectamente puede ser difícil de depurar. El Sistema de Diagnóstico de `MauiPdfGenerator` está diseñado para eliminar esta fricción, transformando los errores silenciosos en retroalimentación clara, contextual y accionable.
+
+Su propósito es actuar como un asistente de depuración que te informa sobre problemas de layout, recursos faltantes o configuraciones incorrectas directamente en tus herramientas de desarrollo y, opcionalmente, de forma visual sobre el PDF generado.
+
+### 5.2. Uso Práctico
+
+#### Comportamiento Predeterminado: Diagnósticos en Consola y Logs
+
+Por defecto, sin ninguna configuración adicional, `MauiPdfGenerator` ya está trabajando para ti. Durante la compilación en modo `DEBUG`, todos los mensajes de diagnóstico (advertencias y errores) generados por el motor se enviarán automáticamente a:
+-   La **Consola de Depuración** de tu IDE (ej. Ventana de Salida en Visual Studio).
+-   El sistema de **Logging** estándar de .NET MAUI.
+
+Esto significa que obtienes información valiosa desde el primer momento, sin necesidad de activar nada.
+
+#### Activación del Visualizador de Diagnósticos
+
+Para obtener la retroalimentación más potente, puedes habilitar la capa de visualización. Esto dibujará ayudas visuales (como rectángulos de error y etiquetas) directamente sobre el PDF generado, mostrándote la ubicación exacta de los problemas.
+
+Para activarlo, simplemente encadena el método `.EnableDiagnosticVisualizer()` en tu `MauiProgram.cs`:
+
+```csharp
+builder
+    .UseMauiApp<App>()
+    .UseMauiPdfGenerator()
+    .EnableDiagnosticVisualizer() // <-- Activa la capa visual
+    .PdfConfigureFonts(...);
+```
+
+Con esta única línea, cualquier diagnóstico que tenga una ubicación espacial (como un desbordamiento de layout) se renderizará en el documento.
+
+### 5.3. Referencia de Códigos de Diagnóstico
+
+A continuación se muestra una lista de los códigos de diagnóstico comunes, su significado y cómo solucionarlos.
+
+| Código | Significado y Causa Común | Soluciones Sugeridas |
+| :--- | :--- | :--- |
+| **`LAYOUT-001`** | **Desbordamiento de Layout:** Un elemento es demasiado ancho para caber en el espacio horizontal disponible de su contenedor (típicamente un `HorizontalStackLayout`). | - Revisa los `WidthRequest` de los elementos hijos y el `Spacing` del layout. <br> - Asegúrate de que la suma de los anchos no exceda el ancho del contenedor padre. <br> - Si los elementos deben apilarse, considera usar un `VerticalStackLayout`. |
+| **`LAYOUT-002`** | **Contenido de Página Sobredimensionado:** Un elemento atómico (como una `IPdfImage` o un `IPdfVerticalStackLayout`) es más alto que una página completa y no puede ser dividido. El elemento será omitido. | - Reduce el tamaño (`HeightRequest`) o el contenido del elemento. <br> - Si es un `VerticalStackLayout`, considera sacar sus hijos para que sean elementos raíz de la página, permitiendo que se dividan a través de las páginas. |
+| **`RESOURCE-001`** | **Error de Decodificación de Imagen:** El `Stream` proporcionado para una `IPdfImage` está corrupto, vacío, cerrado o en un formato no soportado. | - Asegúrate de que el `Stream` esté abierto y posicionado al inicio (`stream.Position = 0;`) antes de pasarlo al constructor. <br> - Verifica que los datos del `byte[]` correspondan a un formato de imagen válido (PNG, JPEG, etc.). |
+| **`RESOURCE-002`** | **Fuente no Encontrada:** Se ha especificado un alias de fuente (`PdfFontIdentifier`) que no fue registrado en `PdfConfigureFonts()` ni en la configuración del documento. | - Verifica que el alias en `PdfFonts.MiFuente` coincida exactamente con el alias registrado en `MauiProgram.cs`. <br> - Asegúrate de haber compilado el proyecto después de añadir la fuente para que la clase `PdfFonts` se regenere. |
+
+### 5.4. Ejemplo Visual: Interpretando un Error de Layout
+
+Imagina que tienes un `HorizontalStackLayout` que contiene dos imágenes, cada una con un `WidthRequest(300)`. En una página A4 estándar (ancho de ~595 puntos), es imposible que quepan.
+
+-   **Sin el visualizador:** La primera imagen se dibujará, la segunda no. Verás un mensaje `[LAYOUT-001]` en tu consola.
+-   **Con el visualizador activado:** Verás la primera imagen dibujada. Adicionalmente, verás un **rectángulo rojo** dibujado justo a la derecha de la primera imagen, en la posición y con el tamaño que la segunda imagen *habría* ocupado si hubiera tenido espacio. Dentro de la esquina superior izquierda de este rectángulo, verás la etiqueta **`[LAYOUT-001]`**.
+
+Esta retroalimentación visual te dice instantáneamente no solo *qué* falló, sino *dónde* y *por cuánto*.

@@ -2,6 +2,9 @@
 using MauiPdfGenerator.Common.Models.Elements;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Models;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
@@ -25,7 +28,11 @@ internal class ImageRenderer : IElementRenderer
         }
         catch (Exception ex)
         {
-            context.Logger.LogWarning(ex, "Failed to decode image stream. A placeholder will be used.");
+            context.DiagnosticSink.Submit(new DiagnosticMessage(
+                DiagnosticSeverity.Warning,
+                DiagnosticCodes.ImageDecodeError,
+                $"Failed to decode image stream. A placeholder will be used. Error: {ex.Message}"
+            ));
             skImage = null;
         }
 

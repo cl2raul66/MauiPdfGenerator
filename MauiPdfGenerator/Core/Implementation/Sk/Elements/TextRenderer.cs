@@ -4,6 +4,9 @@ using MauiPdfGenerator.Common.Models.Elements;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using System.Text;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Models;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
@@ -44,7 +47,7 @@ internal class TextRenderer : IElementRenderer
             totalTextHeight = (allLines.Count - 1) * fontLineSpacing + (fontMetrics.Descent - fontMetrics.Ascent);
         }
 
-        float contentWidth = allLines.Any() ? allLines.Max(line => font.MeasureText(line)) : 0;
+        float contentWidth = allLines.Count != 0 ? allLines.Max(line => font.MeasureText(line)) : 0;
 
         float boxWidth = paragraph.GetWidthRequest.HasValue
             ? (float)paragraph.GetWidthRequest.Value
@@ -134,7 +137,7 @@ internal class TextRenderer : IElementRenderer
         var linesToDraw = textCache.LinesToDrawOnThisPage;
         var pdfRenderRect = textCache.FinalArrangedRect;
 
-        if (linesToDraw is null || !linesToDraw.Any() || pdfRenderRect is null)
+        if (linesToDraw is null || linesToDraw.Count == 0 || pdfRenderRect is null)
         {
             textCache.Font.Dispose();
             textCache.Paint.Dispose();
@@ -265,6 +268,14 @@ internal class TextRenderer : IElementRenderer
         if (fontRegistration is null && fontIdentifierToUse.HasValue)
         {
             fontRegistration = fontRegistry.GetFontRegistration(fontIdentifierToUse.Value);
+            if (fontRegistration is null)
+            {
+                context.DiagnosticSink.Submit(new DiagnosticMessage(
+                    DiagnosticSeverity.Warning,
+                    DiagnosticCodes.FontNotFound,
+                    $"The font with alias '{fontIdentifierToUse.Value.Alias}' was not found in the document's font registry. A system default font will be used as a fallback."
+                ));
+            }
         }
         string? filePathToLoad = null;
         if (fontRegistration is not null && !string.IsNullOrEmpty(fontRegistration.FilePath))

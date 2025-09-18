@@ -3,6 +3,9 @@ using MauiPdfGenerator.Common.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Models;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
 
@@ -55,7 +58,7 @@ internal class ContentPageOrchestrator
                     arrangedElementsOnPage.Add(arrangeInfo);
                 }
 
-                if (arrangeInfo.RemainingElement != null)
+                if (arrangeInfo.RemainingElement is not null)
                 {
                     // El resto va a la siguiente página.
                     spilloverElements.Add(arrangeInfo.RemainingElement);
@@ -63,8 +66,21 @@ internal class ContentPageOrchestrator
                 else if (arrangeInfo.Height <= 0)
                 {
                     // No cupo nada del elemento (era atómico o no cabía ni un fragmento).
-                    // Lo devolvemos a la cola para la siguiente página.
-                    spilloverElements.Add(element);
+                    if (measureInfo.Height > contentRect.Height)
+                    {
+                        // El elemento es más grande que una página completa. Se omite.
+                        context.DiagnosticSink.Submit(new DiagnosticMessage(
+                            DiagnosticSeverity.Warning,
+                            DiagnosticCodes.PageContentOversized,
+                            $"The element of type '{element.GetType().Name}' has a required height of {measureInfo.Height}, which is larger than the available page height of {contentRect.Height}. The element will be skipped.",
+                            new DiagnosticRect(contentRect.X, currentY, contentRect.Width, measureInfo.Height)
+                        ));
+                    }
+                    else
+                    {
+                        // Lo devolvemos a la cola para la siguiente página.
+                        spilloverElements.Add(element);
+                    }
                 }
 
                 // La página está llena, ya sea porque un elemento se dividió o porque uno atómico no cupo.
@@ -98,7 +114,7 @@ internal class ContentPageOrchestrator
         // Medimos de nuevo solo para obtener el ancho deseado, ya que la altura la define availableHeight.
         var measureInfo = await renderer.MeasureAsync(elementContext, new SKRect(0, 0, contentRect.Width, float.PositiveInfinity));
 
-        var elementWidth = element.GetHorizontalOptions == LayoutAlignment.Fill
+        var elementWidth = element.GetHorizontalOptions is LayoutAlignment.Fill
             ? contentRect.Width
             : Math.Min(measureInfo.Width, contentRect.Width);
 

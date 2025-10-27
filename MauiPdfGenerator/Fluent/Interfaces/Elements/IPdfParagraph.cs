@@ -2,15 +2,17 @@
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
 
-public interface IPdfParagraph : IPdfElement<IPdfParagraph>
+public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfParagraph<TSelf>
 {
-    IPdfParagraph FontFamily(PdfFontIdentifier? family);
-    IPdfParagraph FontSize(float size);
-    IPdfParagraph TextColor(Color color);
-    IPdfParagraph HorizontalTextAlignment(TextAlignment alignment);
-    IPdfParagraph VerticalTextAlignment(TextAlignment alignment);
-    IPdfParagraph FontAttributes(FontAttributes attributes);
-    IPdfParagraph LineBreakMode(LineBreakMode mode);
-    IPdfParagraph TextDecorations(TextDecorations decorations);
-    IPdfParagraph TextTransform(TextTransform transform);
+    TSelf FontFamily(PdfFontIdentifier? family);
+    TSelf FontSize(float size);
+    TSelf TextColor(Color color);
+    TSelf HorizontalTextAlignment(TextAlignment alignment);
+    TSelf VerticalTextAlignment(TextAlignment alignment);
+    TSelf FontAttributes(FontAttributes attributes);
+    TSelf LineBreakMode(LineBreakMode mode);
+    TSelf TextDecorations(TextDecorations decorations);
+    TSelf TextTransform(TextTransform transform);
 }
+
+public interface IPdfParagraph : IPdfParagraph<IPdfParagraph> { }

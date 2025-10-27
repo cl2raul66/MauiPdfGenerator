@@ -55,4 +55,11 @@ internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
         _layoutBuilder.Add(stackBuilder);
         return stackBuilder;
     }
+
+    public IPdfGrid Grid()
+    {
+        var gridBuilder = new PdfGridBuilder(_fontRegistry);
+        _layoutBuilder.Add(gridBuilder);
+        return gridBuilder;
+    }
 }

@@ -38,7 +38,7 @@ internal class PdfParagraphBuilder : IPdfParagraph, IBuildablePdfElement
     public IPdfParagraph Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin) { _model.Margin(leftMargin, topMargin, rightMargin, bottomMargin); return this; }
     public IPdfParagraph Padding(double uniformPadding) { _model.Padding(uniformPadding); return this; }
     public IPdfParagraph Padding(double horizontalPadding, double verticalPadding) { _model.Padding(horizontalPadding, verticalPadding); return this; }
-    public IPdfParagraph Padding(double leftPadding, double topPadding, double rightPadding, double bottomPadding) { _model.Padding(leftPadding, topPadding, rightPadding, bottomPadding); return this; }
+    public IPdfParagraph Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin) { _model.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this; }
     public IPdfParagraph TextColor(Color color) { _model.CurrentTextColor = color; return this; }
     public IPdfParagraph TextDecorations(TextDecorations decorations) { _model.CurrentTextDecorations = decorations; return this; }
     public IPdfParagraph TextTransform(TextTransform transform) { _model.CurrentTextTransform = transform; return this; }

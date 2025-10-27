@@ -1,7 +1,9 @@
 ﻿namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
 
-public interface IPdfHorizontalLine : IPdfElement<IPdfHorizontalLine>
+public interface IPdfHorizontalLine<TSelf> : IPdfElement<TSelf> where TSelf : IPdfHorizontalLine<TSelf>
 {
-    IPdfHorizontalLine Thickness(float value);
-    IPdfHorizontalLine Color(Color color);
+    TSelf Thickness(float value);
+    TSelf Color(Color color);
 }
+
+public interface IPdfHorizontalLine : IPdfHorizontalLine<IPdfHorizontalLine> { }

@@ -1,6 +1,8 @@
 ﻿namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
 
-public interface IPdfImage : IPdfElement<IPdfImage>
+public interface IPdfImage<TSelf> : IPdfElement<TSelf> where TSelf : IPdfImage<TSelf>
 {
-    IPdfImage Aspect(Aspect aspect);
+    TSelf Aspect(Aspect aspect);
 }
+
+public interface IPdfImage : IPdfImage<IPdfImage> { }

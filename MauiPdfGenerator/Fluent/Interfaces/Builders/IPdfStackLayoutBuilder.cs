@@ -10,4 +10,5 @@ public interface IPdfStackLayoutBuilder
     IPdfImage Image(Stream stream);
     IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content);
     IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content);
+    IPdfGrid Grid();
 }

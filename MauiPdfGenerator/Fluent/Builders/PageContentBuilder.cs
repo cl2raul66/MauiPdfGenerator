@@ -56,4 +56,11 @@ internal class PageContentBuilder : IPageContentBuilder
         _children.Add(stackBuilder);
         return stackBuilder;
     }
+
+    public IPdfGrid PdfGrid()
+    {
+        var gridBuilder = new PdfGridBuilder(_fontRegistry);
+        _children.Add(gridBuilder);
+        return gridBuilder;
+    }
 }

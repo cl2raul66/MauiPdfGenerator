@@ -10,12 +10,12 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     internal double? GetHeightRequest { get; private set; }
     internal Color? GetBackgroundColor { get; private set; }
     internal LayoutAlignment GetHorizontalOptions { get; private set; } = LayoutAlignment.Fill;
-    internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Fill;
+    internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Start;
 
-    internal int GridRow { get; set; } = 0;
-    internal int GridColumn { get; set; } = 0;
-    internal int GridRowSpan { get; set; } = 1;
-    internal int GridColumnSpan { get; set; } = 1;
+    internal int GridRow { get; private set; } = 0;
+    internal int GridColumn { get; private set; } = 0;
+    internal int GridRowSpan { get; private set; } = 1;
+    internal int GridColumnSpan { get; private set; } = 1;
 
     public PdfElementData Margin(double uniformMargin)
     {
@@ -81,6 +81,30 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     {
         this.GetVerticalOptions = layoutAlignment;
         return this;
+    }
+
+    internal void SetRow(int row)
+    {
+        if (row < 0) throw new ArgumentOutOfRangeException(nameof(row), "Row must be a non-negative integer.");
+        this.GridRow = row;
+    }
+
+    internal void SetColumn(int column)
+    {
+        if (column < 0) throw new ArgumentOutOfRangeException(nameof(column), "Column must be a non-negative integer.");
+        this.GridColumn = column;
+    }
+
+    internal void SetRowSpan(int span)
+    {
+        if (span < 1) throw new ArgumentOutOfRangeException(nameof(span), "RowSpan must be a positive integer.");
+        this.GridRowSpan = span;
+    }
+
+    internal void SetColumnSpan(int span)
+    {
+        if (span < 1) throw new ArgumentOutOfRangeException(nameof(span), "ColumnSpan must be a positive integer.");
+        this.GridColumnSpan = span;
     }
 
     int IPdfGridCellInfo.Row => GridRow;

@@ -11,7 +11,7 @@ Esta primera parte establece la **visión y los principios fundamentales** que g
 Aquí exploraremos:
 - La filosofía de ser una **extensión natural** de .NET MAUI
 - El modelo conceptual de layout y paginación
-- Los principios arquitectónicos que garantizan una experiencia de desarrollo **productiva e intuitiva**
+- Los principios arquitectónicos que garantizan una experiencia de desarrollo **productiva, intuitiva y fácil de depurar**
 
 Esta sección es la base conceptual sobre la cual se construye todo lo demás.
 
@@ -75,6 +75,18 @@ await doc
 - **Minimizar Errores** - Elimina elementos "vacíos" o "invisibles"
 - **Facilitar la Iteración** - Enfoque en contenido, refinamiento progresivo del estilo
 
+#### Retroalimentación Proactiva de Problemas
+
+Como extensión del **Principio de Garantía de Completitud**, la biblioteca incluye un **Sistema de Diagnóstico** integrado que transforma errores silenciosos en retroalimentación clara y accionable.
+
+**¿Por qué es Fundamental?**
+- **Eliminación de Frustración:** Los problemas de layout no se "esconden" - se comunican activamente
+- **Depuración Acelerada:** Identificación inmediata de la causa raíz con ubicación exacta  
+- **Aprendizaje Continuo:** Cada problema detectado incluye sugerencias de resolución
+
+**Filosofía de "Falla Rápido y Claro":**
+La biblioteca prefiere señalar un problema inmediatamente con contexto útil, en lugar de generar un PDF silenciosamente incorrecto que requiera investigación manual.
+
 ## 2. Jerarquía Conceptual: Pages → Layouts → Views
 
 ### 2.1. Analogía Jerárquica: MAUI → PDF
@@ -106,7 +118,7 @@ Los `Layouts` organizan `Views` y otros `Layouts` en **estructuras jerárquicas*
 
 - **`IPdfVerticalStackLayout`** - *Pila vertical de elementos*
 - **`IPdfHorizontalStackLayout`** - *Pila horizontal de elementos*  
-- **`PdfGrid`** - *Cuadrícula de filas y columnas*
+- **`IPdfGrid`** - *Cuadrícula de filas y columnas para maquetación tabular y compleja*
 
 *Cada layout puede contener Views y otros Layouts, permitiendo diseños de cualquier complejidad.*
 
@@ -173,10 +185,11 @@ Para gestionar la paginación de manera **predecible**, la biblioteca clasifica 
   - Renderiza las líneas posibles, pasa el resto a la siguiente página
   - **Conserva todo el formato original**
 
-- **`PdfGrid`**
-  - Mide filas secuencialmente  
-  - División ocurre **entre filas**, nunca a mitad de celda
-  - Filas completas se mueven a la siguiente página
+- **`IPdfGrid`**
+  - Mide filas secuencialmente.
+  - La división ocurre **entre filas**, nunca a mitad de una celda.
+  - Las filas completas que no caben se mueven a la siguiente página.
+  - **Importante:** Un grupo de filas conectadas por un elemento con `RowSpan` se trata como una **unidad atómica** y no se dividirá a través de un salto de página. Si el bloque de filas no cabe, se moverá completo a la página siguiente.
 
 *Esta distinción proporciona **control y previsibilidad** claros sobre el flujo del documento.*
 
@@ -261,17 +274,62 @@ La biblioteca no solo adopta tipos de .NET MAUI, sino también su filosofía de 
 - **Consistencia Transversal:** Los patrones de nomenclatura se aplican rigurosamente en todas las capas, desde la API pública (`Fluent`) hasta el motor interno (`Core`).
 - **Documentación Viva:** La nomenclatura coherente hace que el propio código actúe como una forma de documentación, reflejando fielmente los conceptos definidos en este documento.
 
-### 1.6. Flujo de Diagnósticos: El Patrón Sink/Listener
+### 1.6. Arquitectura del Sistema de Diagnóstico: Observabilidad Integrada
 
-Para proporcionar retroalimentación robusta sin acoplar el motor a los mecanismos de logging o UI, la biblioteca utiliza un patrón de `Sink` (sumidero) y `Listener` (oyente) desacoplado.
+Para proporcionar retroalimentación robusta sin acoplar el motor a los mecanismos de logging o UI, la biblioteca utiliza una arquitectura de **observabilidad desacoplada** basada en los patrones `Sink/Listener` y `Observer`.
 
--   **`IDiagnosticSink`**: Es la única puerta de entrada para los mensajes. El motor `Core` solo conoce esta interfaz. Cuando detecta una anomalía, crea un `DiagnosticMessage` y lo envía al `Sink`.
--   **`IDiagnosticListener`**: Son los consumidores. Se pueden registrar múltiples listeners. Por defecto, se registran oyentes para la consola y el sistema de `ILogger`.
--   **Visualización Opcional**: Al llamar a `.EnableDiagnosticVisualizer()`, se añade un `VisualDiagnosticListener` especial que almacena los mensajes con datos espaciales, y un `IDiagnosticVisualizer` que sabe cómo dibujarlos en el lienzo.
+#### Principios Arquitectónicos
 
-Esta arquitectura asegura que el motor `Core` solo se preocupa de *emitir* problemas, mientras que la capa de configuración de la aplicación decide *cómo* y *dónde* se presentan esos problemas al desarrollador.
+1. **Separación de Preocupaciones:** El motor `Core` es responsable de generar el PDF. El sistema `Diagnostics` observa y reporta anomalías. La comunicación se realiza a través de un contrato (`DiagnosticMessage`) bien definido.
 
-> **NOTA:** Para una guía práctica sobre cómo utilizar esta característica, consulta la sección **[5. Sistema de Diagnóstico](#5-sistema-de-diagnóstico-depuración-visual-e-interactiva)** en la Parte III.
+2. **Enfoque en Causa Raíz:** Implementa lógica de **supresión jerárquica** para reducir ruido y enfocar al desarrollador en el problema original, no en sus consecuencias.
+
+3. **Adaptación Contextual:** La información se adapta a cada canal (Consola, Logs, Visualizador) para ofrecer máxima claridad según la audiencia.
+
+#### Arquitectura de Canales
+
+```
++-------------------+      +-----------------------+      +-----------------------------+
+| Motor de          |----->|   IDiagnosticSink     |----->| ConsoleDiagnosticListener   |
+| Renderizado (Core)|      +-----------------------+      +-----------------------------+
+| (Productor)       |                                     | (Consumidor - Depuración)   |
++-------------------+                                     +-----------------------------+
+                                                          |
+                                                          +-----------------------------+
+                                                          | LoggingDiagnosticListener   |
+                                                          +-----------------------------+
+                                                          | (Consumidor - Auditoría)    |
+                                                          +-----------------------------+
+                                                          |
+                                                          +-----------------------------+
+                                                          | VisualDiagnosticListener    |
+                                                          +-----------------------------+
+                                                          | (Consumidor - Visual)       |
+                                                          +-----------------------------+
+```
+
+#### El Contrato `DiagnosticMessage`
+
+```csharp
+public record DiagnosticMessage(
+    DiagnosticSeverity Severity,           // Error, Warning, Info
+    string Code,                           // "LAYOUT-001", "VIEW-002", etc.
+    string Message,                        // Descripción legible
+    IReadOnlyList<string> HierarchyPath,   // "Page[0]/VSL[1]/Image[2]"
+    DiagnosticRect? Bounds = null,         // Ubicación geométrica opcional
+    IReadOnlyDictionary<string, object>? ContextData = null
+);
+```
+
+#### Lógica de Supresión Jerárquica
+
+| Canal | Supresión | Justificación |
+| - | - | - |
+| **Visual** | Obligatoria | Evitar ruido visual es crítico para usabilidad |
+| **Consola** | Por Defecto | Priorizar claridad para depuración inmediata |
+| **Logs** | Nunca | Garantizar registro completo para auditoría |
+
+Esta arquitectura asegura que el motor `Core` solo se preocupe de *emitir* problemas, mientras que la configuración de la aplicación decide *cómo* y *dónde* presentarlos al desarrollador.
 
 ## 2. Implementación del Sistema de Layout
 
@@ -282,7 +340,7 @@ El motor de layout de MauiPdfGenerator, aunque adaptado para la generación de d
 *   **El Principio de Autoridad Parental:** Esta es la regla más importante del sistema de layout. Un elemento hijo (como un `IPdfParagraph`) **no se posiciona a sí mismo**. Sus propiedades de alineación y tamaño (`HorizontalOptions`, `VerticalOptions`, `WidthRequest`) son **solicitudes** que le hace a su `Layout` padre. Es el `Layout` padre, durante su pasada de `ArrangeAsync`, quien lee estas solicitudes y tiene la autoridad final para calcular y asignar la posición y el tamaño del hijo. Esta separación de responsabilidades garantiza un flujo de layout determinista y predecible de arriba hacia abajo.
 
 *   **El Principio de Propagación de Restricciones:** Un elemento **NUNCA** decide su propio tamaño en el vacío. Siempre opera dentro de las restricciones (un tamaño disponible) que le impone su `Layout` padre. La única excepción es la `Page` raíz, cuyo espacio inicial es el tamaño de la página menos su `Padding`. La naturaleza de estas restricciones cambia según el tipo de layout:
-     * *Layouts Verticales** (`PdfContentPage`, `PdfVerticalStackLayout`, en adelante VSL): Imponen una restricción de **ancho finito** a sus hijos, pero les ofrecen una altura conceptualmente **infinita** para que se midan. Por eso, un `IPdfParagraph` dentro de un VSL aplicará saltos de línea (`WordWrap`) para ajustarse al ancho dado.
+     * *Layouts Verticales** (`PdfVerticalStackLayout`, en adelante VSL): Imponen una restricción de **ancho finito** a sus hijos, pero les ofrecen una altura conceptualmente **infinita** para que se midan. Por eso, un `IPdfParagraph` dentro de un VSL aplicará saltos de línea (`WordWrap`) para ajustarse al ancho dado.
     *   **Layouts Horizontales** (`PdfHorizontalStackLayout`): Imponen una restricción de **altura finita**, pero ofrecen un ancho conceptualmente **infinito**. Por eso, el mismo `IPdfParagraph` intentará renderizarse en una sola línea.
       > **NOTA:** Para ilustrar con mayor claridad: un `IPdfParagraph` con un texto largo, si se coloca dentro de un `PdfVerticalStackLayout` (ancho finito, altura infinita), aplicará saltos de línea para ajustarse al ancho disponible. Sin embargo, ese mismo `IPdfParagraph` dentro de un `PdfHorizontalStackLayout` (ancho infinito, altura finita) intentará renderizarse en una sola línea larga, potencialmente desbordando el layout si no se gestiona adecuadamente.
 
@@ -499,7 +557,7 @@ Por diseño arquitectónico, cada elemento de la biblioteca posee un conjunto cu
 | **`EncodingQuality`** | 100 | `Core.Implementation.Sk` | **Máxima Calidad Visual.** Campo no configurable en v1.0. Se utiliza la máxima calidad (100%) para la compresión de imágenes (ej. JPEG), priorizando la fidelidad visual sobre el tamaño del fichero. |
 | **`PdfA`** | `false` | `Core.Implementation.Sk` | **Compatibilidad General.** Campo no configurable en v1.0. Se establece en `false` por defecto, generando un PDF estándar. La conformidad con PDF/A (archivado a largo plazo) requiere restricciones adicionales que no son el objetivo principal en esta versión. |
 
-### 6.2. Páginas (`PdfContentPage`)
+### 6.2. Páginas (`IPdfContentPage`)
 
 #### Valores Predeterminados de Página
 - **`BackgroundColor`**: Blanco. Por defecto, la página no especifica un color de fondo, resultando en el blanco estándar del medio PDF.
@@ -564,54 +622,65 @@ Estos ejemplos demuestran cómo la biblioteca aplica valores predeterminados int
 - **`Padding`**: `new Thickness(0)` - Sin relleno interno.
 - **`Margin`**: `new Thickness(0)` - Sin margen externo.
 
-#### PdfGrid - Valores Predeterminados
+#### IPdfGrid - Valores Predeterminados
 - **`RowSpacing`**: `0` - Sin espaciado entre filas por defecto.
 - **`ColumnSpacing`**: `0` - Sin espaciado entre columnas por defecto.
 - **`HorizontalOptions`**: `LayoutAlignment.Fill` - Ocupa todo el ancho disponible.
 - **`VerticalOptions`**: `LayoutAlignment.Start` - Se ajusta a la altura de su contenido.
-- **`Padding`**: `new Thickness(0)` - Sin relleno interno.
+- **`Padding`**: `new Thickness(0)` - Sin relleno interno. El `Padding` en un `Grid` crea un marco interior entre el borde del `Grid` (y su `BackgroundColor`) y el conjunto de sus celdas.
 - **`Margin`**: `new Thickness(0)` - Sin margen externo.
+
+##### Valores Predeterminados para Hijos de un `IPdfGrid`
+Los elementos añadidos a un `Grid` también tienen valores predeterminados específicos para su posicionamiento:
+- **`Row`**: `0`
+- **`Column`**: `0`
+- **`RowSpan`**: `1`
+- **`ColumnSpan`**: `1`
+- **`HorizontalOptions`**: `LayoutAlignment.Fill`
+- **`VerticalOptions`**: `LayoutAlignment.Start`
 
 #### Justificación Arquitectónica para Layouts
 Los layouts adoptan una filosofía de "espaciado cero por defecto" para evitar espacios no deseados que puedan interferir con el diseño preciso. El desarrollador puede añadir espaciado explícitamente cuando sea necesario, manteniendo control total sobre la apariencia. Los `Options` contextuales minimizan la necesidad de configuración explícita para los casos de uso más comunes.
 
-### 6.4. Views
+## 7. Sistema de Códigos de Diagnóstico Estandarizados
 
-#### IPdfParagraph - Valores Predeterminados
-- **`FontFamily`**: Hereda del documento
-- **`FontSize`**: Hereda del documento (por defecto `12pt`)
-- **`FontAttributes`**: `FontAttributes.None` - Texto normal sin negrita ni cursiva.
-- **`TextColor`**: Hereda del documento (por defecto `Colors.Black`)
-- **`BackgroundColor`**: `Colors.Transparent` - Sin fondo por defecto.
-- **`HorizontalTextAlignment`**: `TextAlignment.Start` - Alineación a la izquierda para idiomas LTR.
-- **`VerticalTextAlignment`**: `TextAlignment.Start` - Alineación superior.
-- **`LineBreakMode`**: `LineBreakMode.WordWrap` - Ajuste de línea inteligente por palabras.
-- **`LineHeight`**: `1.0` - Altura de línea estándar.
-- **`CharacterSpacing`**: `0` - Sin espaciado adicional entre caracteres.
-- **`Padding`**: `new Thickness(0)` - Sin relleno interno.
-- **`Margin`**: `new Thickness(0)` - Sin margen externo.
-- **`MaxLines`**: `int.MaxValue` - Sin límite de líneas.
-- **`TextDecorations`**: `TextDecorations.None` - Sin subrayado ni tachado.
-- **`TextTransform`**: `TextTransform.None` - Sin transformación de texto.
+### 7.1. Taxonomía de Códigos
 
-#### IPdfImage - Valores Predeterminados
-- **`Aspect`**: `Aspect.AspectFit` - Mantiene proporciones de la imagen original.
-- **`HorizontalOptions`**: `LayoutAlignment.Fill` - Ocupa el ancho disponible.
-- **`VerticalOptions`**: `LayoutAlignment.Fill` - Se adapta al contenido verticalmente.
-- **`BackgroundColor`**: `Colors.Transparent` - Sin fondo por defecto.
-- **`Padding`**: `new Thickness(0)` - Sin relleno interno.
-- **`Margin`**: `new Thickness(0)` - Sin margen externo.
+Los códigos siguen un patrón `{COMPONENTE}-{NÚMERO}` que facilita la identificación del origen y la documentación:
 
-#### PdfHorizontalLine - Valores Predeterminados
-- **`Color`**: `Colors.Black` - Color de línea estándar.
-- **`Thickness`**: `1.0` - Grosor de línea estándar.
-- **`HorizontalOptions`**: `LayoutAlignment.Fill` - Ocupa todo el ancho disponible.
-- **`VerticalOptions`**: `LayoutAlignment.Center` - Se centra verticalmente.
-- **`Padding`**: `new Thickness(0)` - Sin relleno interno.
-- **`Margin`**: `new Thickness(0)` - Sin margen externo.
+```csharp
+public static class DiagnosticCodes
+{
+    // Errores a Nivel de Documento
+    public const string InvalidDocumentConfiguration = "DOC-001";
 
-#### Justificación Arquitectónica para Views
-Los valores predeterminados de las Views priorizan la legibilidad y la funcionalidad inmediata. Las fuentes y colores heredan de la configuración global del documento para mantener consistencia visual, mientras que las propiedades de espaciado inician en cero para evitar layouts no deseados.
+    // Errores a Nivel de Página  
+    public const string PageHasNoContent = "PAGE-001";
+
+    // Errores de Layout
+    public const string LayoutOverflow = "LAYOUT-001";
+    public const string PageContentOversized = "LAYOUT-002";
+    public const string AtomicElementPaged = "LAYOUT-003";
+
+    // Errores de View
+    public const string ImageDecodeError = "VIEW-001";
+    public const string FontAliasNotFound = "VIEW-002";
+    public const string FontFileNotFound = "VIEW-003";
+}
+```
+
+### 7.2. Mapeo de Componentes Emisores
+
+| Código | Componente Emisor | Justificación Arquitectónica |
+|--------|-------------------|------------------------------|
+| `DOC-001` | `PdfDocumentBuilder` | Validar configuración antes de renderizado costoso |
+| `PAGE-001` | `PdfContentPageBuilder` | Prevenir confusión por páginas en blanco |
+| `LAYOUT-001` | `HorizontalStackLayoutRenderer` | Retroalimentación visual inmediata de overflow |
+| `LAYOUT-002` | `ContentPageOrchestrator` | Evitar bucles infinitos con elementos indivisibles |
+| `LAYOUT-003` | `ContentPageOrchestrator` | Educar sobre layouts atómicos vs. divisibles |
+| `VIEW-001` | `ImageRenderer` | Robustez ante recursos corruptos |
+| `VIEW-002` | `TextRenderer` | Degradación elegante con fuentes faltantes |
+| `VIEW-003` | `SkiaUtils` | Diagnóstico preciso de problemas de fuentes |
 
 ---
 
@@ -890,16 +959,16 @@ El constructor de contenido (`IPageContentBuilder`) expone métodos fluidos para
 | `.HorizontalLine()` | Añade un elemento de línea horizontal (View). | `IPdfHorizontalLine` |
 | `.VerticalStackLayout(...)` | Añade un layout de pila vertical (Layout). | `IPdfVerticalStackLayout` | 
 | `.HorizontalStackLayout(...)` | Añade un layout de pila horizontal (Layout). | `IPdfHorizontalStackLayout` |
-| `.PdfGrid()` | Añade un layout de rejilla configurable (Layout). | `PdfGrid` |
+| `.PdfGrid()` | Añade un layout de rejilla configurable (Layout). | `IPdfGrid` |
 
 ### 3.2. Pages
 
-#### PdfContentPage
+#### IPdfContentPage
 La `IPdfContentPage` es la interfaz para el tipo de `Page` más común. Su propósito es mostrar contenido visual.
 
-#### El Comportamiento de Layout de `PdfContentPage`
+#### El Comportamiento de Layout de `IPdfContentPage`
 
-Por diseño arquitectónico, `PdfContentPage` no es un simple contenedor pasivo; **su responsabilidad principal es organizar una secuencia de elementos de contenido en un flujo vertical continuo.** Este comportamiento es inherente a su tipo y es fundamental para habilitar la paginación automática de manera eficiente. Los elementos hijos directos de la página, que pueden ser una mezcla de `Views` y `Layouts`, se apilan verticalmente.
+Por diseño arquitectónico, `IPdfContentPage` no es un simple contenedor pasivo; **su responsabilidad principal es organizar una secuencia de elementos de contenido en un flujo vertical continuo.** Este comportamiento es inherente a su tipo y es fundamental para habilitar la paginación automática de manera eficiente. Los elementos hijos directos de la página, que pueden ser una mezcla de `Views` y `Layouts`, se apilan verticalmente.
 
 Esta decisión de diseño cumple varios objetivos:
 1.  **Rendimiento**: Evita la creación de un objeto de layout (`VerticalStackLayout`) adicional e innecesario en el árbol de datos para el caso de uso más común, manteniendo el procesamiento más ligero.
@@ -924,7 +993,7 @@ Cuando se añaden múltiples elementos (sean `Views` o `Layouts`) directamente e
 ```
 
 **2. Caso de Uso Avanzado (Layout Único como Raíz):**
-Si necesitas un control total sobre la estructura, como un espaciado específico entre elementos, un layout horizontal o una rejilla como contenedor principal, debes definir **un único `Layout` como el elemento raíz** dentro del constructor `.Content()`. En este escenario, `PdfContentPage` delega la responsabilidad de organizar el contenido a ese único elemento hijo, que ocupará todo el espacio disponible de la página.
+Si necesitas un control total sobre la estructura, como un espaciado específico entre elementos, un layout horizontal o una rejilla como contenedor principal, debes definir **un único `Layout` como el elemento raíz** dentro del constructor `.Content()`. En este escenario, `IPdfContentPage` delega la responsabilidad de organizar el contenido a ese único elemento hijo, que ocupará todo el espacio disponible de la página.
 
 *Ejemplo de layout explícito como raíz:*
 ```csharp
@@ -956,10 +1025,10 @@ El `PdfVerticalStackLayout` organiza sus elementos hijos (sean `Views` u otros `
 
 > **Comportamiento de Paginación:** Este `Layout` es **atómico**. Esto tiene una implicación importante: si el `VerticalStackLayout` y todo su contenido no caben en el espacio restante de una página, la **unidad completa** se moverá a la página siguiente. La biblioteca no dividirá el contenido de un `StackLayout` a través de un salto de página. Para contenido que debe fluir y dividirse a través de las páginas, los elementos deben ser hijos directos de `IPdfContentPage` o de un `PdfGrid`.
 
-#### Creación y Uso Práctico
+##### Creación y Uso Práctico
 Se instancia a través del método `.VerticalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido. El patrón de `Action` proporciona un nuevo constructor anidado (`IStackLayoutBuilder`) para definir los elementos hijos dentro del `Layout`.
 
-#### Propiedades clave:
+##### Propiedades clave:
 | Propiedad | Tipo de Dato | Descripción |
 | - | - | - |
 | `Spacing` | `double` | Define el espacio entre cada elemento hijo. El valor predeterminado es 0. |
@@ -971,10 +1040,10 @@ El `PdfHorizontalStackLayout` organiza sus elementos hijos en una única fila ho
 
 > **Característica de Depuración (Overflow):** El `HorizontalStackLayout` incluye un mecanismo avanzado de depuración. Si durante la disposición de sus hijos detecta que un elemento excede el ancho disponible, en lugar de simplemente recortarlo o esconderlo, le indicará al renderizador de ese hijo que dibuje un estado de error visual (por ejemplo, un recuadro rojo para una imagen). Este renderizado de error se realiza en la **posición y tamaño ideales** que el elemento habría ocupado si hubiera tenido espacio suficiente, proporcionando una retroalimentación visual invaluable para corregir problemas de layout.
 
-#### Creación y Uso Práctico
+##### Creación y Uso Práctico
 Se instancia a través del método `.HorizontalStackLayout(Action<IStackLayoutBuilder> content)` en un constructor de contenido.
 
-#### Propiedades clave:
+##### Propiedades clave:
 | Propiedad | Tipo de Dato | Descripción |
 | - | - | - |
 | `Spacing` | `double` | Define el espacio entre cada elemento hijo. El valor predeterminado es 0. |
@@ -997,21 +1066,28 @@ c.VerticalStackLayout(vsl =>
 });
 ```
 
-#### PdfGrid
-El `PdfGrid` es un `Layout` potente para mostrar `Views` y otros `Layouts` en filas y columnas.
+#### IPdfGrid
+El `IPdfGrid` es el `Layout` más potente y flexible, diseñado para mostrar `Views` y otros `Layouts` en una estructura de filas y columnas. Es la herramienta ideal para maquetación tabular, facturas, informes y diseños complejos.
 
-> **Comportamiento de Paginación:** Este `Layout` es **divisible**. Si su contenido excede el espacio disponible en la página actual, la biblioteca lo dividirá automáticamente, continuando las filas restantes en la siguiente página. La división siempre ocurre entre filas, nunca a mitad de una celda.
+> **Comportamiento de Paginación:** Este `Layout` es **divisible**. Si su contenido excede el espacio disponible en la página actual, la biblioteca lo dividirá automáticamente, continuando las filas restantes en la siguiente página. La división siempre ocurre **entre filas**, nunca a mitad de una celda. Un grupo de filas unidas por un `RowSpan` se trata como una unidad atómica y no se dividirá.
 
-#### Creación y Uso Práctico
-Se instancia con el método `.PdfGrid()` en un constructor de contenido. La configuración de filas, columnas y la adición de hijos se realiza mediante una API fluida directamente sobre el objeto `PdfGrid` devuelto.
+##### Creación y Uso Práctico
+Se instancia con el método `.PdfGrid()` en un constructor de contenido. La configuración de filas, columnas y la adición de hijos se realiza mediante una API fluida directamente sobre el objeto `IPdfGrid` devuelto.
 
-#### Posicionamiento y Expansión de Vistas:
-Los elementos hijos se colocan en celdas específicas utilizando las propiedades adjuntas `.Row(int)` y `.Column(int)`. Para que un elemento ocupe múltiples filas o columnas, se utilizan `.RowSpan(int)` y `.ColumnSpan(int)`.
+##### Posicionamiento y Expansión de Vistas
+Los elementos hijos se colocan en celdas específicas utilizando los métodos encadenables `.Row(int)` y `.Column(int)`. Para que un elemento ocupe múltiples filas o columnas, se utilizan `.RowSpan(int)` y `.ColumnSpan(int)`.
 
-#### Definición de Tamaño:
-El tamaño de las filas y columnas se controla a través de `RowDefinitions` y `ColumnDefinitions`, usando `GridLength` con valores `Auto`, un valor numérico explícito, o un valor proporcional (`Star`).
+##### Posicionamiento por Defecto y Protección Contra Colisiones
+Para maximizar la productividad, el `PdfGrid` implementa un sistema de posicionamiento por defecto simple y determinista:
+- Si `.Row(int)` se omite en un elemento, su fila por defecto es `0`.
+- Si `.Column(int)` se omite en un elemento, su columna por defecto es `0`.
 
-#### Propiedades clave:
+> **NOTA CRÍTICA DE DISEÑO:** Este comportamiento implica que si se añaden múltiples elementos sin especificar sus coordenadas, todos intentarán posicionarse en la celda `(0,0)`. Para prevenir errores de layout silenciosos y difíciles de depurar, la biblioteca aplica una **protección estricta contra colisiones**: si se intenta añadir un elemento a una celda que ya está ocupada, se lanzará una `InvalidOperationException` en tiempo de ejecución. Esta filosofía de "fallar rápido y claro" garantiza que los errores de maquetación sean inmediatamente evidentes. La composición de múltiples vistas dentro de una misma área visual debe lograrse anidando un `Layout` (`VerticalStackLayout`, etc.) como el único hijo de la celda.
+
+##### Definición de Tamaño
+El tamaño de las filas y columnas se controla a través de `.RowDefinitions(...)` y `.ColumnDefinitions(...)`, usando `GridLength` con valores `Auto`, un valor numérico explícito, o un valor proporcional (`Star`).
+
+##### Propiedades clave:
 | Propiedad | Tipo de Dato | Descripción |
 | - | - | - |
 | `RowDefinitions` | `RowDefinitionCollection` | La colección de objetos `RowDefinition` que definen las filas. |
@@ -1206,52 +1282,89 @@ Estos tres mecanismos controlan el espacio en el documento, pero cada uno tiene 
 
 ### 5.1. Filosofía: De Errores Silenciosos a Retroalimentación Accionable
 
-La generación de layouts complejos puede ser un desafío. Un elemento que no aparece o se posiciona incorrectamente puede ser difícil de depurar. El Sistema de Diagnóstico de `MauiPdfGenerator` está diseñado para eliminar esta fricción, transformando los errores silenciosos en retroalimentación clara, contextual y accionable.
+La generación de layouts complejos puede ser desafiante. Un elemento que no aparece o se posiciona incorrectamente puede ser difícil de depurar. El Sistema de Diagnóstico transforma errores silenciosos en retroalimentación clara, contextual y accionable.
 
-Su propósito es actuar como un asistente de depuración que te informa sobre problemas de layout, recursos faltantes o configuraciones incorrectas directamente en tus herramientas de desarrollo y, opcionalmente, de forma visual sobre el PDF generado.
+Actúa como asistente de depuración que informa sobre problemas de layout, recursos faltantes o configuraciones incorrectas directamente en herramientas de desarrollo y, opcionalmente, de forma visual en el PDF.
 
-### 5.2. Uso Práctico
+### 5.2. Configuración y Uso Práctico
 
-#### Comportamiento Predeterminado: Diagnósticos en Consola y Logs
+#### Comportamiento Predeterminado: Diagnósticos Automáticos
 
-Por defecto, sin ninguna configuración adicional, `MauiPdfGenerator` ya está trabajando para ti. Durante la compilación en modo `DEBUG`, todos los mensajes de diagnóstico (advertencias y errores) generados por el motor se enviarán automáticamente a:
--   La **Consola de Depuración** de tu IDE (ej. Ventana de Salida en Visual Studio).
--   El sistema de **Logging** estándar de .NET MAUI.
+Sin configuración adicional, en modo `DEBUG`, todos los mensajes se envían automáticamente a:
+- **Consola de Depuración** del IDE
+- **Sistema de Logging** estándar de .NET MAUI
 
-Esto significa que obtienes información valiosa desde el primer momento, sin necesidad de activar nada.
+#### Activación del Visualizador
 
-#### Activación del Visualizador de Diagnósticos
-
-Para obtener la retroalimentación más potente, puedes habilitar la capa de visualización. Esto dibujará ayudas visuales (como rectángulos de error y etiquetas) directamente sobre el PDF generado, mostrándote la ubicación exacta de los problemas.
-
-Para activarlo, simplemente encadena el método `.EnableDiagnosticVisualizer()` en tu `MauiProgram.cs`:
+Para retroalimentación visual directa en el PDF:
 
 ```csharp
 builder
     .UseMauiApp<App>()
     .UseMauiPdfGenerator()
-    .EnableDiagnosticVisualizer() // <-- Activa la capa visual
+    .EnableDiagnosticVisualizer() // ← Activa capa visual
     .PdfConfigureFonts(...);
 ```
 
-Con esta única línea, cualquier diagnóstico que tenga una ubicación espacial (como un desbordamiento de layout) se renderizará en el documento.
+### 5.3. Estándares de Presentación por Canal
 
-### 5.3. Referencia de Códigos de Diagnóstico
+#### Canal de Consola
+**Formato:** `[CÓDIGO][NIVEL] at RUTA: Mensaje legible.`
 
-A continuación se muestra una lista de los códigos de diagnóstico comunes, su significado y cómo solucionarlos.
+```
+[LAYOUT-001][Warning] at Page[0]-VerticalStackLayout[0]-HorizontalStackLayout[2]-Image[1]: Element 'PdfImageData' with desired width 300 overflows the available space of 151.28.
+```
 
-| Código | Significado y Causa Común | Soluciones Sugeridas |
-| :--- | :--- | :--- |
-| **`LAYOUT-001`** | **Desbordamiento de Layout:** Un elemento es demasiado ancho para caber en el espacio horizontal disponible de su contenedor (típicamente un `HorizontalStackLayout`). | - Revisa los `WidthRequest` de los elementos hijos y el `Spacing` del layout. <br> - Asegúrate de que la suma de los anchos no exceda el ancho del contenedor padre. <br> - Si los elementos deben apilarse, considera usar un `VerticalStackLayout`. |
-| **`LAYOUT-002`** | **Contenido de Página Sobredimensionado:** Un elemento atómico (como una `IPdfImage` o un `IPdfVerticalStackLayout`) es más alto que una página completa y no puede ser dividido. El elemento será omitido. | - Reduce el tamaño (`HeightRequest`) o el contenido del elemento. <br> - Si es un `VerticalStackLayout`, considera sacar sus hijos para que sean elementos raíz de la página, permitiendo que se dividan a través de las páginas. |
-| **`RESOURCE-001`** | **Error de Decodificación de Imagen:** El `Stream` proporcionado para una `IPdfImage` está corrupto, vacío, cerrado o en un formato no soportado. | - Asegúrate de que el `Stream` esté abierto y posicionado al inicio (`stream.Position = 0;`) antes de pasarlo al constructor. <br> - Verifica que los datos del `byte[]` correspondan a un formato de imagen válido (PNG, JPEG, etc.). |
-| **`RESOURCE-002`** | **Fuente no Encontrada:** Se ha especificado un alias de fuente (`PdfFontIdentifier`) que no fue registrado en `PdfConfigureFonts()` ni en la configuración del documento. | - Verifica que el alias en `PdfFonts.MiFuente` coincida exactamente con el alias registrado en `MauiProgram.cs`. <br> - Asegúrate de haber compilado el proyecto después de añadir la fuente para que la clase `PdfFonts` se regenere. |
+#### Canal de Logs Estructurados
+**Formato:** JSON estructurado para análisis automatizado
 
-### 5.4. Ejemplo Visual: Interpretando un Error de Layout
+```json
+{
+  "Timestamp": "2025-09-21T14:30:05.123Z",
+  "Level": "Warning",
+  "Code": "LAYOUT-001",
+  "SourceContext": "MauiPdfGenerator.Core.Implementation.Sk.Layouts.HorizontalStackLayoutRenderer",
+  "Properties": {
+    "HierarchyPath": "Page[0]-VerticalStackLayout[0]-HorizontalStackLayout[2]-Image[1]",
+    "ElementType": "PdfImageData",
+    "DesiredWidth": 300,
+    "AvailableSpace": 151.28
+  }
+}
+```
 
-Imagina que tienes un `HorizontalStackLayout` que contiene dos imágenes, cada una con un `WidthRequest(300)`. En una página A4 estándar (ancho de ~595 puntos), es imposible que quepan.
+#### Canal Visual (Superposición en PDF)
 
--   **Sin el visualizador:** La primera imagen se dibujará, la segunda no. Verás un mensaje `[LAYOUT-001]` en tu consola.
--   **Con el visualizador activado:** Verás la primera imagen dibujada. Adicionalmente, verás un **rectángulo rojo** dibujado justo a la derecha de la primera imagen, en la posición y con el tamaño que la segunda imagen *habría* ocupado si hubiera tenido espacio. Dentro de la esquina superior izquierda de este rectángulo, verás la etiqueta **`[LAYOUT-001]`**.
+| Característica | Estándar |
+| - | - |
+| **Aplicación** | Diagnósticos con `Bounds` y severidad `Error`/`Warning` |
+| **Exclusión** | `Views` divisibles (`IPdfParagraph`) |
+| **Caja** | Rectángulo 1pt, fondo blanco |
+| **Etiqueta** | Centrada, multilínea: `[CÓDIGO]\nSIGNIFICADO` |
+| **Colores** | Error: **Rojo**, Warning: **Naranja** |
+| **Recorte** | Respeta límites del contenedor padre |
 
-Esta retroalimentación visual te dice instantáneamente no solo *qué* falló, sino *dónde* y *por cuánto*.
+### 5.4. Referencia de Códigos de Diagnóstico
+
+| Código | Nivel | Significado | Soluciones Sugeridas |
+|--------|-------|-------------|---------------------|
+| **`DOC-001`** | Error | Configuración de documento inválida | Revisar llamadas a `.Configuration(...)` |
+| **`PAGE-001`** | Warning | Página sin contenido | Asegurar `.Content(...)` después de `.ContentPage()` |
+| **`LAYOUT-001`** | Warning | Desbordamiento de layout (elemento más ancho que contenedor) | Revisar `WidthRequest`; usar `PdfGrid` para reparto proporcional |
+| **`LAYOUT-002`** | Warning | Contenido sobredimensionado (elemento más alto que página) | Reducir `HeightRequest`; desagrupar `VerticalStackLayout` |
+| **`LAYOUT-003`** | Info | Paginación de elemento atómico (`VerticalStackLayout` movido a nueva página) | Sacar contenido del `VerticalStackLayout` para flujo o ignorar si agrupación es intencional |
+| **`VIEW-001`** | Warning | Error de decodificación de imagen | Verificar `Stream` válido en posición 0 |
+| **`VIEW-002`** | Warning | Alias de fuente no encontrado | Verificar registro en `MauiProgram.cs` y compilación |
+| **`VIEW-003`** | Error | Fichero de fuente no encontrado | Verificar existencia y `Build Action: MauiFont` |
+
+### 5.5. Jerarquía de Rutas (HierarchyPath)
+
+El sistema genera rutas jerárquicas que identifican exactamente dónde ocurre un problema:
+
+**Formato:** `ELEMENT_PARENT[ÍNDICE]-ELEMENT_CHILD[ÍNDICE]-ELEMENT_LASTCHILD[ÍNDICE]`
+
+**Ejemplos:**
+- `Page[0]-VerticalStackLayout[1]-Image[2]` - Imagen en posición 2 de un VerticalStackLayout en posición 1 de la primera página
+- `Page[1]-Grid[0]-HorizontalStackLayout[1]-Paragraph[0]` - Párrafo en un HorizontalStackLayout dentro de un Grid
+
+Esta información permite localizar y corregir problemas específicos rápidamente en el código fuente.

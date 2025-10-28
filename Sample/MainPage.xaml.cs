@@ -557,18 +557,13 @@ public partial class MainPage : ContentPage
                     c.PdfGrid()
                         .BackgroundColor(Colors.LightGray)
                         .Padding(5)
-                        .Margin(15)
                         .WidthRequest(200)
-                        .HorizontalOptions(LayoutAlignment.Start)
+                        .VerticalOptions(LayoutAlignment.End)
                         .Children(ch =>
                         {
-                            ch.Paragraph("Hola mundo")
-                                .FontAttributes(FontAttributes.Bold)
-                                .TextTransform(TextTransform.Uppercase)
-                                .HorizontalOptions(LayoutAlignment.Center)
-                                .VerticalOptions(LayoutAlignment.Center);
+                            ch.Paragraph("Hola mundo");
                         });
-                    c.HorizontalLine();
+                    //c.HorizontalLine();
                 }).Build()
             .SaveAsync(targetFilePath);
 

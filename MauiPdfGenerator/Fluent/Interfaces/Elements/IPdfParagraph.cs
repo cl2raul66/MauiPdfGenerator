@@ -2,7 +2,7 @@
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
 
-public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfParagraph<TSelf>
+public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
 {
     TSelf FontFamily(PdfFontIdentifier? family);
     TSelf FontSize(float size);
@@ -14,5 +14,3 @@ public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfPar
     TSelf TextDecorations(TextDecorations decorations);
     TSelf TextTransform(TextTransform transform);
 }
-
-public interface IPdfParagraph : IPdfParagraph<IPdfParagraph> { }

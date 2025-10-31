@@ -1,5 +1,11 @@
 ﻿namespace MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
-public interface IPdfHorizontalStackLayout<TSelf> : IPdfLayoutElement<TSelf> where TSelf : IPdfHorizontalStackLayout<TSelf> { }
+public interface IPdfHorizontalStackLayout<TSelf> : IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
+{
+    TSelf Spacing(float value);
+}
 
-public interface IPdfHorizontalStackLayout : IPdfHorizontalStackLayout<IPdfHorizontalStackLayout> { }
+// Interfaz final para uso en Page y otros Layouts
+public interface IPdfHorizontalStackLayout : IPdfHorizontalStackLayout<IPdfHorizontalStackLayout>, IPdfLayoutChild<IPdfHorizontalStackLayout>
+{
+}

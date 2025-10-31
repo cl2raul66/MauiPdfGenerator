@@ -3,6 +3,7 @@ using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -18,21 +19,21 @@ internal class PageContentBuilder : IPageContentBuilder
 
     internal IReadOnlyList<IBuildablePdfElement> GetBuildableChildren() => _children.AsReadOnly();
 
-    public IPdfParagraph Paragraph(string text)
+    public IPdfPageChildParagraph Paragraph(string text)
     {
         var builder = new PdfParagraphBuilder(text, _fontRegistry);
-        _children.Add(builder);
+        _children.Add(builder); 
         return builder;
     }
 
-    public IPdfHorizontalLine HorizontalLine()
+    public IPdfPageChildHorizontalLine HorizontalLine()
     {
         var builder = new PdfHorizontalLineBuilder();
         _children.Add(builder);
         return builder;
     }
 
-    public IPdfImage Image(Stream stream)
+    public IPdfPageChildImage Image(Stream stream)
     {
         var builder = new PdfImageBuilder(stream);
         _children.Add(builder);

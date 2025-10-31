@@ -1,14 +1,13 @@
 ﻿using MauiPdfGenerator.Fluent.Builders.Elements;
 using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
 {
-    private readonly dynamic _layoutBuilder; // Can be VerticalStackLayoutBuilder or HorizontalStackLayoutBuilder
+    private readonly dynamic _layoutBuilder; 
     private readonly PdfFontRegistryBuilder _fontRegistry;
 
     public PdfStackLayoutContentBuilder(dynamic layoutBuilder, PdfFontRegistryBuilder fontRegistry)
@@ -17,21 +16,21 @@ internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
         _fontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
     }
 
-    public IPdfParagraph Paragraph(string text)
+    public IPdfLayoutChildParagraph Paragraph(string text)
     {
         var builder = new PdfParagraphBuilder(text, _fontRegistry);
         _layoutBuilder.Add(builder);
         return builder;
     }
 
-    public IPdfHorizontalLine HorizontalLine()
+    public IPdfLayoutChildHorizontalLine HorizontalLine()
     {
         var builder = new PdfHorizontalLineBuilder();
         _layoutBuilder.Add(builder);
         return builder;
     }
 
-    public IPdfImage Image(Stream stream)
+    public IPdfLayoutChildImage Image(Stream stream)
     {
         var builder = new PdfImageBuilder(stream);
         _layoutBuilder.Add(builder);

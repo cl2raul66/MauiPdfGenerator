@@ -48,6 +48,7 @@
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
+	  <None Include="Fluent\Interfaces\Pages\IPdfPageChildHorizontalLine.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

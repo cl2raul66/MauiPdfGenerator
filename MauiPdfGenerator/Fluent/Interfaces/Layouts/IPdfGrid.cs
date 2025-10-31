@@ -2,7 +2,7 @@
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
-public interface IPdfGrid : IPdfElement<IPdfGrid>
+public interface IPdfGrid : IPdfElement<IPdfGrid>, IPdfLayoutChild<IPdfGrid>
 {
     IPdfGrid RowSpacing(double value);
     IPdfGrid ColumnSpacing(double value);

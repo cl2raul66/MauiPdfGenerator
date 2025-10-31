@@ -32,14 +32,10 @@ public partial class MainPage : ContentPage
                 {
                     // --- Casos de Uso Básicos ---
                     c.Paragraph("[P1] Texto simple, con propiedades predeterminadas");
-                    c.Paragraph("[P2] Texto simple, con HorizontalOptions Center")
-                        .HorizontalOptions(LayoutAlignment.Center);
-                    c.Paragraph("[P3] Texto simple, con HorizontalOptions Fill")
-                        .HorizontalOptions(LayoutAlignment.Fill);
-                    c.Paragraph("[P4] Texto simple, con HorizontalOptions End")
-                        .HorizontalOptions(LayoutAlignment.End);
-                    c.Paragraph("[P5] Texto simple, con HorizontalOptions Start")
-                        .HorizontalOptions(LayoutAlignment.Start);
+                    //c.Paragraph("[P2] Texto simple, con HorizontalOptions Center").HorizontalOptions(LayoutAlignment.Center);
+                    //c.Paragraph("[P3] Texto simple, con HorizontalOptions Fill").HorizontalOptions(LayoutAlignment.Fill);
+                    //c.Paragraph("[P4] Texto simple, con HorizontalOptions End").HorizontalOptions(LayoutAlignment.End);
+                    //c.Paragraph("[P5] Texto simple, con HorizontalOptions Start").HorizontalOptions(LayoutAlignment.Start);
                     c.Paragraph("[P6] Texto simple, con TextColor Blue")
                         .TextColor(Colors.Blue);
                     c.Paragraph("[P7] Texto simple, con TextTransform None")
@@ -68,8 +64,7 @@ public partial class MainPage : ContentPage
                         .FontFamily(PdfFonts.Comic);
                     c.Paragraph("[P19] Texto simple, con HeightRequest 72, BackgroundColor LightBlue, VerticalOptions Center")
                         .HeightRequest(72)
-                        .BackgroundColor(Colors.LightBlue)
-                        .VerticalOptions(LayoutAlignment.Center);
+                        .BackgroundColor(Colors.LightBlue);
                     c.Paragraph("Siguiente texto [P20] con LineBreakMode WordWrap");
                     c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
                         .LineBreakMode(LineBreakMode.WordWrap);
@@ -89,10 +84,9 @@ public partial class MainPage : ContentPage
                     c.Paragraph("Lorem ipsum dolor sit amet lorem et kasd erat nonumy eu ipsum sed. Sit invidunt et possim vero aliquyam sadipscing stet et erat amet lorem eirmod stet lorem possim nulla. Diam sed voluptua hendrerit no. Lorem tempor nulla takimata nonumy et takimata dolores magna vel sadipscing. Zzril exerci est iriure sit labore facilisis lorem takimata sit kasd dolore labore.")
                         .LineBreakMode(LineBreakMode.TailTruncation);
 
-                    c.Paragraph("--- Casos de Uso Avanzados y Combinados ---").HorizontalOptions(LayoutAlignment.Center).FontSize(16).FontAttributes(FontAttributes.Bold).Margin(0, 20, 0, 10);
+                    c.Paragraph("--- Casos de Uso Avanzados y Combinados ---").HorizontalTextAlignment(TextAlignment.End).FontSize(16).FontAttributes(FontAttributes.Bold).Margin(0, 20, 0, 10);
 
                     c.Paragraph("[P26] Caja centrada, texto a la derecha.")
-                        .HorizontalOptions(LayoutAlignment.Center)
                         .HorizontalTextAlignment(TextAlignment.End)
                         .BackgroundColor(Colors.LightYellow)
                         .WidthRequest(300);
@@ -160,7 +154,7 @@ public partial class MainPage : ContentPage
                 .ContentPage()
                 .Content(c =>
                 {
-                    c.Paragraph("--- Casos de Uso de Imágenes ---").FontSize(16).FontAttributes(FontAttributes.Bold).HorizontalOptions(LayoutAlignment.Center);
+                    c.Paragraph("--- Casos de Uso de Imágenes ---").FontSize(16).FontAttributes(FontAttributes.Bold);
 
                     // Caso 1: Imagen simple, tamaño intrínseco
                     c.Paragraph("1. Imagen simple (tamaño intrínseco)");
@@ -169,16 +163,14 @@ public partial class MainPage : ContentPage
                     // Caso 2: Imagen con WidthRequest y alineación
                     c.Paragraph("2. Imagen con WidthRequest(100) y HorizontalOptions(End)");
                     c.Image(new MemoryStream(imageData))
-                        .WidthRequest(100)
-                        .HorizontalOptions(LayoutAlignment.End);
+                        .WidthRequest(100);
 
                     // Caso 3: Aspect.Fill (estirada)
                     c.Paragraph("3. Aspect(Fill) con tamaño fijo (150x75)");
                     c.Image(new MemoryStream(imageData))
                         .WidthRequest(150)
                         .HeightRequest(75)
-                        .Aspect(Aspect.Fill)
-                        .HorizontalOptions(LayoutAlignment.Center);
+                        .Aspect(Aspect.Fill);
 
                     // Caso 4: Aspect.AspectFill (recortada para llenar)
                     c.Paragraph("4. Aspect(AspectFill) con tamaño fijo (150x75)");
@@ -186,7 +178,6 @@ public partial class MainPage : ContentPage
                         .WidthRequest(150)
                         .HeightRequest(75)
                         .Aspect(Aspect.AspectFill)
-                        .HorizontalOptions(LayoutAlignment.Center)
                         .BackgroundColor(Colors.LightGray); // Fondo para ver el área
 
                     // Caso 5: Aspect.AspectFit (ajustada sin recortar)
@@ -195,7 +186,6 @@ public partial class MainPage : ContentPage
                         .WidthRequest(150)
                         .HeightRequest(75)
                         .Aspect(Aspect.AspectFit)
-                        .HorizontalOptions(LayoutAlignment.Center)
                         .BackgroundColor(Colors.LightBlue); // Fondo para ver el área
 
                     // Caso 6: Con Padding y BackgroundColor
@@ -204,8 +194,7 @@ public partial class MainPage : ContentPage
                         .WidthRequest(120)
                         .Padding(20)
                         .Margin(16)
-                        .BackgroundColor(Colors.LightCoral)
-                        .HorizontalOptions(LayoutAlignment.Center);
+                        .BackgroundColor(Colors.LightCoral);
 
                     // Caso 7: Manejo de error (Stream cerrado)
                     //c.Paragraph("7. Manejo de error (Stream cerrado)");
@@ -248,8 +237,7 @@ public partial class MainPage : ContentPage
                 {
                     c.Paragraph("--- Casos de Uso de HorizontalLine ---")
                         .FontSize(16)
-                        .FontAttributes(FontAttributes.Bold)
-                        .HorizontalOptions(LayoutAlignment.Center);
+                        .FontAttributes(FontAttributes.Bold);
 
                     // Caso 1: Línea predeterminada
                     c.Paragraph("1. Línea con valores predeterminados (Thickness=1, Color=Black, HorizontalOptions=Fill)");
@@ -275,14 +263,12 @@ public partial class MainPage : ContentPage
                     c.Paragraph("5. Línea con WidthRequest(200) y HorizontalOptions(Center)");
                     c.HorizontalLine()
                         .WidthRequest(200)
-                        .HorizontalOptions(LayoutAlignment.Center)
                         .Color(Colors.Orange); // Color para que sea fácil de ver
 
                     // Caso 6: Alineación a la derecha
                     c.Paragraph("6. Línea con WidthRequest(100) y HorizontalOptions(End)");
                     c.HorizontalLine()
                         .WidthRequest(100)
-                        .HorizontalOptions(LayoutAlignment.End)
                         .Color(Colors.Purple);
 
                     // Caso 7: Con margen vertical
@@ -308,7 +294,6 @@ public partial class MainPage : ContentPage
                         .Thickness(4)
                         .Color(Colors.DarkCyan)
                         .WidthRequest(300)
-                        .HorizontalOptions(LayoutAlignment.Center)
                         .Margin(0, 10);
 
                     c.Paragraph("Fin de los casos de prueba para HorizontalLine.");
@@ -563,8 +548,7 @@ public partial class MainPage : ContentPage
                         {
                             ch.Paragraph("Hola mundo");
                         });
-                    //c.HorizontalLine();
-                }).Build()
+                }).Build()    
             .SaveAsync(targetFilePath);
 
             await Launcher.OpenAsync(new OpenFileRequest

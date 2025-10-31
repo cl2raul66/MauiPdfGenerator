@@ -2,6 +2,6 @@
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
 
-public interface IPdfGridChildImage : IPdfImage<IPdfGridChildImage>, IPdfGridChildElement<IPdfGridChildImage>
+public interface IPdfGridChildImage : IPdfImage<IPdfGridChildImage>, IPdfGridChild<IPdfGridChildImage>
 {
 }

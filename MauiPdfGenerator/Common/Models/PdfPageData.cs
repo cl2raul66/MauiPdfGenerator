@@ -8,7 +8,7 @@ internal record PdfPageData(
     PageOrientationType Orientation,
     Thickness Padding,
     Color? BackgroundColor,
-    IReadOnlyList<PdfElementData> Elements,
+    PdfLayoutElementData Content, 
     PdfFontIdentifier? PageDefaultFontFamily,
     float PageDefaultFontSize,
     Color PageDefaultTextColor,

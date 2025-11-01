@@ -1,0 +1,5 @@
+﻿namespace MauiPdfGenerator.Fluent.Interfaces.Layouts;
+
+public interface IPdfLayoutChildHorizontalStackLayout : IPdfHorizontalStackLayout<IPdfLayoutChildHorizontalStackLayout>, IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>
+{
+}

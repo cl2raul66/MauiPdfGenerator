@@ -1,11 +1,11 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
-using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
+using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -37,11 +37,18 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
-    public IPdfContentPage ContentPage()
+    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<TLayout> para coincidir con la interfaz.
+    public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
-        var pageBuilder = new PdfContentPageBuilder(this, _configurationBuilder);
+        var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry);
         _pages.Add(pageBuilder);
         return pageBuilder;
+    }
+
+    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<IPdfVerticalStackLayout>.
+    public IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage()
+    {
+        return ContentPage<IPdfVerticalStackLayout>();
     }
 
     public Task SaveAsync()
@@ -70,7 +77,7 @@ internal class PdfDocumentBuilder : IPdfDocument
                     contentPageBuilder.GetEffectivePageOrientation(),
                     contentPageBuilder.GetEffectivePadding(),
                     contentPageBuilder.GetEffectiveBackgroundColor(),
-                    contentPageBuilder.GetElements(),
+                    contentPageBuilder.GetContent(),
                     contentPageBuilder.GetPageDefaultFontFamily(),
                     contentPageBuilder.GetPageDefaultFontSize(),
                     contentPageBuilder.GetPageDefaultTextColor(),

@@ -10,7 +10,7 @@ internal interface IPdfContentPageBuilder : IPdfPageBuilder
     Thickness GetEffectivePadding();
     PageOrientationType GetEffectivePageOrientation();
     Color? GetEffectiveBackgroundColor();
-    IReadOnlyList<PdfElementData> GetElements();
+    PdfLayoutElementData GetContent();
     PdfFontIdentifier? GetPageDefaultFontFamily();
     float GetPageDefaultFontSize();
     Color GetPageDefaultTextColor();

@@ -1,7 +1,6 @@
 ﻿using MauiPdfGenerator.Fluent.Builders.Elements;
 using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 
@@ -22,7 +21,7 @@ internal class PageContentBuilder : IPageContentBuilder
     public IPdfPageChildParagraph Paragraph(string text)
     {
         var builder = new PdfParagraphBuilder(text, _fontRegistry);
-        _children.Add(builder); 
+        _children.Add(builder);
         return builder;
     }
 
@@ -42,7 +41,8 @@ internal class PageContentBuilder : IPageContentBuilder
 
     public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content)
     {
-        var stackBuilder = new PdfVerticalStackLayoutBuilder();
+        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
+        var stackBuilder = new PdfVerticalStackLayoutBuilder(_fontRegistry);
         var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
         content(contentBuilder);
         _children.Add(stackBuilder);
@@ -51,14 +51,15 @@ internal class PageContentBuilder : IPageContentBuilder
 
     public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content)
     {
-        var stackBuilder = new PdfHorizontalStackLayoutBuilder();
+        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
+        var stackBuilder = new PdfHorizontalStackLayoutBuilder(_fontRegistry);
         var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
         content(contentBuilder);
         _children.Add(stackBuilder);
         return stackBuilder;
     }
 
-    public IPdfGrid PdfGrid()
+    public IPdfGrid Grid()
     {
         var gridBuilder = new PdfGridBuilder(_fontRegistry);
         _children.Add(gridBuilder);

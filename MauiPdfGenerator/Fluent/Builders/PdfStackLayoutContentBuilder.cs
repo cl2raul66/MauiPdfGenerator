@@ -7,7 +7,7 @@ namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
 {
-    private readonly dynamic _layoutBuilder; 
+    private readonly dynamic _layoutBuilder;
     private readonly PdfFontRegistryBuilder _fontRegistry;
 
     public PdfStackLayoutContentBuilder(dynamic layoutBuilder, PdfFontRegistryBuilder fontRegistry)
@@ -39,7 +39,8 @@ internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
 
     public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content)
     {
-        var stackBuilder = new PdfVerticalStackLayoutBuilder();
+        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
+        var stackBuilder = new PdfVerticalStackLayoutBuilder(_fontRegistry);
         var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
         content(contentBuilder);
         _layoutBuilder.Add(stackBuilder);
@@ -48,7 +49,8 @@ internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
 
     public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content)
     {
-        var stackBuilder = new PdfHorizontalStackLayoutBuilder();
+        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
+        var stackBuilder = new PdfHorizontalStackLayoutBuilder(_fontRegistry);
         var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
         content(contentBuilder);
         _layoutBuilder.Add(stackBuilder);

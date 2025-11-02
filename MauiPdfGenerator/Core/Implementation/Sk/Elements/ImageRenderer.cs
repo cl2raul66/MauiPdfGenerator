@@ -38,41 +38,40 @@ internal class ImageRenderer : IElementRenderer
 
         context.LayoutState[image] = new ImageLayoutCache(skImage, SKRect.Empty, PdfRect.Empty);
 
-        float boxWidth;
-        if (image.GetWidthRequest.HasValue)
+        float imageWidth = skImage?.Width ?? 100f;
+        float imageHeight = skImage?.Height ?? 50f;
+        float aspectRatio = imageWidth > 0 ? imageHeight / imageWidth : 1;
+
+        float boxWidth, boxHeight;
+
+        if (image.GetWidthRequest.HasValue && image.GetHeightRequest.HasValue)
         {
             boxWidth = (float)image.GetWidthRequest.Value;
-        }
-        else if (image.GetHorizontalOptions is LayoutAlignment.Fill)
-        {
-            boxWidth = availableRect.Width - (float)image.GetMargin.HorizontalThickness;
-        }
-        else
-        {
-            boxWidth = skImage?.Width ?? 100f;
-        }
-
-        float boxHeight;
-        if (image.GetHeightRequest.HasValue)
-        {
             boxHeight = (float)image.GetHeightRequest.Value;
         }
-        else
+        else if (image.GetWidthRequest.HasValue)
         {
+            boxWidth = (float)image.GetWidthRequest.Value;
             float imageContentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
-
-            float proportionalImageHeight = 0;
-            if (skImage != null && skImage.Width > 0 && imageContentWidth > 0)
+            boxHeight = (imageContentWidth * aspectRatio) + (float)image.GetPadding.VerticalThickness;
+        }
+        else if (image.GetHeightRequest.HasValue)
+        {
+            boxHeight = (float)image.GetHeightRequest.Value;
+            float imageContentHeight = boxHeight - (float)image.GetPadding.VerticalThickness;
+            if (aspectRatio > 0)
             {
-                float aspectRatio = (float)skImage.Height / skImage.Width;
-                proportionalImageHeight = imageContentWidth * aspectRatio;
+                boxWidth = (imageContentHeight / aspectRatio) + (float)image.GetPadding.HorizontalThickness;
             }
             else
             {
-                proportionalImageHeight = 50f;
+                boxWidth = imageWidth + (float)image.GetPadding.HorizontalThickness;
             }
-
-            boxHeight = proportionalImageHeight + (float)image.GetPadding.VerticalThickness;
+        }
+        else
+        {
+            boxWidth = imageWidth + (float)image.GetPadding.HorizontalThickness;
+            boxHeight = imageHeight + (float)image.GetPadding.VerticalThickness;
         }
 
         var totalWidth = boxWidth + (float)image.GetMargin.HorizontalThickness;
@@ -124,28 +123,37 @@ internal class ImageRenderer : IElementRenderer
         }
 
         var renderRect = new SKRect(cache.FinalRect.Left, cache.FinalRect.Top, cache.FinalRect.Right, cache.FinalRect.Bottom);
+        var elementBox = new SKRect(
+            renderRect.Left + (float)image.GetMargin.Left,
+            renderRect.Top + (float)image.GetMargin.Top,
+            renderRect.Right - (float)image.GetMargin.Right,
+            renderRect.Bottom - (float)image.GetMargin.Bottom
+        );
 
         if (image.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(image.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            canvas.DrawRect(renderRect, bgPaint);
+            canvas.DrawRect(elementBox, bgPaint);
         }
 
         if (cache.SkImage is null)
         {
-            DrawImageError(canvas, renderRect, "[Image Load Error]");
+            DrawImageError(canvas, elementBox, "[Image Load Error]");
+            cache.SkImage?.Dispose();
             return Task.CompletedTask;
         }
 
         var skImage = cache.SkImage;
 
         SKRect finalDrawRect = cache.RelativeTargetRect;
-        finalDrawRect.Offset(renderRect.Left + (float)image.GetMargin.Left, renderRect.Top + (float)image.GetMargin.Top);
+        finalDrawRect.Offset(elementBox.Left, elementBox.Top);
 
         canvas.Save();
-        canvas.ClipRect(renderRect);
+        canvas.ClipRect(elementBox);
         canvas.DrawImage(skImage, finalDrawRect);
         canvas.Restore();
+
+        skImage.Dispose();
 
         return Task.CompletedTask;
     }
@@ -180,44 +188,66 @@ internal class ImageRenderer : IElementRenderer
         canvas.Restore();
     }
 
+    // --- MÉTODO CALCULATE TARGET RECT RECONSTRUIDO ---
     private static SKRect CalculateTargetRect(SKImage image, SKRect container, Aspect aspect)
     {
-        if (image.Width <= 0 || image.Height <= 0 || container.Width <= 0 || container.Height <= 0 || aspect is Aspect.Fill)
+        float imageWidth = image.Width;
+        float imageHeight = image.Height;
+        float containerWidth = container.Width;
+        float containerHeight = container.Height;
+
+        if (imageWidth <= 0 || imageHeight <= 0 || containerWidth <= 0 || containerHeight <= 0)
         {
-            return container;
+            return SKRect.Empty;
         }
 
-        float imageRatio = image.Width / (float)image.Height;
-        float containerRatio = container.Width / (float)container.Height;
+        float finalWidth = 0;
+        float finalHeight = 0;
 
-        float finalWidth = container.Width;
-        float finalHeight = container.Height;
-
-        if (aspect is Aspect.AspectFit)
+        switch (aspect)
         {
-            if (imageRatio > containerRatio)
-            {
-                finalHeight = container.Width / imageRatio;
-            }
-            else
-            {
-                finalWidth = container.Height * imageRatio;
-            }
-        }
-        else if (aspect is Aspect.AspectFill)
-        {
-            if (imageRatio > containerRatio)
-            {
-                finalWidth = container.Height * imageRatio;
-            }
-            else
-            {
-                finalHeight = container.Width / imageRatio;
-            }
+            case Aspect.Fill:
+                return container;
+
+            case Aspect.Center:
+                finalWidth = imageWidth;
+                finalHeight = imageHeight;
+                break;
+
+            case Aspect.AspectFit:
+                float imageRatio = imageWidth / imageHeight;
+                float containerRatio = containerWidth / containerHeight;
+                if (imageRatio > containerRatio) // La imagen es más ancha (proporcionalmente) que el contenedor
+                {
+                    finalWidth = containerWidth;
+                    finalHeight = containerWidth / imageRatio;
+                }
+                else // La imagen es más alta o tiene la misma proporción
+                {
+                    finalHeight = containerHeight;
+                    finalWidth = containerHeight * imageRatio;
+                }
+                break;
+
+            case Aspect.AspectFill:
+                imageRatio = imageWidth / imageHeight;
+                containerRatio = containerWidth / containerHeight;
+                if (imageRatio > containerRatio) // La imagen es más ancha
+                {
+                    finalHeight = containerHeight;
+                    finalWidth = containerHeight * imageRatio;
+                }
+                else // La imagen es más alta
+                {
+                    finalWidth = containerWidth;
+                    finalHeight = containerWidth / imageRatio;
+                }
+                break;
         }
 
-        float x = container.Left + (container.Width - finalWidth) / 2f;
-        float y = container.Top + (container.Height - finalHeight) / 2f;
+        // CORRECCIÓN: Calcular el centrado para todos los modos excepto Fill.
+        float x = container.Left + (containerWidth - finalWidth) / 2f;
+        float y = container.Top + (containerHeight - finalHeight) / 2f;
 
         return SKRect.Create(x, y, finalWidth, finalHeight);
     }

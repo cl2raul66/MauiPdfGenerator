@@ -9,6 +9,9 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     internal double? GetWidthRequest { get; private set; }
     internal double? GetHeightRequest { get; private set; }
     internal Color? GetBackgroundColor { get; private set; }
+
+    // CORRECCIÓN: Se establece el valor predeterminado a Fill, que es el comportamiento
+    // base correcto para un hijo en un contexto de flujo vertical como el VSL raíz.
     internal LayoutAlignment GetHorizontalOptions { get; private set; } = LayoutAlignment.Fill;
     internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Start;
 

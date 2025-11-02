@@ -17,7 +17,7 @@ internal class TextRenderer : IElementRenderer
         SKFont Font,
         SKPaint Paint,
         TextAlignment HorizontalAlignment,
-        TextAlignment VerticalTextAlignment, // <-- Añadido para la corrección
+        TextAlignment VerticalTextAlignment, 
         TextDecorations TextDecorations,
         LineBreakMode LineBreakMode,
         string TransformedText,
@@ -41,13 +41,13 @@ internal class TextRenderer : IElementRenderer
         if (fontLineSpacing <= 0) fontLineSpacing = font.Size * 1.2f;
 
         float totalTextHeight = 0;
-        if (allLines.Any())
+        if (allLines.Count != 0)
         {
             SKFontMetrics fontMetrics = font.Metrics;
             totalTextHeight = (allLines.Count - 1) * fontLineSpacing + (fontMetrics.Descent - fontMetrics.Ascent);
         }
 
-        float contentWidth = allLines.Any() ? allLines.Max(line => font.MeasureText(line)) : 0;
+        float contentWidth = allLines.Count != 0 ? allLines.Max(line => font.MeasureText(line)) : 0;
 
         float boxWidth = (float?)paragraph.GetWidthRequest ?? (contentWidth + (float)paragraph.GetPadding.HorizontalThickness);
         float boxHeight = (float?)paragraph.GetHeightRequest ?? (totalTextHeight + (float)paragraph.GetPadding.VerticalThickness);
@@ -82,7 +82,7 @@ internal class TextRenderer : IElementRenderer
         if (fontLineSpacing <= 0) fontLineSpacing = font.Size * 1.2f;
 
         float totalTextHeight = 0;
-        if (allLines.Any())
+        if (allLines.Count != 0)
         {
             totalTextHeight = (allLines.Count - 1) * fontLineSpacing + (font.Metrics.Descent - font.Metrics.Ascent);
         }
@@ -138,7 +138,7 @@ internal class TextRenderer : IElementRenderer
         var linesToDraw = textCache.LinesToDrawOnThisPage;
         var pdfRenderRect = textCache.FinalArrangedRect;
 
-        if (linesToDraw is null || !linesToDraw.Any() || pdfRenderRect is null)
+        if (linesToDraw is null || linesToDraw.Count == 0 || pdfRenderRect is null)
         {
             textCache.Font.Dispose();
             textCache.Paint.Dispose();
@@ -264,7 +264,7 @@ internal class TextRenderer : IElementRenderer
         FontAttributes fontAttributes = paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes;
 
         TextAlignment horizontalAlignment = paragraph.CurrentHorizontalTextAlignment;
-        TextAlignment verticalTextAlignment = paragraph.CurrentVerticalTextAlignment; // <-- Añadido
+        TextAlignment verticalTextAlignment = paragraph.CurrentVerticalTextAlignment; 
 
         LineBreakMode lineBreakMode = paragraph.CurrentLineBreakMode ?? PdfParagraphData.DefaultLineBreakMode;
         TextDecorations textDecorations = paragraph.CurrentTextDecorations ?? pageDefinition.PageDefaultTextDecorations;
@@ -381,7 +381,7 @@ internal class TextRenderer : IElementRenderer
                     break;
                 }
             }
-            return startIndex == textLength && textLength > 0 && ellipsisWidth > 0 ? Ellipsis : Ellipsis + textSegment.Substring(startIndex);
+            return startIndex == textLength && textLength > 0 && ellipsisWidth > 0 ? Ellipsis : Ellipsis + textSegment[startIndex..];
         }
         if (lineBreakMode is LineBreakMode.MiddleTruncation)
         {
@@ -396,7 +396,7 @@ internal class TextRenderer : IElementRenderer
             for (int i = 1; i <= textLength - (int)startCount; i++)
             {
                 string sub = textSegment.Substring(textLength - i);
-                if (font.MeasureText(textSegment.Substring(0, (int)startCount) + Ellipsis + sub) <= maxWidth)
+                if (font.MeasureText(string.Concat(textSegment.AsSpan(0, (int)startCount), Ellipsis, sub)) <= maxWidth)
                 {
                     tempEndString = sub;
                 }
@@ -450,7 +450,7 @@ internal class TextRenderer : IElementRenderer
 
             if (breakPositionAttempt >= textLength)
             {
-                resultingLines.Add(singleLine.Substring(currentPosition));
+                resultingLines.Add(singleLine[currentPosition..]);
                 break;
             }
 

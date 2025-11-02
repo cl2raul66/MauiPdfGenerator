@@ -31,6 +31,7 @@ public partial class MainPage : ContentPage
                 .ContentPage()
                 .Content(c =>
                 {
+                    c.Spacing(15);
                     c.Children(ch =>
                     {
                         // --- Propiedades básicas ---
@@ -224,58 +225,146 @@ public partial class MainPage : ContentPage
                 .ContentPage()
                 .Content(c =>
                 {
-                    c.Children(ch =>
+                    c.Spacing(15)
+                    .Children(ch =>
                     {
-                        ch.Paragraph("--- Casos de Uso de Imágenes ---").FontSize(16).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("--- Casos de Uso de Imágenes ---")
+                        .FontSize(16)
+                        .FontAttributes(FontAttributes.Bold)
+                        .HorizontalTextAlignment(TextAlignment.Center);
 
-                        // Caso 1: Imagen simple, tamaño intrínseco
-                        ch.Paragraph("1. Imagen simple (tamaño intrínseco)");
+                        // --- Propiedades básicas ---
+                        ch.Paragraph("1. Imagen con tamaño intrínseco (sin modificaciones)");
                         ch.Image(new MemoryStream(imageData));
 
-                        // Caso 2: Imagen con WidthRequest y alineación
-                        ch.Paragraph("2. Imagen con WidthRequest(100) y HorizontalOptions(End)");
+                        // --- Control de tamaño ---
+                        ch.Paragraph("2. Imagen con WidthRequest(200)");
                         ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(100);
+                            .WidthRequest(200);
 
-                        // Caso 3: Aspect.Fill (estirada)
-                        ch.Paragraph("3. Aspect(Fill) con tamaño fijo (150x75)");
+                        ch.Paragraph("3. Imagen con HeightRequest(75)");
                         ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(150)
+                            .HeightRequest(75);
+
+                        ch.Paragraph("4. Imagen con 75 de ancho, 75 de altura y fondo gris claro");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(75)
                             .HeightRequest(75)
-                            .Aspect(Aspect.Fill);
+                            .BackgroundColor(Colors.LightGray);
 
-                        // Caso 4: Aspect.AspectFill (recortada para llenar)
-                        ch.Paragraph("4. Aspect(AspectFill) con tamaño fijo (150x75)");
+                        // --- Aspectos ---
+                        ch.Paragraph("5. Imagen con 75 de ancho, 75 de altura, fondo azul claro y Aspect.Fill (estira la imagen)");
                         ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(150)
+                            .WidthRequest(75)
                             .HeightRequest(75)
-                            .Aspect(Aspect.AspectFill)
-                            .BackgroundColor(Colors.LightGray); // Fondo para ver el área
+                            .Aspect(Aspect.Fill)
+                            .BackgroundColor(Colors.LightBlue);
 
-                        // Caso 5: Aspect.AspectFit (ajustada sin recortar)
-                        ch.Paragraph("5. Aspect(AspectFit) con tamaño fijo (150x75)");
+                        ch.Paragraph("6. Imagen con 75 de ancho, 75 de altura, fondo azul claro y Aspect.Center (mantiene centrada)");
                         ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(150)
+                            .WidthRequest(75)
+                            .HeightRequest(75)
+                            .Aspect(Aspect.Center)
+                            .BackgroundColor(Colors.LightBlue);
+
+                        ch.Paragraph("7. Imagen con 75 de ancho, 75 de altura, fondo azul claro y Aspect.AspectFit (mantiene proporción dentro del contenedor)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(75)
                             .HeightRequest(75)
                             .Aspect(Aspect.AspectFit)
-                            .BackgroundColor(Colors.LightBlue); // Fondo para ver el área
+                            .BackgroundColor(Colors.LightBlue);
 
-                        // Caso 6: Con Padding y BackgroundColor
-                        ch.Paragraph("6. Imagen con Padding(20) y BackgroundColor");
+                        ch.Paragraph("8. Imagen con 75 de ancho, 75 de altura y Aspect.AspectFill (recorta manteniendo proporción)");
                         ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(120)
+                            .WidthRequest(75)
+                            .HeightRequest(75)
+                            .Aspect(Aspect.AspectFill)
+                            .BackgroundColor(Colors.LightBlue);
+
+                        // --- Alineación ---
+                        ch.Paragraph("9. Imagen con 200 de ancho y HorizontalOptions(Start)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .HorizontalOptions(LayoutAlignment.Start);
+
+                        ch.Paragraph("10. Imagen con 200 de ancho y HorizontalOptions(Center)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .HorizontalOptions(LayoutAlignment.Center);
+
+                        ch.Paragraph("11. Imagen con 200 de ancho y HorizontalOptions(End)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .HorizontalOptions(LayoutAlignment.End);
+
+                        // --- Márgenes y Padding ---
+                        ch.Paragraph("12. Imagen con Margin(20)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .Margin(20)
+                            .BackgroundColor(Colors.LightYellow);
+
+                        ch.Paragraph("13. Imagen con Padding(20)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
                             .Padding(20)
-                            .Margin(16)
+                            .BackgroundColor(Colors.LightGreen);
+
+                        ch.Paragraph("14. Imagen con Margin(10) y Padding(10)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .Margin(10)
+                            .Padding(10)
+                            .BackgroundColor(Colors.LightSalmon);
+
+                        // --- Márgenes específicos ---
+                        ch.Paragraph("15. Imagen con Margin(20, 10)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .Margin(20, 10)
+                            .BackgroundColor(Colors.LightCyan);
+
+                        ch.Paragraph("16. Imagen con Padding(20, 10)");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .Padding(20, 10)
+                            .BackgroundColor(Colors.LightGoldenrodYellow);
+
+                        // --- Combinaciones complejas ---
+                        ch.Paragraph("17. Imagen con múltiples propiedades");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(300)
+                            .HeightRequest(150)
+                            .Aspect(Aspect.AspectFit)
+                            .HorizontalOptions(LayoutAlignment.Center)
+                            .Margin(10)
+                            .Padding(5)
+                            .BackgroundColor(Colors.LightSteelBlue);
+
+                        ch.Paragraph("18. Imagen estilo tarjeta");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(250)
+                            .Aspect(Aspect.AspectFit)
+                            .HorizontalOptions(LayoutAlignment.Center)
+                            .Margin(15)
+                            .Padding(10)
+                            .BackgroundColor(Colors.White);
+
+                        ch.Paragraph("19. Imagen con efectos visuales combinados");
+                        ch.Image(new MemoryStream(imageData))
+                            .WidthRequest(200)
+                            .HeightRequest(200)
+                            .Aspect(Aspect.AspectFill)
+                            .HorizontalOptions(LayoutAlignment.Center)
+                            .Margin(20, 10)
+                            .Padding(15)
                             .BackgroundColor(Colors.LightCoral);
 
-                        // Caso 7: Manejo de error (Stream cerrado)
-                        //c.Paragraph("7. Manejo de error (Stream cerrado)");
-                        //var closedStream = new MemoryStream();
-                        //closedStream.Close();
-                        //c.PdfImage(closedStream)
-                        //    .WidthRequest(200)
-                        //    .HeightRequest(50)
-                        //    .HorizontalOptions(LayoutAlignment.Center);
+                        ch.Paragraph("--- Fin de los casos de uso de imágenes ---")
+                            .FontSize(16)
+                            .FontAttributes(FontAttributes.Bold)
+                            .HorizontalTextAlignment(TextAlignment.Center)
+                            .Margin(0, 20, 0, 0);
                     });
                 }).Build()
                 .SaveAsync(targetFilePath);

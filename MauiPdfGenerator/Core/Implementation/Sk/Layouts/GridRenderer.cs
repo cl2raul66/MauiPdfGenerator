@@ -65,7 +65,7 @@ internal class GridRenderer : IElementRenderer
 
         var (rowsForThisPage, remainingChildren) = DetermineRowsForCurrentPage(grid, measureCache.RowHeights, availableContentHeight);
 
-        if (!rowsForThisPage.Any() && grid.GetChildren.Any())
+        if (rowsForThisPage.Count == 0 && grid.GetChildren.Any())
         {
             return new PdfLayoutInfo(grid, finalRect.Width, 0, PdfRect.Empty, grid);
         }
@@ -80,7 +80,7 @@ internal class GridRenderer : IElementRenderer
         var childrenForThisPage = grid.GetChildren.Cast<PdfElementData>().Where(c => !remainingChildren.Contains(c)).ToList();
         var arrangedCells = await ArrangeChildrenInRows(grid, context, measureCache, rowsForThisPage, childrenForThisPage, contentBox);
 
-        float arrangedContentHeight = rowsForThisPage.Any() ? rowsForThisPage.Select(r => measureCache.RowHeights[r]).Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowsForThisPage.Count - 1) : 0;
+        float arrangedContentHeight = rowsForThisPage.Count != 0 ? rowsForThisPage.Select(r => measureCache.RowHeights[r]).Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowsForThisPage.Count - 1) : 0;
         float finalHeightForThisPage = arrangedContentHeight + (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
         var arrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, finalHeightForThisPage);
 
@@ -137,11 +137,11 @@ internal class GridRenderer : IElementRenderer
     private async Task<(float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures)> MeasureGridContent(PdfGridData grid, PdfGenerationContext context, SKSize availableContentSize)
     {
         var children = grid.GetChildren.Cast<PdfElementData>().ToList();
-        var numCols = grid.GetColumnDefinitions.Any() ? grid.GetColumnDefinitions.Count : children.Any() ? children.Max(c => c.GridColumn + c.GridColumnSpan) : 1;
-        var numRows = grid.GetRowDefinitions.Any() ? grid.GetRowDefinitions.Count : children.Any() ? children.Max(c => c.GridRow + c.GridRowSpan) : 1;
+        var numCols = grid.GetColumnDefinitions.Any() ? grid.GetColumnDefinitions.Count : children.Count != 0 ? children.Max(c => c.GridColumn + c.GridColumnSpan) : 1;
+        var numRows = grid.GetRowDefinitions.Any() ? grid.GetRowDefinitions.Count : children.Count != 0 ? children.Max(c => c.GridRow + c.GridRowSpan) : 1;
 
-        var colDefs = grid.GetColumnDefinitions.Count == numCols ? grid.GetColumnDefinitions.ToList() : Enumerable.Repeat(new ColumnDefinition(GridLength.Star), numCols).ToList();
-        var rowDefs = grid.GetRowDefinitions.Count == numRows ? grid.GetRowDefinitions.ToList() : Enumerable.Repeat(new RowDefinition(GridLength.Auto), numRows).ToList();
+        var colDefs = grid.GetColumnDefinitions.Count == numCols ? [.. grid.GetColumnDefinitions] : Enumerable.Repeat(new ColumnDefinition(GridLength.Star), numCols).ToList();
+        var rowDefs = grid.GetRowDefinitions.Count == numRows ? [.. grid.GetRowDefinitions] : Enumerable.Repeat(new RowDefinition(GridLength.Auto), numRows).ToList();
 
         var columnWidths = await CalculateColumnWidthsAsync(grid, context, availableContentSize.Width, colDefs, numCols);
 
@@ -373,7 +373,7 @@ internal class GridRenderer : IElementRenderer
             if (rowsToArrange.Contains(i)) continue;
 
             var childrenTouchingRow = allChildren.Where(c => c.GridRow <= i && (c.GridRow + c.GridRowSpan) > i).ToList();
-            if (!childrenTouchingRow.Any())
+            if (childrenTouchingRow.Count == 0)
             {
                 if (currentHeight + rowHeights[i] <= availableHeight)
                 {
@@ -395,7 +395,7 @@ internal class GridRenderer : IElementRenderer
 
             float heightWithBlock = (rowsToArrange.Count == 0) ? blockHeight : currentHeight + (float)grid.GetRowSpacing + blockHeight;
 
-            if (heightWithBlock <= availableHeight || !rowsToArrange.Any())
+            if (heightWithBlock <= availableHeight || rowsToArrange.Count == 0)
             {
                 for (int j = blockStartRow; j <= blockEndRow; j++)
                 {

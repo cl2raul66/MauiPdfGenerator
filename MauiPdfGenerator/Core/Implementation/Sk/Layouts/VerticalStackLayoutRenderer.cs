@@ -1,14 +1,13 @@
-﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Common.Models;
+﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Elements;
 using MauiPdfGenerator.Common.Models.Layouts;
-using Microsoft.Extensions.Logging;
+using MauiPdfGenerator.Core.Models;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
 internal class VerticalStackLayoutRenderer : IElementRenderer
 {
-    // ... El método MeasureAsync no necesita cambios ...
     public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
     {
         if (context.Element is not PdfVerticalStackLayoutData vsl)
@@ -46,7 +45,6 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
 
         return new PdfLayoutInfo(vsl, totalWidth, totalHeightWithMargin);
     }
-
 
     public async Task<PdfLayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
     {
@@ -94,16 +92,26 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             }
 
             var child = vsl.GetChildren[i];
+            var renderer = context.RendererFactory.GetRenderer(child);
+            var childContext = context with { Element = child };
+
             var measure = childMeasures.FirstOrDefault(m => m.Element == child);
             if (measure.Element == null)
             {
-                var renderer = context.RendererFactory.GetRenderer(child);
-                var childContext = context with { Element = child };
                 measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, finalRect.Width, float.PositiveInfinity));
             }
 
             float requiredSpacing = i > 0 ? vsl.GetSpacing : 0;
             float remainingHeightForChild = availableHeight - consumedHeight - requiredSpacing;
+
+            bool isAtomic = child is PdfImageData or PdfHorizontalLineData or PdfHorizontalStackLayoutData || (child is PdfVerticalStackLayoutData cvsl && cvsl.GetVerticalOptions != LayoutAlignment.Fill);
+
+            if (isAtomic && measure.Height > remainingHeightForChild)
+            {
+                remainingChildren.Add(child);
+                pageIsFull = true;
+                continue;
+            }
 
             if (measure.Height <= remainingHeightForChild)
             {
@@ -112,8 +120,6 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             }
             else
             {
-                var renderer = context.RendererFactory.GetRenderer(child);
-                var childContext = context with { Element = child };
                 var partialRect = new PdfRect(finalRect.X, finalRect.Y + consumedHeight + requiredSpacing, finalRect.Width, remainingHeightForChild);
                 var partialArrange = await renderer.ArrangeAsync(partialRect, childContext);
 
@@ -168,27 +174,35 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
 
             var measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, contentWidth, float.PositiveInfinity));
 
-            // --- INICIO DE LA CORRECCIÓN DEL BUG ---
+            // --- INICIO DE LA LÓGICA DE ARRANGE CORREGIDA Y DEFINITIVA ---
+            var horizontalOptions = child.GetHorizontalOptions;
+
+            // Regla de degradación: Si el HorizontalOptions es Fill (por defecto) pero el hijo
+            // tiene CUALQUIER restricción de tamaño explícita, el comportamiento de alineación
+            // efectivo debe ser Start, para emular a .NET MAUI.
+            if (horizontalOptions == LayoutAlignment.Fill && (child.GetWidthRequest.HasValue || child.GetHeightRequest.HasValue))
+            {
+                horizontalOptions = LayoutAlignment.Start;
+            }
+
             float childWidth;
-            // 1. Si el hijo tiene un WidthRequest, ESE es su ancho.
             if (child.GetWidthRequest.HasValue)
             {
                 childWidth = (float)child.GetWidthRequest.Value;
             }
-            // 2. Si no, se respeta el HorizontalOptions.
             else
             {
-                childWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? contentWidth : measure.Width;
+                // Si es Fill (y no hay restricción de tamaño), ocupa todo el ancho. Si no, su ancho medido.
+                childWidth = horizontalOptions == LayoutAlignment.Fill ? contentWidth : measure.Width;
             }
 
-            // 3. El offsetX se calcula siempre para posicionar la caja (ahora del ancho correcto) dentro del contentWidth.
-            float offsetX = child.GetHorizontalOptions switch
+            float offsetX = horizontalOptions switch
             {
                 LayoutAlignment.Center => (contentWidth - childWidth) / 2f,
                 LayoutAlignment.End => contentWidth - childWidth,
                 _ => 0f // Start o Fill
             };
-            // --- FIN DE LA CORRECCIÓN DEL BUG ---
+            // --- FIN DE LA LÓGICA DE ARRANGE CORREGIDA Y DEFINITIVA ---
 
             float x = elementBox.Left + (float)vsl.GetPadding.Left + offsetX;
 

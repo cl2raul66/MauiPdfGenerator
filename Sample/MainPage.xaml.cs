@@ -88,8 +88,8 @@ public partial class MainPage : ContentPage
                         ch.Paragraph("14. Texto mediano (16pt)")
                             .FontSize(16);
 
-                        ch.Paragraph("15. Texto grande (24pt)")
-                            .FontSize(24);
+                        ch.Paragraph("15. Texto grande (22pt)")
+                            .FontSize(22);
 
                         // --- Familias de fuente ---
                         ch.Paragraph("16. Texto con OpenSansRegular")
@@ -132,33 +132,34 @@ public partial class MainPage : ContentPage
                             .BackgroundColor(Colors.LightGoldenrodYellow);
 
                         // --- Control de altura ---
-                        ch.Paragraph("26. Texto con altura fija de 50")
+                        ch.Paragraph("26. Texto con altura fija de 50, fondo azul acerado claro con alineación vertical centrada")
                             .HeightRequest(50)
                             .BackgroundColor(Colors.LightSteelBlue)
                             .VerticalTextAlignment(TextAlignment.Center);
 
                         // --- Opciones de diseño ---
-                        ch.Paragraph("27. Texto centrado horizontal y verticalmente")
+                        ch.Paragraph("27. Texto con alineación centrado horizontal y verticalmente")
                             .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center)
-                            .HeightRequest(40)
-                            .BackgroundColor(Colors.LightCyan);
+                            .VerticalOptions(LayoutAlignment.Center);
 
                         // --- Control de salto de línea ---
                         ch.Paragraph("28. Texto largo con LineBreakMode WordWrap: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.WordWrap)
-                            .WidthRequest(200);
+                            .LineBreakMode(LineBreakMode.WordWrap);
 
                         ch.Paragraph("29. Texto largo con LineBreakMode CharacterWrap: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.CharacterWrap)
-                            .WidthRequest(200);
+                            .LineBreakMode(LineBreakMode.CharacterWrap);
 
-                        ch.Paragraph("30. Texto largo con LineBreakMode TailTruncation: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.TailTruncation)
-                            .WidthRequest(200);
+                        ch.Paragraph("30. Texto largo con LineBreakMode HeadTruncation: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                            .LineBreakMode(LineBreakMode.HeadTruncation);
+
+                        ch.Paragraph("31. Texto largo con LineBreakMode MiddleTruncation: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                            .LineBreakMode(LineBreakMode.MiddleTruncation);
+
+                        ch.Paragraph("32. Texto largo con LineBreakMode TailTruncation: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                            .LineBreakMode(LineBreakMode.TailTruncation);
 
                         // --- Combinaciones complejas ---
-                        ch.Paragraph("31. Párrafo con múltiples propiedades")
+                        ch.Paragraph("33. Párrafo con múltiples propiedades")
                             .FontSize(18)
                             .FontAttributes(FontAttributes.Bold | FontAttributes.Italic)
                             .TextColor(Colors.Purple)
@@ -168,17 +169,17 @@ public partial class MainPage : ContentPage
                             .HorizontalTextAlignment(TextAlignment.Center)
                             .TextDecorations(TextDecorations.Underline);
 
-                        ch.Paragraph("32. Párrafo con estilo de tarjeta")
-                            .FontFamily(PdfFonts.OpenSansSemibold)
+                        ch.Paragraph("34. Párrafo con estilo de tarjeta")
+                            .FontFamily(PdfFonts.Comic)
                             .FontSize(16)
                             .TextColor(Colors.DarkBlue)
-                            .BackgroundColor(Colors.White)
+                            .BackgroundColor(Colors.LightGrey)
                             .Padding(15)
                             .Margin(10)
                             .WidthRequest(300)
                             .HorizontalOptions(LayoutAlignment.Center);
 
-                        ch.Paragraph("33. Párrafo con múltiples líneas y formato personalizado\nSegunda línea\nTercera línea")
+                        ch.Paragraph("35. Párrafo con múltiples líneas y formato personalizado\nSegunda línea\nTercera línea")
                             .FontSize(14)
                             .TextColor(Colors.DarkGreen)
                             .BackgroundColor(Colors.LightGray)
@@ -619,7 +620,7 @@ public partial class MainPage : ContentPage
                     .VerticalOptions(LayoutAlignment.End)
                     .Children(ch =>
                     {
-                        ch.Paragraph("Hola mundo"); 
+                        ch.Paragraph("Hola mundo");
                     });
                 }).Build()
             .SaveAsync(targetFilePath);

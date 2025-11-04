@@ -8,7 +8,7 @@ public interface IPdfGridChildrenBuilder
     IPdfGridChildParagraph Paragraph(string text);
     IPdfGridChildImage Image(Stream stream);
     IPdfGridChildHorizontalLine HorizontalLine();
-    IPdfGridChildVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content);
-    IPdfGridChildHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content);
-    IPdfGrid Grid();
+    IPdfGridChildVerticalStackLayout VerticalStackLayout(Action<IPdfGridChildVerticalStackLayout> layoutSetup);
+    IPdfGridChildHorizontalStackLayout HorizontalStackLayout(Action<IPdfGridChildHorizontalStackLayout> layoutSetup);
+    IPdfGrid Grid(Action<IPdfGrid> layoutSetup);
 }

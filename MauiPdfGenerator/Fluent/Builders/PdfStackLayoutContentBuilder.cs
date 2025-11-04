@@ -30,36 +30,33 @@ internal class PdfStackLayoutContentBuilder : IPdfStackLayoutBuilder
         return builder;
     }
 
-    public IPdfLayoutChildImage Image(Stream stream)
+    public IPdfLayoutChildImage Image(System.IO.Stream stream)
     {
         var builder = new PdfImageBuilder(stream);
         _layoutBuilder.Add(builder);
         return builder;
     }
 
-    public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content)
+    public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfVerticalStackLayout> layoutSetup)
     {
-        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
         var stackBuilder = new PdfVerticalStackLayoutBuilder(_fontRegistry);
-        var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
-        content(contentBuilder);
+        layoutSetup(stackBuilder);
         _layoutBuilder.Add(stackBuilder);
         return stackBuilder;
     }
 
-    public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content)
+    public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfHorizontalStackLayout> layoutSetup)
     {
-        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
         var stackBuilder = new PdfHorizontalStackLayoutBuilder(_fontRegistry);
-        var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
-        content(contentBuilder);
+        layoutSetup(stackBuilder);
         _layoutBuilder.Add(stackBuilder);
         return stackBuilder;
     }
 
-    public IPdfGrid Grid()
+    public IPdfGrid Grid(Action<IPdfGrid> layoutSetup)
     {
         var gridBuilder = new PdfGridBuilder(_fontRegistry);
+        layoutSetup(gridBuilder);
         _layoutBuilder.Add(gridBuilder);
         return gridBuilder;
     }

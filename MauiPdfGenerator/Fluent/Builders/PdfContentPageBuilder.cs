@@ -44,11 +44,7 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
 
         _contentApi = (TContent)_contentBuilder;
 
-        // --- LA CORRECCIÓN FUNDAMENTAL ---
-        // Forzamos que el layout raíz de la página tenga VerticalOptions.Fill
-        // para que sea tratado como divisible por el motor de paginación.
         ((PdfLayoutElementData)_contentBuilder.GetModel()).VerticalOptions(LayoutAlignment.Fill);
-        // --- FIN DE LA CORRECCIÓN ---
 
         _pageDefaultFontFamily = _documentConfiguration.FontRegistry.GetUserConfiguredDefaultFontIdentifier()
                                  ?? _documentConfiguration.FontRegistry.GetFirstMauiRegisteredFontIdentifier();

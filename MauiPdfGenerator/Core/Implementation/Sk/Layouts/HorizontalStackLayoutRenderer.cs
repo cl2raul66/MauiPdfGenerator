@@ -23,7 +23,7 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
         var childMeasures = new List<PdfLayoutInfo>();
-        var childAvailableRect = new SKRect(0, 0, float.PositiveInfinity, availableRect.Height);
+        var childAvailableRect = new SKRect(0, 0, float.PositiveInfinity, availableRect.Height - (float)hsl.GetMargin.VerticalThickness - (float)hsl.GetPadding.VerticalThickness);
 
         foreach (var child in hsl.GetChildren)
         {
@@ -56,7 +56,6 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
         if (context.Element is not PdfHorizontalStackLayoutData hsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
-        // REGLA DE ATOMICIDAD: Si la altura medida del HSL no cabe, se mueve completo.
         var measure = await MeasureAsync(context, new SKRect(0, 0, finalRect.Width, float.PositiveInfinity));
         if (measure.Height > finalRect.Height)
         {
@@ -77,7 +76,6 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
         );
 
         float contentHeight = elementBox.Height - (float)hsl.GetPadding.VerticalThickness;
-        float contentWidth = elementBox.Width - (float)hsl.GetPadding.HorizontalThickness;
         float currentX = elementBox.Left + (float)hsl.GetPadding.Left;
 
         var arrangedChildren = new List<PdfLayoutInfo>();
@@ -91,7 +89,6 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             var childContext = context with { Element = child };
 
             var requiredSpacing = i > 0 ? hsl.GetSpacing : 0;
-            var spaceAvailableForChild = (elementBox.Left + contentWidth) - (currentX + requiredSpacing);
 
             float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? contentHeight : childMeasure.Height;
             float offsetY = child.GetVerticalOptions switch
@@ -101,6 +98,11 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
                 _ => 0f
             };
             float y = elementBox.Top + (float)hsl.GetPadding.Top + offsetY;
+
+            // --- INICIO DE LA CORRECCIÓN DEL BUG ---
+            // El espacio disponible es el borde derecho del área de contenido menos la posición actual.
+            var spaceAvailableForChild = (elementBox.Right - (float)hsl.GetPadding.Right) - (currentX + requiredSpacing);
+            // --- FIN DE LA CORRECCIÓN DEL BUG ---
 
             if (childMeasure.Width <= spaceAvailableForChild)
             {
@@ -112,7 +114,6 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             }
             else
             {
-                // REGLA DE CLIPPING Y DIAGNÓSTICO
                 currentX += requiredSpacing;
                 var overflowBounds = new PdfRect(currentX, y, childMeasure.Width, childHeight);
                 overflowedChildren.Add((child, overflowBounds));
@@ -124,14 +125,13 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
                     new DiagnosticRect(overflowBounds.X, overflowBounds.Y, overflowBounds.Width, overflowBounds.Height)
                 ));
 
-                // Asignamos el espacio restante para el clipping
                 var clippedRect = new PdfRect(currentX, y, spaceAvailableForChild, childHeight);
                 if (clippedRect.Width > 0)
                 {
                     var arrangedChild = await renderer.ArrangeAsync(clippedRect, childContext);
                     arrangedChildren.Add(arrangedChild);
                 }
-                currentX += childMeasure.Width; // Avanzamos el espacio ideal para calcular los siguientes desbordamientos
+                currentX += childMeasure.Width;
             }
         }
 
@@ -166,15 +166,13 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             canvas.DrawRect(elementBox, bgPaint);
         }
 
-        // Lógica de renderizado condicional según diagnóstico
-        bool hasVisualDiagnostics = context.DiagnosticSink.GetType().Name.Contains("Visual"); // Simplificación, idealmente se pasa un flag.
+        bool hasVisualDiagnostics = context.DiagnosticSink.GetType().Name.Contains("Visual");
 
         foreach (var childInfo in cache.ArrangedChildren)
         {
             bool isOverflowed = cache.OverflowedChildren.Any(oc => oc.Element == childInfo.Element);
             if (isOverflowed && hasVisualDiagnostics)
             {
-                // No renderizar el contenido recortado si el diagnóstico visual lo va a reemplazar.
                 continue;
             }
 

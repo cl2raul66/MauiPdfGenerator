@@ -8,7 +8,7 @@ public interface IPageContentBuilder
     IPdfPageChildParagraph Paragraph(string text);
     IPdfPageChildHorizontalLine HorizontalLine();
     IPdfPageChildImage Image(Stream stream);
-    IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content);
-    IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content);
-    IPdfGrid Grid();
+    IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfVerticalStackLayout> layoutSetup);
+    IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfHorizontalStackLayout> layoutSetup);
+    IPdfGrid PdfGrid(Action<IPdfGrid> layoutSetup);
 }

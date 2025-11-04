@@ -2,10 +2,15 @@
 
 internal class PdfHorizontalStackLayoutData : PdfLayoutElementData, IPdfLayoutElement
 {
-    internal PdfHorizontalStackLayoutData() : base() { }
+    internal PdfHorizontalStackLayoutData() : base()
+    {
+        base.HorizontalOptions(LayoutAlignment.Start);
+    }
 
     internal PdfHorizontalStackLayoutData(IEnumerable<PdfElementData> remainingChildren, PdfHorizontalStackLayoutData originalStyleSource)
-        : base(remainingChildren, originalStyleSource) { }
+        : base(remainingChildren, originalStyleSource)
+    {
+    }
 
     IReadOnlyList<object> IPdfLayoutElement.Children => [.. _children.Cast<object>()];
     LayoutType IPdfLayoutElement.LayoutType => LayoutType.HorizontalStack;

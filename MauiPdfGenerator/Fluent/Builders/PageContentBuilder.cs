@@ -39,29 +39,26 @@ internal class PageContentBuilder : IPageContentBuilder
         return builder;
     }
 
-    public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfStackLayoutBuilder> content)
+    public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfVerticalStackLayout> layoutSetup)
     {
-        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
         var stackBuilder = new PdfVerticalStackLayoutBuilder(_fontRegistry);
-        var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
-        content(contentBuilder);
+        layoutSetup(stackBuilder);
         _children.Add(stackBuilder);
         return stackBuilder;
     }
 
-    public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfStackLayoutBuilder> content)
+    public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfHorizontalStackLayout> layoutSetup)
     {
-        // CORRECCIÓN: Se pasa el fontRegistry al constructor.
         var stackBuilder = new PdfHorizontalStackLayoutBuilder(_fontRegistry);
-        var contentBuilder = new PdfStackLayoutContentBuilder(stackBuilder, _fontRegistry);
-        content(contentBuilder);
+        layoutSetup(stackBuilder);
         _children.Add(stackBuilder);
         return stackBuilder;
     }
 
-    public IPdfGrid Grid()
+    public IPdfGrid PdfGrid(Action<IPdfGrid> layoutSetup)
     {
         var gridBuilder = new PdfGridBuilder(_fontRegistry);
+        layoutSetup(gridBuilder);
         _children.Add(gridBuilder);
         return gridBuilder;
     }

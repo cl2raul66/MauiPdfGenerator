@@ -1,5 +1,11 @@
 # MauiPdfGenerator
 
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=fyodOXgCJMY">
+    <img src="https://img.youtube.com/vi/fyodOXgCJMY/hqdefault.jpg" alt="Video" />
+  </a>
+</div>
+
 ## Introduction
 
 MauiPdfGenerator is a powerful and flexible library for .NET MAUI that allows you to generate PDF documents directly in your applications. It offers a fluent API for easy document construction, comprehensive content elements, and flexible styling options. This library is complemented by `MauiPdfGenerator.SourceGenerators`, a code generator that simplifies font management by providing compile-time safe aliases for both standard PDF fonts and custom fonts registered in your MAUI application. Together, they provide a robust solution for creating, modifying, and managing PDFs easily, enhancing your app's functionality and user experience.

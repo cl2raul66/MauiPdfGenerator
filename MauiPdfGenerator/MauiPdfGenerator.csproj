@@ -36,6 +36,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.120" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="9.0.120" />
+		<PackageReference Include="RandAMediaLabGroup.MauiPdfGenerator.Diagnostics" Version="1.0.0" />
 		<PackageReference Include="SkiaSharp" Version="3.119.1" />
 	</ItemGroup>
 
@@ -49,10 +50,6 @@
 	    <PackagePath>\</PackagePath>
 	  </None>
 	  <None Include="Fluent\Interfaces\Pages\IPdfPageChildHorizontalLine.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
 	</ItemGroup>
 
 </Project>

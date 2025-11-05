@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Diagnostics.Interfaces;
+﻿using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Diagnostics.Models;
 using Microsoft.Extensions.Logging;
 

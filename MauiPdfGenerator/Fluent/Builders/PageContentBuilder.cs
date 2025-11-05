@@ -1,11 +1,14 @@
-﻿using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Models.Elements;
+﻿using MauiPdfGenerator.Fluent.Builders.Elements;
+using MauiPdfGenerator.Fluent.Builders.Layouts;
+using MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PageContentBuilder : IPageContentBuilder
 {
-    private readonly List<PdfElement> _children = [];
+    private readonly List<IBuildablePdfElement> _children = [];
     private readonly PdfFontRegistryBuilder _fontRegistry;
 
     public PageContentBuilder(PdfFontRegistryBuilder fontRegistry)
@@ -13,45 +16,50 @@ internal class PageContentBuilder : IPageContentBuilder
         _fontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
     }
 
-    internal IReadOnlyList<PdfElement> GetChildren() => _children.AsReadOnly();
+    internal IReadOnlyList<IBuildablePdfElement> GetBuildableChildren() => _children.AsReadOnly();
 
-    public PdfParagraph Paragraph(string text)
+    public IPdfPageChildParagraph Paragraph(string text)
     {
-        var paragraph = new PdfParagraph(text, _fontRegistry);
-        _children.Add(paragraph);
-        return paragraph;
+        var builder = new PdfParagraphBuilder(text, _fontRegistry);
+        _children.Add(builder);
+        return builder;
     }
 
-    public PdfHorizontalLine HorizontalLine()
+    public IPdfPageChildHorizontalLine HorizontalLine()
     {
-        var line = new PdfHorizontalLine();
-        _children.Add(line);
-        return line;
+        var builder = new PdfHorizontalLineBuilder();
+        _children.Add(builder);
+        return builder;
     }
 
-    public PdfImage PdfImage(Stream stream)
+    public IPdfPageChildImage Image(Stream stream)
     {
-        var image = new PdfImage(stream);
-        _children.Add(image);
-        return image;
+        var builder = new PdfImageBuilder(stream);
+        _children.Add(builder);
+        return builder;
     }
 
-    public PdfVerticalStackLayout VerticalStackLayout(Action<IStackLayoutBuilder> content)
+    public IPdfVerticalStackLayout VerticalStackLayout(Action<IPdfVerticalStackLayout> layoutSetup)
     {
-        var stack = new PdfVerticalStackLayout(_fontRegistry);
-        var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
-        content(builder);
-        _children.Add(stack);
-        return stack;
+        var stackBuilder = new PdfVerticalStackLayoutBuilder(_fontRegistry);
+        layoutSetup(stackBuilder);
+        _children.Add(stackBuilder);
+        return stackBuilder;
     }
 
-    public PdfHorizontalStackLayout HorizontalStackLayout(Action<IStackLayoutBuilder> content)
+    public IPdfHorizontalStackLayout HorizontalStackLayout(Action<IPdfHorizontalStackLayout> layoutSetup)
     {
-        var stack = new PdfHorizontalStackLayout(_fontRegistry);
-        var builder = new StackLayoutContentBuilder(stack, _fontRegistry);
-        content(builder);
-        _children.Add(stack);
-        return stack;
+        var stackBuilder = new PdfHorizontalStackLayoutBuilder(_fontRegistry);
+        layoutSetup(stackBuilder);
+        _children.Add(stackBuilder);
+        return stackBuilder;
+    }
+
+    public IPdfGrid PdfGrid(Action<IPdfGrid> layoutSetup)
+    {
+        var gridBuilder = new PdfGridBuilder(_fontRegistry);
+        layoutSetup(gridBuilder);
+        _children.Add(gridBuilder);
+        return gridBuilder;
     }
 }
-// --- END OF FILE PageContentBuilder.cs ---

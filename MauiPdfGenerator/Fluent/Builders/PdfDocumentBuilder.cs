@@ -1,12 +1,13 @@
-﻿using MauiPdfGenerator.Core;
+﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
-using MauiPdfGenerator.Core.Implementation.Sk;
-using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
+using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -15,14 +16,18 @@ internal class PdfDocumentBuilder : IPdfDocument
     private string? _filePath;
     private readonly PdfConfigurationBuilder _configurationBuilder;
     private readonly List<IPdfPageBuilder> _pages;
-    private readonly IPdfGenerationService _pdfGenerationService;
+    private readonly IPdfCoreGenerator _pdfGenerationService;
+    private readonly ILogger _logger;
+    private readonly IDiagnosticSink _diagnosticSink;
 
-    public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, string? defaultPath = null)
+    public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, ILoggerFactory loggerFactory, IDiagnosticSink diagnosticSink, IPdfCoreGenerator pdfGenerationService, string? defaultPath = null)
     {
         _filePath = defaultPath;
         _pages = [];
         _configurationBuilder = new PdfConfigurationBuilder(fontRegistry);
-        _pdfGenerationService = new SkPdfGenerationService();
+        _pdfGenerationService = pdfGenerationService;
+        _logger = loggerFactory.CreateLogger<IPdfDocument>();
+        _diagnosticSink = diagnosticSink;
     }
 
     public IPdfDocument Configuration(Action<IPdfDocumentConfigurator> documentConfigurator)
@@ -32,11 +37,18 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
-    public IPdfContentPage ContentPage()
+    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<TLayout> para coincidir con la interfaz.
+    public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
-        var pageBuilder = new PdfContentPageBuilder(this, _configurationBuilder);
+        var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry);
         _pages.Add(pageBuilder);
         return pageBuilder;
+    }
+
+    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<IPdfVerticalStackLayout>.
+    public IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage()
+    {
+        return ContentPage<IPdfVerticalStackLayout>();
     }
 
     public Task SaveAsync()
@@ -63,22 +75,21 @@ internal class PdfDocumentBuilder : IPdfDocument
                 var pageData = new PdfPageData(
                     contentPageBuilder.GetEffectivePageSize(),
                     contentPageBuilder.GetEffectivePageOrientation(),
-                    contentPageBuilder.GetEffectiveMargin(),
+                    contentPageBuilder.GetEffectivePadding(),
                     contentPageBuilder.GetEffectiveBackgroundColor(),
-                    contentPageBuilder.GetElements(),
-                    contentPageBuilder.GetPageSpacing(),
+                    contentPageBuilder.GetContent(),
                     contentPageBuilder.GetPageDefaultFontFamily(),
                     contentPageBuilder.GetPageDefaultFontSize(),
                     contentPageBuilder.GetPageDefaultTextColor(),
                     contentPageBuilder.GetPageDefaultFontAttributes(),
                     contentPageBuilder.GetPageDefaultTextDecorations(),
-                    contentPageBuilder.GetPageDefaultTextTransform() 
+                    contentPageBuilder.GetPageDefaultTextTransform()
                 );
                 pageDataList.Add(pageData);
             }
             else
             {
-                Debug.WriteLine($"Warning: Unknown page builder type found: {pageBuilder.GetType().FullName}. Skipping page.");
+                _logger.LogWarning("Unknown page builder type found: {PageBuilderType}. Skipping page.", pageBuilder.GetType().FullName);
             }
         }
 
@@ -101,12 +112,12 @@ internal class PdfDocumentBuilder : IPdfDocument
         }
         catch (PdfGenerationException genEx)
         {
-            Debug.WriteLine($"PDF generation error: {genEx.Message}");
+            _logger.LogError(genEx, "A known PDF generation error occurred.");
             throw;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Unexpected error while saving PDF: {ex.Message}");
+            _logger.LogError(ex, "An unexpected error occurred while saving the PDF.");
             throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
         }
     }

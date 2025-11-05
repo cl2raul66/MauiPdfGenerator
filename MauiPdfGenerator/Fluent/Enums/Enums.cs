@@ -18,7 +18,7 @@ public enum PageOrientationType
     Portrait,
     Landscape
 }
-public enum DefaultMarginType
+public enum DefaultPagePaddingType
 {
     Normal,
     Narrow,

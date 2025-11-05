@@ -16,184 +16,95 @@ public partial class MainPage : ContentPage
 
     private async void GeneratePdfOnlyParagraph_Clicked(object sender, EventArgs e)
     {
-        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Paragraphs.pdf");
         try
         {
             var doc = pdfDocFactory.CreateDocument();
             await doc
                 .Configuration(cfg =>
                 {
-                    cfg.MetaData(data =>
-                    {
-                        data.Title("MauiPdfGenerator sample - Experimental Paragraphs");
-                    });
+                    cfg.MetaData(data => data.Title("MauiPdfGenerator - Paragraph Showcase"));
                 })
                 .ContentPage()
                 .Content(c =>
                 {
-                    c.Spacing(15);
+                    c.Spacing(10);
+                    c.Padding(20);
                     c.Children(ch =>
                     {
-                        // --- Propiedades básicas ---
-                        ch.Paragraph("Título: Demostración de propiedades de párrafos")
-                            .FontSize(24)
-                            .FontAttributes(FontAttributes.Bold)
-                            .TextColor(Colors.DarkBlue)
-                            .HorizontalTextAlignment(TextAlignment.Center)
-                            .Margin(0, 0, 0, 20);
+                        ch.Paragraph("Paragraph Showcase")
+                            .FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
+                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
 
-                        // --- Alineación de texto ---
-                        ch.Paragraph("1. Texto alineado a la izquierda (predeterminado)")
-                            .HorizontalTextAlignment(TextAlignment.Start);
+                        ch.Paragraph("Alineación de Texto").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Alineado a la Izquierda (Start).").HorizontalTextAlignment(TextAlignment.Start);
+                        ch.Paragraph("Alineado al Centro.").HorizontalTextAlignment(TextAlignment.Center);
+                        ch.Paragraph("Alineado a la Derecha (End).").HorizontalTextAlignment(TextAlignment.End);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        ch.Paragraph("2. Texto alineado al centro")
-                            .HorizontalTextAlignment(TextAlignment.Center);
+                        ch.Paragraph("Estilos y Decoraciones").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Texto en Negrita.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Texto en Cursiva.").FontAttributes(FontAttributes.Italic);
+                        ch.Paragraph("Texto en Negrita y Cursiva.").FontAttributes(FontAttributes.Bold | FontAttributes.Italic);
+                        ch.Paragraph("Texto Subrayado.").TextDecorations(TextDecorations.Underline);
+                        ch.Paragraph("Texto Tachado.").TextDecorations(TextDecorations.Strikethrough);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        ch.Paragraph("3. Texto alineado a la derecha")
-                            .HorizontalTextAlignment(TextAlignment.End);
+                        ch.Paragraph("Transformaciones de Texto").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Este texto está en MAYÚSCULAS.").TextTransform(TextTransform.Uppercase);
+                        ch.Paragraph("Este Texto Está En Minúsculas.").TextTransform(TextTransform.Lowercase);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        // --- Transformación de texto ---
-                        ch.Paragraph("4. Texto sin transformación")
-                            .TextTransform(TextTransform.None);
+                        ch.Paragraph("Familias de Fuente").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Fuente OpenSans Regular.").FontFamily(PdfFonts.OpenSansRegular);
+                        ch.Paragraph("Fuente OpenSans Semibold.").FontFamily(PdfFonts.OpenSansSemibold);
+                        ch.Paragraph("Fuente Comic (si está registrada).").FontFamily(PdfFonts.Comic);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        ch.Paragraph("5. Texto en mayúsculas")
-                            .TextTransform(TextTransform.Uppercase);
+                        ch.Paragraph("Tamaño y Color").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Texto con FontSize 22.").FontSize(22);
+                        ch.Paragraph("Texto con color Rojo.").TextColor(Colors.Red);
+                        ch.Paragraph("Texto azul sobre fondo amarillo.").TextColor(Colors.DarkBlue).BackgroundColor(Colors.LightYellow);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        ch.Paragraph("6. Texto en minúsculas")
-                            .TextTransform(TextTransform.Lowercase);
+                        ch.Paragraph("Caja y Espaciado").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Este párrafo tiene un Padding de 10.").Padding(10).BackgroundColor(Colors.LightPink);
+                        ch.Paragraph("Este párrafo tiene un Margin de 10.").Margin(10).BackgroundColor(Colors.LightBlue);
+                        ch.Paragraph("Este párrafo tiene un WidthRequest de 300 y está centrado.")
+                            .WidthRequest(300).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightGreen);
+                        ch.Paragraph("Este párrafo tiene un HeightRequest de 50 y el texto está centrado verticalmente.")
+                            .HeightRequest(50).BackgroundColor(Colors.LightSteelBlue).VerticalTextAlignment(TextAlignment.Center);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        // --- Atributos de fuente ---
-                        ch.Paragraph("7. Texto en negrita")
-                            .FontAttributes(FontAttributes.Bold);
-
-                        ch.Paragraph("8. Texto en cursiva")
-                            .FontAttributes(FontAttributes.Italic);
-
-                        ch.Paragraph("9. Texto en negrita y cursiva")
-                            .FontAttributes(FontAttributes.Bold | FontAttributes.Italic);
-
-                        // --- Decoración de texto ---
-                        ch.Paragraph("10. Texto subrayado")
-                            .TextDecorations(TextDecorations.Underline);
-
-                        ch.Paragraph("11. Texto tachado")
-                            .TextDecorations(TextDecorations.Strikethrough);
-
-                        ch.Paragraph("12. Texto subrayado y tachado")
-                            .TextDecorations(TextDecorations.Underline | TextDecorations.Strikethrough);
-
-                        // --- Tamaños de fuente ---
-                        ch.Paragraph("13. Texto pequeño (12pt)")
-                            .FontSize(12);
-
-                        ch.Paragraph("14. Texto mediano (16pt)")
-                            .FontSize(16);
-
-                        ch.Paragraph("15. Texto grande (22pt)")
-                            .FontSize(22);
-
-                        // --- Familias de fuente ---
-                        ch.Paragraph("16. Texto con OpenSansRegular")
-                            .FontFamily(PdfFonts.OpenSansRegular);
-
-                        ch.Paragraph("17. Texto con OpenSansSemibold")
-                            .FontFamily(PdfFonts.OpenSansSemibold);
-
-                        ch.Paragraph("18. Texto con Comic")
-                            .FontFamily(PdfFonts.Comic);
-
-                        // --- Colores ---
-                        ch.Paragraph("19. Texto en color rojo")
-                            .TextColor(Colors.Red);
-
-                        ch.Paragraph("20. Texto con fondo amarillo claro")
-                            .BackgroundColor(Colors.LightYellow);
-
-                        ch.Paragraph("21. Texto en color azul con fondo gris claro")
-                            .TextColor(Colors.Blue)
-                            .BackgroundColor(Colors.LightGray);
-
-                        // --- Espaciado y márgenes ---
-                        ch.Paragraph("22. Texto con 10 padding y fondo rosado claro")
-                            .Padding(10)
-                            .BackgroundColor(Colors.LightPink);
-
-                        ch.Paragraph("23. Texto con 10 margin y fondo azul claro")
-                            .Margin(10)
-                            .BackgroundColor(Colors.LightBlue);
-
-                        ch.Paragraph("24. Texto con padding 5 horizontal, 10 de vertical y margin 10 horizontal, 5 vertical y fondo verde claro")
-                            .Padding(5, 10)
-                            .Margin(10, 5)
-                            .BackgroundColor(Colors.LightGreen);
-
-                        // --- Control de ancho ---
-                        ch.Paragraph("25. Texto en ancho fijo de 200 y fondo amarillo dorado claro")
-                            .WidthRequest(200)
-                            .BackgroundColor(Colors.LightGoldenrodYellow);
-
-                        // --- Control de altura ---
-                        ch.Paragraph("26. Texto con altura fija de 50, fondo azul acerado claro con alineación vertical centrada")
-                            .HeightRequest(50)
-                            .BackgroundColor(Colors.LightSteelBlue)
-                            .VerticalTextAlignment(TextAlignment.Center);
-
-                        // --- Opciones de diseño ---
-                        ch.Paragraph("27. Texto con alineación centrado horizontal y verticalmente")
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center);
-
-                        // --- Control de salto de línea ---
-                        ch.Paragraph("28. Texto largo con LineBreakMode WordWrap: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.WordWrap);
-
-                        ch.Paragraph("29. Texto largo con LineBreakMode CharacterWrap: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.CharacterWrap);
-
-                        ch.Paragraph("30. Texto largo con LineBreakMode HeadTruncation: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.HeadTruncation);
-
-                        ch.Paragraph("31. Texto largo con LineBreakMode MiddleTruncation: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.MiddleTruncation);
-
-                        ch.Paragraph("32. Texto largo con LineBreakMode TailTruncation: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-                            .LineBreakMode(LineBreakMode.TailTruncation);
-
-                        // --- Combinaciones complejas ---
-                        ch.Paragraph("33. Párrafo con múltiples propiedades")
-                            .FontSize(18)
-                            .FontAttributes(FontAttributes.Bold | FontAttributes.Italic)
-                            .TextColor(Colors.Purple)
-                            .BackgroundColor(Colors.LightYellow)
-                            .Padding(10)
-                            .Margin(5)
-                            .HorizontalTextAlignment(TextAlignment.Center)
-                            .TextDecorations(TextDecorations.Underline);
-
-                        ch.Paragraph("34. Párrafo con estilo de tarjeta")
-                            .FontFamily(PdfFonts.Comic)
-                            .FontSize(16)
-                            .TextColor(Colors.DarkBlue)
-                            .BackgroundColor(Colors.LightGrey)
-                            .Padding(15)
-                            .Margin(10)
-                            .WidthRequest(300)
-                            .HorizontalOptions(LayoutAlignment.Center);
-
-                        ch.Paragraph("35. Párrafo con múltiples líneas y formato personalizado\nSegunda línea\nTercera línea")
-                            .FontSize(14)
-                            .TextColor(Colors.DarkGreen)
-                            .BackgroundColor(Colors.LightGray)
-                            .Padding(10)
-                            .HorizontalTextAlignment(TextAlignment.Center);
+                        ch.Paragraph("Ajuste de Línea (en una caja de 400pt)").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.VerticalStackLayout(vsl =>
+                        {
+                            vsl.WidthRequest(400).HorizontalOptions(LayoutAlignment.Center).Padding(5).Spacing(5).BackgroundColor(Colors.LightGray);
+                            vsl.Children(vsl_ch =>
+                            {
+                                vsl_ch.Paragraph("WordWrap:").FontAttributes(FontAttributes.Bold);
+                                vsl_ch.Paragraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                                    .LineBreakMode(LineBreakMode.WordWrap);
+                                vsl_ch.Paragraph("CharacterWrap:").FontAttributes(FontAttributes.Bold);
+                                vsl_ch.Paragraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                                    .LineBreakMode(LineBreakMode.CharacterWrap);
+                                vsl_ch.Paragraph("HeadTruncation:").FontAttributes(FontAttributes.Bold);
+                                vsl_ch.Paragraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                                    .LineBreakMode(LineBreakMode.HeadTruncation);
+                                vsl_ch.Paragraph("MiddleTruncation:").FontAttributes(FontAttributes.Bold);
+                                vsl_ch.Paragraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                                    .LineBreakMode(LineBreakMode.MiddleTruncation);
+                                vsl_ch.Paragraph("TailTruncation:").FontAttributes(FontAttributes.Bold);
+                                vsl_ch.Paragraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+                                    .LineBreakMode(LineBreakMode.TailTruncation);
+                            });
+                        });
                     });
-                }).Build()
+                })
+                .Build()
                 .SaveAsync(targetFilePath);
 
-            await Launcher.OpenAsync(new OpenFileRequest
-            {
-                File = new ReadOnlyFile(targetFilePath)
-            });
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
         catch (Exception ex)
         {
@@ -210,169 +121,56 @@ public partial class MainPage : ContentPage
             imageData = await httpClient.GetByteArrayAsync(uri);
         }
 
-        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Images.pdf");
         try
         {
             var doc = pdfDocFactory.CreateDocument();
             await doc
                 .Configuration(cfg =>
                 {
-                    cfg.MetaData(data =>
-                    {
-                        data.Title("MauiPdfGenerator sample - Experimental Images");
-                    });
+                    cfg.MetaData(data => data.Title("MauiPdfGenerator - Image Showcase"));
                 })
                 .ContentPage()
                 .Content(c =>
                 {
-                    c.Spacing(15)
-                    .Children(ch =>
+                    c.Spacing(10).Padding(20);
+                    c.Children(ch =>
                     {
-                        ch.Paragraph("--- Casos de Uso de Imágenes ---")
-                        .FontSize(16)
-                        .FontAttributes(FontAttributes.Bold)
-                        .HorizontalTextAlignment(TextAlignment.Center);
+                        ch.Paragraph("Image Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
+                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
 
-                        // --- Propiedades básicas ---
-                        ch.Paragraph("1. Imagen con tamaño intrínseco (sin modificaciones)");
-                        ch.Image(new MemoryStream(imageData));
+                        ch.Paragraph("1. Comportamiento por Defecto").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Sin tamaño ni alineación, la imagen se centra (porque su caja es 'Fill' y el contenido se centra en la caja).");
+                        ch.Image(new MemoryStream(imageData)).BackgroundColor(Colors.LightGray);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        // --- Control de tamaño ---
-                        ch.Paragraph("2. Imagen con WidthRequest(200)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200);
+                        ch.Paragraph("2. Con Tamaño Explícito").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Con WidthRequest o HeightRequest, la alineación por defecto es 'Start' (izquierda).");
+                        ch.Image(new MemoryStream(imageData)).WidthRequest(200).BackgroundColor(Colors.LightPink);
+                        ch.Image(new MemoryStream(imageData)).HeightRequest(50).BackgroundColor(Colors.LightBlue);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        ch.Paragraph("3. Imagen con HeightRequest(75)");
-                        ch.Image(new MemoryStream(imageData))
-                            .HeightRequest(75);
+                        ch.Paragraph("3. Alineación Explícita").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("HorizontalOptions anula el comportamiento por defecto.");
+                        ch.Image(new MemoryStream(imageData)).WidthRequest(200).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightGreen);
+                        ch.Image(new MemoryStream(imageData)).WidthRequest(200).HorizontalOptions(LayoutAlignment.End).BackgroundColor(Colors.LightYellow);
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        ch.Paragraph("4. Imagen con 75 de ancho, 75 de altura y fondo gris claro");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(75)
-                            .HeightRequest(75)
-                            .BackgroundColor(Colors.LightGray);
-
-                        // --- Aspectos ---
-                        ch.Paragraph("5. Imagen con 75 de ancho, 75 de altura, fondo azul claro y Aspect.Fill (estira la imagen)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(75)
-                            .HeightRequest(75)
-                            .Aspect(Aspect.Fill)
-                            .BackgroundColor(Colors.LightBlue);
-
-                        ch.Paragraph("6. Imagen con 75 de ancho, 75 de altura, fondo azul claro y Aspect.Center (mantiene centrada)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(75)
-                            .HeightRequest(75)
-                            .Aspect(Aspect.Center)
-                            .BackgroundColor(Colors.LightBlue);
-
-                        ch.Paragraph("7. Imagen con 75 de ancho, 75 de altura, fondo azul claro y Aspect.AspectFit (mantiene proporción dentro del contenedor)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(75)
-                            .HeightRequest(75)
-                            .Aspect(Aspect.AspectFit)
-                            .BackgroundColor(Colors.LightBlue);
-
-                        ch.Paragraph("8. Imagen con 75 de ancho, 75 de altura y Aspect.AspectFill (recorta manteniendo proporción)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(75)
-                            .HeightRequest(75)
-                            .Aspect(Aspect.AspectFill)
-                            .BackgroundColor(Colors.LightBlue);
-
-                        // --- Alineación ---
-                        ch.Paragraph("9. Imagen con 200 de ancho y HorizontalOptions(Start)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .HorizontalOptions(LayoutAlignment.Start);
-
-                        ch.Paragraph("10. Imagen con 200 de ancho y HorizontalOptions(Center)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .HorizontalOptions(LayoutAlignment.Center);
-
-                        ch.Paragraph("11. Imagen con 200 de ancho y HorizontalOptions(End)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .HorizontalOptions(LayoutAlignment.End);
-
-                        // --- Márgenes y Padding ---
-                        ch.Paragraph("12. Imagen con Margin(20)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .Margin(20)
-                            .BackgroundColor(Colors.LightYellow);
-
-                        ch.Paragraph("13. Imagen con Padding(20)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .Padding(20)
-                            .BackgroundColor(Colors.LightGreen);
-
-                        ch.Paragraph("14. Imagen con Margin(10) y Padding(10)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .Margin(10)
-                            .Padding(10)
-                            .BackgroundColor(Colors.LightSalmon);
-
-                        // --- Márgenes específicos ---
-                        ch.Paragraph("15. Imagen con Margin(20, 10)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .Margin(20, 10)
-                            .BackgroundColor(Colors.LightCyan);
-
-                        ch.Paragraph("16. Imagen con Padding(20, 10)");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .Padding(20, 10)
-                            .BackgroundColor(Colors.LightGoldenrodYellow);
-
-                        // --- Combinaciones complejas ---
-                        ch.Paragraph("17. Imagen con múltiples propiedades");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(300)
-                            .HeightRequest(150)
-                            .Aspect(Aspect.AspectFit)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .Margin(10)
-                            .Padding(5)
-                            .BackgroundColor(Colors.LightSteelBlue);
-
-                        ch.Paragraph("18. Imagen estilo tarjeta");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(250)
-                            .Aspect(Aspect.AspectFit)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .Margin(15)
-                            .Padding(10)
-                            .BackgroundColor(Colors.White);
-
-                        ch.Paragraph("19. Imagen con efectos visuales combinados");
-                        ch.Image(new MemoryStream(imageData))
-                            .WidthRequest(200)
-                            .HeightRequest(200)
-                            .Aspect(Aspect.AspectFill)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .Margin(20, 10)
-                            .Padding(15)
-                            .BackgroundColor(Colors.LightCoral);
-
-                        ch.Paragraph("--- Fin de los casos de uso de imágenes ---")
-                            .FontSize(16)
-                            .FontAttributes(FontAttributes.Bold)
-                            .HorizontalTextAlignment(TextAlignment.Center)
-                            .Margin(0, 20, 0, 0);
+                        ch.Paragraph("4. Modos de Aspecto (en una caja de 150x75)").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("AspectFit (defecto): cabe completa, puede dejar espacio.");
+                        ch.Image(new MemoryStream(imageData)).WidthRequest(150).HeightRequest(75).Aspect(Aspect.AspectFit).BackgroundColor(Colors.LightSteelBlue);
+                        ch.Paragraph("AspectFill: llena la caja, puede recortar.");
+                        ch.Image(new MemoryStream(imageData)).WidthRequest(150).HeightRequest(75).Aspect(Aspect.AspectFill).BackgroundColor(Colors.LightSteelBlue);
+                        ch.Paragraph("Fill: estira para llenar la caja, deforma la imagen.");
+                        ch.Image(new MemoryStream(imageData)).WidthRequest(150).HeightRequest(75).Aspect(Aspect.Fill).BackgroundColor(Colors.LightSteelBlue);
+                        ch.Paragraph("Center: no escala, centra y recorta.");
+                        ch.Image(new MemoryStream(imageData)).WidthRequest(150).HeightRequest(75).Aspect(Aspect.Center).BackgroundColor(Colors.LightSteelBlue);
                     });
-                }).Build()
+                })
+                .Build()
                 .SaveAsync(targetFilePath);
 
-            await Launcher.OpenAsync(new OpenFileRequest
-            {
-                File = new ReadOnlyFile(targetFilePath)
-            });
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
         catch (Exception ex)
         {
@@ -382,139 +180,46 @@ public partial class MainPage : ContentPage
 
     private async void GeneratePdfWithHorizontalLine_Clicked(object sender, EventArgs e)
     {
-        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Lines.pdf");
         try
         {
             var doc = pdfDocFactory.CreateDocument();
             await doc.Configuration(cfg =>
             {
-                cfg.MetaData(data =>
-                {
-                    data.Title("MauiPdfGenerator sample - Horizontal Lines");
-                });
+                cfg.MetaData(data => data.Title("MauiPdfGenerator - HorizontalLine Showcase"));
             })
             .ContentPage()
             .Content(c =>
             {
-                c.Spacing(5);
+                c.Spacing(10).Padding(20);
                 c.Children(ch =>
                 {
-                    ch.Paragraph("Demostración de HorizontalLine")
-                    .FontSize(24)
-                    .FontAttributes(FontAttributes.Bold)
-                    .TextColor(Colors.DarkBlue)
-                    .HorizontalTextAlignment(TextAlignment.Center)
-                    .Margin(0, 0, 0, 20);
+                    ch.Paragraph("HorizontalLine Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
+                        .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
 
-                    // 1. Línea básica
-                    ch.Paragraph("1. Línea con valores predeterminados")
-                    .FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("1. Línea por Defecto").FontSize(18).FontAttributes(FontAttributes.Bold);
                     ch.HorizontalLine();
+                    ch.HorizontalLine().Margin(0, 10);
 
-                    // 2. Grosor personalizado
-                    ch.Paragraph("2. Líneas con diferentes grosores");
-                    ch.HorizontalLine().Thickness(1);
-                    ch.HorizontalLine().Thickness(3);
-                    ch.HorizontalLine().Thickness(5);
+                    ch.Paragraph("2. Grosor y Color").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.HorizontalLine().Thickness(5).Color(Colors.Red);
+                    ch.HorizontalLine().Margin(0, 10);
 
-                    // 3. Colores
-                    ch.Paragraph("3. Líneas con diferentes colores");
-                    ch.HorizontalLine().Color(Colors.Red);
-                    ch.HorizontalLine().Color(Colors.Green);
-                    ch.HorizontalLine().Color(Colors.Blue);
+                    ch.Paragraph("3. Ancho y Alineación").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.HorizontalLine().WidthRequest(200).HorizontalOptions(LayoutAlignment.Start).Color(Colors.Green);
+                    ch.HorizontalLine().WidthRequest(200).HorizontalOptions(LayoutAlignment.Center).Color(Colors.Green);
+                    ch.HorizontalLine().WidthRequest(200).HorizontalOptions(LayoutAlignment.End).Color(Colors.Green);
+                    ch.HorizontalLine().Margin(0, 10);
 
-                    // 4. Grosor y Color combinados
-                    ch.Paragraph("4. Líneas con grosor y color combinados");
-                    ch.HorizontalLine().Thickness(3).Color(Colors.Purple);
-                    ch.HorizontalLine().Thickness(5).Color(Colors.Orange);
-
-                    // 5. Ancho personalizado
-                    ch.Paragraph("5. Líneas con anchos personalizados");
-                    ch.HorizontalLine()
-                    .WidthRequest(100)
-                    .Color(Colors.DarkBlue);
-
-                    ch.HorizontalLine()
-                    .WidthRequest(200)
-                    .Color(Colors.DarkGreen);
-
-                    ch.HorizontalLine()
-                    .WidthRequest(300)
-                    .Color(Colors.DarkRed);
-
-                    // 6. Alineación horizontal
-                    ch.Paragraph("6. Líneas con diferentes alineaciones");
-                    ch.HorizontalLine()
-                    .WidthRequest(200)
-                    .HorizontalOptions(LayoutAlignment.Start)
-                    .Color(Colors.Brown);
-                    ch.HorizontalLine()
-                    .WidthRequest(200)
-                    .HorizontalOptions(LayoutAlignment.Center)
-                    .Color(Colors.Purple);
-                    ch.HorizontalLine()
-                    .WidthRequest(200)
-                    .HorizontalOptions(LayoutAlignment.End)
-                    .Color(Colors.Navy);
-
-                    // 7. Márgenes
-                    ch.Paragraph("7. Líneas con diferentes márgenes");
-                    ch.HorizontalLine()
-                    .Margin(20)
-                    .Color(Colors.DarkCyan);
-                    ch.HorizontalLine()
-                    .Margin(50, 10)
-                    .Color(Colors.DarkGoldenrod);
-                    ch.HorizontalLine()
-                    .Margin(20, 5, 20, 5)
-                    .Color(Colors.DarkMagenta);
-
-                    // 8. Padding
-                    ch.Paragraph("8. Líneas con diferentes paddings y fondo");
-                    ch.HorizontalLine()
-                    .Padding(10)
-                    .BackgroundColor(Colors.LightGray)
-                    .Color(Colors.DarkOliveGreen);
-                    ch.HorizontalLine()
-                    .Padding(20, 5)
-                    .BackgroundColor(Colors.LightPink)
-                    .Color(Colors.DarkOrchid);
-
-                    // 9. Combinación de propiedades
-                    ch.Paragraph("9. Líneas con combinaciones de propiedades");
-                    ch.HorizontalLine()
-                    .Thickness(3)
-                    .Color(Colors.DeepPink)
-                    .WidthRequest(250)
-                    .HorizontalOptions(LayoutAlignment.Center)
-                    .Margin(10)
-                    .BackgroundColor(Colors.LightYellow);
-
-                    // 10. Efectos visuales
-                    ch.Paragraph("10. Líneas con efectos visuales");
-                    ch.HorizontalLine()
-                    .Thickness(10)
-                    .Color(Colors.DarkSlateBlue)
-                    .WidthRequest(300)
-                    .HorizontalOptions(LayoutAlignment.Center)
-                    .Margin(15)
-                    .Padding(5)
-                    .BackgroundColor(Colors.LightSteelBlue);
-
-                    ch.Paragraph("Fin de la demostración de HorizontalLine")
-                    .FontSize(16)
-                    .FontAttributes(FontAttributes.Bold)
-                    .HorizontalTextAlignment(TextAlignment.Center)
-                    .Margin(0, 20, 0, 0);
+                    ch.Paragraph("4. Padding y BackgroundColor").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("El padding crea espacio dentro de la caja de la línea.");
+                    ch.HorizontalLine().Thickness(2).Padding(0, 10).BackgroundColor(Colors.LightGray).Color(Colors.DarkBlue);
                 });
             })
             .Build()
             .SaveAsync(targetFilePath);
 
-            await Launcher.OpenAsync(new OpenFileRequest
-            {
-                File = new ReadOnlyFile(targetFilePath)
-            });
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
         catch (Exception ex)
         {
@@ -531,188 +236,76 @@ public partial class MainPage : ContentPage
             imageData = await httpClient.GetByteArrayAsync(uri);
         }
 
-        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Layouts.pdf");
         try
         {
             var doc = pdfDocFactory.CreateDocument();
             await doc
                 .Configuration(cfg =>
                 {
-                    cfg.MetaData(data =>
-                    {
-                        data.Title("MauiPdfGenerator sample - Stack Layouts");
-                    });
+                    cfg.MetaData(data => data.Title("MauiPdfGenerator - Layout Showcase"));
                 })
                 .ContentPage()
                 .Content(c =>
                 {
-                    c.Spacing(15)
-                    .Children(ch =>
+                    c.Spacing(15).Padding(20);
+                    c.Children(ch =>
                     {
-                        // Título de la página
-                        ch.Paragraph("Demostración de Stack Layouts")
-                            .FontSize(24)
-                            .FontAttributes(FontAttributes.Bold)
-                            .TextColor(Colors.DarkBlue)
-                            .HorizontalTextAlignment(TextAlignment.Center)
-                            .Margin(0, 0, 0, 20);
+                        ch.Paragraph("Layout Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
+                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
 
-                        // 1. VerticalStackLayout básico
-                        ch.Paragraph("1. VerticalStackLayout básico");
-                        ch.VerticalStackLayout(vsl =>
-                        {
-                            vsl.BackgroundColor(Colors.LightGray);
-                            vsl.Children(vslch =>
-                            {
-                                vslch.Paragraph("Elemento 1");
-                                vslch.Paragraph("Elemento 2");
-                                vslch.Paragraph("Elemento 3");
-                            });
-                        });
-
-                        // 2. VerticalStackLayout con espaciado
-                        ch.Paragraph("2. VerticalStackLayout con espaciado");
-                        ch.VerticalStackLayout(vsl =>
-                        {
-                            vsl.Spacing(10)
-                            .BackgroundColor(Colors.LightPink);
-                            vsl.Children(vslch =>
-                            {
-                                vslch.Paragraph("Elemento 1");
-                                vslch.Paragraph("Elemento 2");
-                                vslch.Paragraph("Elemento 3");
-                            });
-                        });
-
-                        // 3. VerticalStackLayout con padding y margin
-                        ch.Paragraph("3. VerticalStackLayout con padding y margin");
-                        ch.VerticalStackLayout(vsl =>
-                        {
-                            vsl.Padding(10)
-                            .Margin(20)
-                            .BackgroundColor(Colors.LightGreen);
-                            vsl.Children(vslch =>
-                            {
-                                vslch.Paragraph("Elemento 1");
-                                vslch.Paragraph("Elemento 2");
-                                vslch.Paragraph("Elemento 3");
-                            });
-                        });
-
-                        // 4. HorizontalStackLayout básico
-                        ch.Paragraph("4. HorizontalStackLayout básico");
+                        ch.Paragraph("1. HorizontalStackLayout").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Se ajusta al ancho de su contenido (`Start`) y alinea a sus hijos en una fila.");
                         ch.HorizontalStackLayout(hsl =>
                         {
-                            hsl.BackgroundColor(Colors.LightYellow);
-                            hsl.Children(hslch =>
+                            hsl.Spacing(10).Padding(5).BackgroundColor(Colors.LightYellow);
+                            hsl.Children(hsl_ch =>
                             {
-                                hslch.Paragraph("H1");
-                                hslch.Paragraph("H2");
-                                hslch.Paragraph("H3");
+                                hsl_ch.Paragraph("Texto 1");
+                                hsl_ch.Image(new MemoryStream(imageData)).HeightRequest(20);
+                                hsl_ch.Paragraph("Texto 2");
                             });
                         });
+                        ch.HorizontalLine().Margin(0, 10);
 
-                        // 5. HorizontalStackLayout con espaciado
-                        ch.Paragraph("5. HorizontalStackLayout con espaciado");
-                        ch.HorizontalStackLayout(hsl =>
-                        {
-                            hsl.Spacing(20)
-                            .BackgroundColor(Colors.LightBlue);
-                            hsl.Children(hslch =>
-                            {
-                                hslch.Paragraph("H1");
-                                hslch.Paragraph("H2");
-                                hslch.Paragraph("H3");
-                            });
-                        });
-
-                        // 6. HorizontalStackLayout con imágenes
-                        ch.Paragraph("6. HorizontalStackLayout con imágenes");
-                        ch.HorizontalStackLayout(hsl =>
-                        {
-                            hsl.Spacing(10)
-                            .BackgroundColor(Colors.LightCyan);
-                            hsl.Children(hslch =>
-                            {
-                                hslch.Image(new MemoryStream(imageData)).WidthRequest(100);
-                                hslch.Image(new MemoryStream(imageData)).WidthRequest(100);
-                            });
-                        });
-
-                        // 7. StackLayout anidado
-                        ch.Paragraph("7. StackLayout anidado");
+                        ch.Paragraph("2. VerticalStackLayout Anidado (Atómico)").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Este bloque es atómico. Si no cabe, se moverá completo a la siguiente página.");
                         ch.VerticalStackLayout(vsl =>
                         {
-                            vsl.Padding(10)
-                            .BackgroundColor(Colors.LightSteelBlue);
-                            vsl.Children(hslch =>
+                            vsl.Spacing(5).Padding(10).BackgroundColor(Colors.LightPink)
+                               .HorizontalOptions(LayoutAlignment.Center).WidthRequest(400); // Es atómico porque VerticalOptions es Start (defecto)
+                            vsl.Children(vsl_ch =>
                             {
-                                hslch.Paragraph("Contenedor exterior")
-                                .FontAttributes(FontAttributes.Bold);
-                                hslch.HorizontalStackLayout(hsl1 =>
+                                vsl_ch.Paragraph("Título del Bloque Atómico").FontAttributes(FontAttributes.Bold);
+                                vsl_ch.Paragraph("Este texto no se separará del título por un salto de página.");
+                            });
+                        });
+                        ch.HorizontalLine().Margin(0, 10);
+
+                        ch.Paragraph("3. Anidamiento Complejo").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.VerticalStackLayout(vsl_outer =>
+                        {
+                            vsl_outer.Padding(10).BackgroundColor(Colors.LightGray);
+                            vsl_outer.Children(vsl_outer_ch =>
+                            {
+                                vsl_outer_ch.Paragraph("Contenedor Principal (VSL)");
+                                vsl_outer_ch.HorizontalStackLayout(hsl_inner =>
                                 {
-                                    hsl1.Spacing(10)
-                                    .BackgroundColor(Colors.LightSalmon);
-                                    hsl1.Children(hsl1ch =>
+                                    hsl_inner.Spacing(10).Padding(5).BackgroundColor(Colors.LightBlue);
+                                    hsl_inner.Children(hsl_inner_ch =>
                                     {
-                                        hsl1ch.Paragraph("Inner 1");
-                                        hsl1ch.Paragraph("Inner 2");
+                                        hsl_inner_ch.Image(new MemoryStream(imageData)).HeightRequest(40);
+                                        hsl_inner_ch.VerticalStackLayout(vsl_inner =>
+                                        {
+                                            vsl_inner.Spacing(2).BackgroundColor(Colors.LightGreen);
+                                            vsl_inner.Children(vsl_inner_ch =>
+                                            {
+                                                vsl_inner_ch.Paragraph("Texto Anidado 1").FontSize(10);
+                                                vsl_inner_ch.Paragraph("Texto Anidado 2").FontSize(10);
+                                            });
+                                        });
                                     });
                                 });
-                            });
-                        });
-
-                        // 8. StackLayout con alineación horizontal
-                        ch.Paragraph("8. StackLayout con alineación horizontal");
-                        ch.HorizontalStackLayout(hsl =>
-                        {
-                            hsl.BackgroundColor(Colors.LightGoldenrodYellow)
-                            .Padding(5).HorizontalOptions(LayoutAlignment.Center);
-                            hsl.Children(hslch =>
-                            {
-                                hslch.Paragraph("Start").HorizontalOptions(LayoutAlignment.Start);
-                                hslch.Paragraph("Center").HorizontalOptions(LayoutAlignment.Center);
-                                hslch.Paragraph("End").HorizontalOptions(LayoutAlignment.End);
-                            });
-                        });
-
-                        // 9. StackLayout con elementos de tamaño específico
-                        ch.Paragraph("9. StackLayout con elementos de tamaño específico");
-                        ch.HorizontalStackLayout(hsl =>
-                        {
-                            hsl.Spacing(5).BackgroundColor(Colors.Snow);
-                            hsl.Children(hslch =>
-                            {
-                                hslch.Paragraph("W:75").WidthRequest(75).BackgroundColor(Colors.LightGray);
-                                hslch.Paragraph("W:150").WidthRequest(150).BackgroundColor(Colors.LightPink);
-                                hslch.Paragraph("W:100").WidthRequest(100).BackgroundColor(Colors.LightGreen);
-                            });
-                        });
-
-                        // 10. StackLayout con combinación de elementos
-                        ch.Paragraph("10. StackLayout con combinación de elementos");
-                        ch.VerticalStackLayout(vsl =>
-                        {
-                            vsl.Spacing(10)
-                            .Padding(10)
-                            .BackgroundColor(Colors.Snow);
-                            vsl.Children(vslch =>
-                            {
-                                vslch.Image(new MemoryStream(imageData))
-                                .WidthRequest(150)
-                                .HorizontalOptions(LayoutAlignment.Center);
-                                vslch.HorizontalStackLayout(hsl1 =>
-                                {
-                                    hsl1.Spacing(10)
-                                    .HorizontalOptions(LayoutAlignment.Center)
-                                    .BackgroundColor(Colors.LightGray);
-                                    hsl1.Children(hsl1ch =>
-                                    {
-                                        hsl1ch.Paragraph("Texto 1").Padding(5);
-                                        hsl1ch.Paragraph("Texto 2").Padding(5);
-                                    });
-                                });
-
                             });
                         });
                     });
@@ -720,10 +313,7 @@ public partial class MainPage : ContentPage
                 .Build()
                 .SaveAsync(targetFilePath);
 
-            await Launcher.OpenAsync(new OpenFileRequest
-            {
-                File = new ReadOnlyFile(targetFilePath)
-            });
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
         catch (Exception ex)
         {
@@ -740,127 +330,63 @@ public partial class MainPage : ContentPage
             imageData = await httpClient.GetByteArrayAsync(uri);
         }
 
-        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Grid.pdf");
         try
         {
             var doc = pdfDocFactory.CreateDocument();
-
-            await doc
-                .Configuration(cfg =>
-                {
-                    cfg.MetaData(data =>
-                    {
-                        data.Title("MauiPdfGenerator sample - Grid");
-                    });
-                })
-                .ContentPage<IPdfGrid>()
-                .Content(c =>
-                {
-                    c.BackgroundColor(Colors.LightSlateGray)
-                    .Padding(10)
-                    .RowSpacing(5)
-                    .ColumnSpacing(5)
-                    .RowDefinitions(rd =>
-                    {
-                        rd.GridLength(GridUnitType.Auto); // 0
-                        rd.GridLength(GridUnitType.Auto); // 1
-                        rd.GridLength(GridUnitType.Auto); // 2
-                        rd.GridLength(GridUnitType.Auto); // 3
-                        rd.GridLength(GridUnitType.Auto); // 4
-                        rd.GridLength(GridUnitType.Auto); // 5
-                    })
+            await doc.Configuration(cfg =>
+            {
+                cfg.MetaData(data => data.Title("MauiPdfGenerator - Grid Showcase"));
+            })
+            .ContentPage<IPdfGrid>() // Usamos un Grid como layout raíz
+            .Content(grid =>
+            {
+                grid.Margin(20).BackgroundColor(Colors.WhiteSmoke)
+                    .RowSpacing(5).ColumnSpacing(10)
                     .ColumnDefinitions(cd =>
                     {
-                        cd.GridLength(GridUnitType.Star);   // 0
-                        cd.GridLength(GridUnitType.Auto);   // 1
-                        cd.GridLength(GridUnitType.Auto);   // 2
-                        cd.GridLength(GridUnitType.Auto);   // 3
-                        cd.GridLength(100);                 // 4
+                        cd.GridLength(GridLength.Auto); // Col 0
+                        cd.GridLength(GridLength.Star); // Col 1
+                        cd.GridLength(100);             // Col 2
+                    })
+                    .RowDefinitions(rd =>
+                    {
+                        rd.GridLength(GridLength.Auto); // Fila 0
+                        rd.GridLength(GridLength.Auto); // Fila 1
+                        rd.GridLength(50);              // Fila 2
                     })
                     .Children(ch =>
                     {
-                        ch.Paragraph("Tabla de cuotas")
-                            .FontAttributes(FontAttributes.Bold)
-                            .TextTransform(TextTransform.Uppercase)
+                        // Fila 0
+                        ch.Paragraph("Header 1").FontAttributes(FontAttributes.Bold).Row(0).Column(0);
+                        ch.Paragraph("Header 2 (Star Column)").FontAttributes(FontAttributes.Bold).Row(0).Column(1);
+                        ch.Paragraph("Header 3 (Fixed)").FontAttributes(FontAttributes.Bold).Row(0).Column(2);
+
+                        // Fila 1
+                        ch.Image(new MemoryStream(imageData)).Row(1).Column(0).HeightRequest(40);
+                        ch.Paragraph("Este texto está en una columna Star, por lo que se ajustará para llenar el espacio disponible. Lorem ipsum dolor sit amet, consectetur adipiscing elit.")
+                            .Row(1).Column(1);
+                        ch.Paragraph("Contenido de ancho fijo, alineado a la derecha.")
+                            .Row(1).Column(2).HorizontalTextAlignment(TextAlignment.End);
+
+                        // Fila 2
+                        ch.Paragraph("Celda con ColumnSpan=2 y centrada")
+                            .Row(2).Column(0).ColumnSpan(2)
                             .HorizontalOptions(LayoutAlignment.Center)
                             .VerticalOptions(LayoutAlignment.Center)
-                            .ColumnSpan(3);
+                            .BackgroundColor(Colors.LightBlue);
 
-                        ch.Image(new MemoryStream(imageData))
-                            .HorizontalOptions(LayoutAlignment.End)
-                            .WidthRequest(80)
-                            .Column(3)
-                            .RowSpan(2);
-
-                        ch.Paragraph("Nombres")
-                            .FontAttributes(FontAttributes.Bold)
-                            .TextTransform(TextTransform.Uppercase)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center)
-                            .Row(1);
-
-                        ch.Paragraph("Cuotas")
-                            .FontAttributes(FontAttributes.Bold)
-                            .TextTransform(TextTransform.Uppercase)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center)
-                            .Row(1)
-                            .Column(1)
-                            .ColumnSpan(3);
-
-                        ch.Paragraph("Total de abonados")
-                            .FontAttributes(FontAttributes.Bold)
-                            .TextTransform(TextTransform.Uppercase)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center)
-                            .Row(1)
-                            .Column(4);
-
-                        ch.Paragraph("1")
-                            .FontAttributes(FontAttributes.Bold)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center)
-                            .Row(2)
-                            .Column(1);
-                        ch.Paragraph("2")
-                            .FontAttributes(FontAttributes.Bold)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center)
-                            .Row(2)
-                            .Column(2);
-
-                        ch.Paragraph("3")
-                            .Row(2)
-                            .Column(3)
-                            .FontAttributes(FontAttributes.Bold)
-                            .HorizontalOptions(LayoutAlignment.Center)
-                            .VerticalOptions(LayoutAlignment.Center);
-
-                        ch.Paragraph("María González").Row(3);
-                        ch.Paragraph("120").Row(3).Column(1).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("150").Row(3).Column(2).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("130").Row(3).Column(3).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("400.00").Row(3).Column(4).HorizontalTextAlignment(TextAlignment.End);
-
-                        ch.Paragraph("Luis Pérez").Row(4);
-                        ch.Paragraph("100").Row(4).Column(1).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("110").Row(4).Column(2).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("105").Row(4).Column(3).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("315.00").Row(4).Column(4).HorizontalTextAlignment(TextAlignment.End);
-
-                        ch.Paragraph("Carlos Gómez").Row(5);
-                        ch.Paragraph("130").Row(5).Column(1).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("140").Row(5).Column(2).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("135").Row(5).Column(3).HorizontalTextAlignment(TextAlignment.End);
-                        ch.Paragraph("405.00").Row(5).Column(4).HorizontalTextAlignment(TextAlignment.End);
+                        ch.Paragraph("Celda (2,2)")
+                            .Row(2).Column(2)
+                            .VerticalOptions(LayoutAlignment.End)
+                            .HorizontalTextAlignment(TextAlignment.End)
+                            .BackgroundColor(Colors.LightGreen);
                     });
-                }).Build()
+            })
+            .Build()
             .SaveAsync(targetFilePath);
 
-            await Launcher.OpenAsync(new OpenFileRequest
-            {
-                File = new ReadOnlyFile(targetFilePath)
-            });
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
         catch (Exception ex)
         {
@@ -868,50 +394,4 @@ public partial class MainPage : ContentPage
         }
     }
 
-    private async void GeneratePdfWithMiniGrid_Clicked(object sender, EventArgs e)
-    {
-        byte[] imageData;
-        using (var httpClient = new HttpClient())
-        {
-            var uri = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
-            imageData = await httpClient.GetByteArrayAsync(uri);
-        }
-
-        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
-        try
-        {
-            var doc = pdfDocFactory.CreateDocument();
-
-            await doc
-                .Configuration(cfg =>
-                {
-                    cfg.MetaData(data =>
-                    {
-                        data.Title("MauiPdfGenerator sample - Grid");
-                    });
-                })
-                .ContentPage<IPdfGrid>()
-                .Content(c =>
-                {
-                    c.BackgroundColor(Colors.LightGray)
-                    .Padding(5)
-                    .WidthRequest(200)
-                    .VerticalOptions(LayoutAlignment.End)
-                    .Children(ch =>
-                    {
-                        ch.Paragraph("Hola mundo");
-                    });
-                }).Build()
-            .SaveAsync(targetFilePath);
-
-            await Launcher.OpenAsync(new OpenFileRequest
-            {
-                File = new ReadOnlyFile(targetFilePath)
-            });
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
-        }
-    }
 }

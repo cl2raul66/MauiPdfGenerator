@@ -2,9 +2,6 @@
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Diagnostics;
-using MauiPdfGenerator.Diagnostics.Enums;
-using MauiPdfGenerator.Diagnostics.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -22,11 +19,7 @@ internal class GridRenderer : IElementRenderer
         if (context.Element is not PdfGridData grid)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfGridData)} or is null.");
 
-        var boxAvailableWidth = availableRect.Width - (float)grid.GetMargin.HorizontalThickness;
-        var contentAvailableWidth = (grid.GetHorizontalOptions == LayoutAlignment.Fill && !grid.GetWidthRequest.HasValue)
-            ? boxAvailableWidth - (float)grid.GetPadding.HorizontalThickness
-            : float.PositiveInfinity;
-
+        var contentAvailableWidth = availableRect.Width - (float)grid.GetMargin.HorizontalThickness - (float)grid.GetPadding.HorizontalThickness;
         if (grid.GetWidthRequest.HasValue)
         {
             contentAvailableWidth = (float)grid.GetWidthRequest.Value - (float)grid.GetPadding.HorizontalThickness;
@@ -34,13 +27,16 @@ internal class GridRenderer : IElementRenderer
 
         var (columnWidths, rowHeights, childMeasures) = await MeasureGridContent(grid, context, new SKSize(contentAvailableWidth, float.PositiveInfinity));
 
-        float finalBoxWidth = (float?)grid.GetWidthRequest ?? (columnWidths.Sum() + (float)grid.GetColumnSpacing * Math.Max(0, columnWidths.Length - 1)) + (float)grid.GetPadding.HorizontalThickness;
-        float finalBoxHeight = (rowHeights.Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowHeights.Length - 1)) + (float)grid.GetPadding.VerticalThickness;
+        float finalContentWidth = columnWidths.Sum() + (float)grid.GetColumnSpacing * Math.Max(0, columnWidths.Length - 1);
+        float finalContentHeight = rowHeights.Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowHeights.Length - 1);
+
+        float boxWidth = finalContentWidth + (float)grid.GetPadding.HorizontalThickness;
+        float boxHeight = finalContentHeight + (float)grid.GetPadding.VerticalThickness;
 
         context.LayoutState[grid] = new GridCache(columnWidths, rowHeights, childMeasures);
 
-        var totalWidth = finalBoxWidth + (float)grid.GetMargin.HorizontalThickness;
-        var totalHeight = finalBoxHeight + (float)grid.GetMargin.VerticalThickness;
+        var totalWidth = boxWidth + (float)grid.GetMargin.HorizontalThickness;
+        var totalHeight = boxHeight + (float)grid.GetMargin.VerticalThickness;
 
         return new PdfLayoutInfo(grid, totalWidth, totalHeight);
     }
@@ -65,7 +61,7 @@ internal class GridRenderer : IElementRenderer
 
         var (rowsForThisPage, remainingChildren) = DetermineRowsForCurrentPage(grid, measureCache.RowHeights, availableContentHeight);
 
-        if (rowsForThisPage.Count == 0 && grid.GetChildren.Any())
+        if (!rowsForThisPage.Any() && grid.GetChildren.Any())
         {
             return new PdfLayoutInfo(grid, finalRect.Width, 0, PdfRect.Empty, grid);
         }
@@ -80,7 +76,7 @@ internal class GridRenderer : IElementRenderer
         var childrenForThisPage = grid.GetChildren.Cast<PdfElementData>().Where(c => !remainingChildren.Contains(c)).ToList();
         var arrangedCells = await ArrangeChildrenInRows(grid, context, measureCache, rowsForThisPage, childrenForThisPage, contentBox);
 
-        float arrangedContentHeight = rowsForThisPage.Count != 0 ? rowsForThisPage.Select(r => measureCache.RowHeights[r]).Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowsForThisPage.Count - 1) : 0;
+        float arrangedContentHeight = rowsForThisPage.Any() ? rowsForThisPage.Select(r => measureCache.RowHeights[r]).Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowsForThisPage.Count - 1) : 0;
         float finalHeightForThisPage = arrangedContentHeight + (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
         var arrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, finalHeightForThisPage);
 
@@ -137,11 +133,11 @@ internal class GridRenderer : IElementRenderer
     private async Task<(float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures)> MeasureGridContent(PdfGridData grid, PdfGenerationContext context, SKSize availableContentSize)
     {
         var children = grid.GetChildren.Cast<PdfElementData>().ToList();
-        var numCols = grid.GetColumnDefinitions.Any() ? grid.GetColumnDefinitions.Count : children.Count != 0 ? children.Max(c => c.GridColumn + c.GridColumnSpan) : 1;
-        var numRows = grid.GetRowDefinitions.Any() ? grid.GetRowDefinitions.Count : children.Count != 0 ? children.Max(c => c.GridRow + c.GridRowSpan) : 1;
+        var numCols = grid.GetColumnDefinitions.Any() ? grid.GetColumnDefinitions.Count : children.Any() ? children.Max(c => c.GridColumn + c.GridColumnSpan) : 1;
+        var numRows = grid.GetRowDefinitions.Any() ? grid.GetRowDefinitions.Count : children.Any() ? children.Max(c => c.GridRow + c.GridRowSpan) : 1;
 
-        var colDefs = grid.GetColumnDefinitions.Count == numCols ? [.. grid.GetColumnDefinitions] : Enumerable.Repeat(new ColumnDefinition(GridLength.Star), numCols).ToList();
-        var rowDefs = grid.GetRowDefinitions.Count == numRows ? [.. grid.GetRowDefinitions] : Enumerable.Repeat(new RowDefinition(GridLength.Auto), numRows).ToList();
+        var colDefs = grid.GetColumnDefinitions.Count == numCols ? grid.GetColumnDefinitions.ToList() : Enumerable.Repeat(new ColumnDefinition(GridLength.Star), numCols).ToList();
+        var rowDefs = grid.GetRowDefinitions.Count == numRows ? grid.GetRowDefinitions.ToList() : Enumerable.Repeat(new RowDefinition(GridLength.Auto), numRows).ToList();
 
         var columnWidths = await CalculateColumnWidthsAsync(grid, context, availableContentSize.Width, colDefs, numCols);
 
@@ -150,6 +146,8 @@ internal class GridRenderer : IElementRenderer
         foreach (var child in children)
         {
             var cellInfo = (IPdfGridCellInfo)child;
+            if (cellInfo.Row >= numRows || cellInfo.Column >= numCols) continue;
+
             var childContext = context with { Element = child };
             var renderer = context.RendererFactory.GetRenderer(child);
 
@@ -159,7 +157,7 @@ internal class GridRenderer : IElementRenderer
             var measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, childAvailableWidth, float.PositiveInfinity));
             childMeasures.Add(measure);
 
-            if (cellInfo.RowSpan == 1 && cellInfo.Row < rowDefs.Count && rowDefs[cellInfo.Row].Height.IsAuto)
+            if (cellInfo.RowSpan == 1 && rowDefs[cellInfo.Row].Height.IsAuto)
             {
                 rowMaxHeights[cellInfo.Row] = Math.Max(rowMaxHeights[cellInfo.Row], measure.Height);
             }
@@ -171,120 +169,106 @@ internal class GridRenderer : IElementRenderer
         return (columnWidths, rowHeights, childMeasures);
     }
 
-    // --- LÓGICA COMPLEJA RESTAURADA ---
     private async Task<float[]> CalculateColumnWidthsAsync(PdfGridData grid, PdfGenerationContext context, float totalAvailableWidth, IReadOnlyList<ColumnDefinition> colDefs, int numCols)
     {
         var columnWidths = new float[numCols];
         var children = grid.GetChildren.Cast<PdfElementData>().ToList();
-        var childMeasures = new Dictionary<object, float>();
 
         bool isWidthConstrained = !float.IsPositiveInfinity(totalAvailableWidth);
-        if (isWidthConstrained)
-        {
-            totalAvailableWidth -= (float)grid.GetColumnSpacing * Math.Max(0, numCols - 1);
-        }
 
-        float assignedWidth = 0;
+        // --- INICIO DE LA LÓGICA CORREGIDA ---
+        // Si el Grid no se estira (Start, Center, End), las columnas Star se tratan como Auto.
+        bool treatStarAsAuto = grid.GetHorizontalOptions != LayoutAlignment.Fill && !grid.GetWidthRequest.HasValue;
+
+        var effectiveColDefs = new List<ColumnDefinition>();
+        foreach (var cd in colDefs)
+        {
+            if (treatStarAsAuto && cd.Width.IsStar)
+            {
+                effectiveColDefs.Add(new ColumnDefinition(GridLength.Auto));
+            }
+            else
+            {
+                effectiveColDefs.Add(cd);
+            }
+        }
+        // --- FIN DE LA LÓGICA CORREGIDA ---
+
+        float availableWidthForStars = isWidthConstrained ? totalAvailableWidth - (float)grid.GetColumnSpacing * Math.Max(0, numCols - 1) : 0;
+
         for (int i = 0; i < numCols; i++)
         {
-            if (colDefs[i].Width.IsAbsolute)
+            if (effectiveColDefs[i].Width.IsAbsolute)
             {
-                columnWidths[i] = (float)colDefs[i].Width.Value;
-                assignedWidth += columnWidths[i];
+                columnWidths[i] = (float)effectiveColDefs[i].Width.Value;
+                if (isWidthConstrained) availableWidthForStars -= columnWidths[i];
             }
         }
 
-        foreach (var child in children)
+        var autoColumns = Enumerable.Range(0, numCols).Where(i => effectiveColDefs[i].Width.IsAuto).ToList();
+        if (autoColumns.Any())
         {
-            var info = (IPdfGridCellInfo)child;
-            bool spansAuto = false;
-            bool spansStar = false;
-            for (int i = 0; i < info.ColumnSpan; i++)
+            var childMeasures = new Dictionary<object, float>();
+            foreach (var child in children)
             {
-                int colIndex = info.Column + i;
-                if (colIndex < numCols)
+                var info = (IPdfGridCellInfo)child;
+                bool spansOnlyAutoOrAbsolute = true;
+                for (int i = 0; i < info.ColumnSpan; i++)
                 {
-                    if (colDefs[colIndex].Width.IsAuto) spansAuto = true;
-                    if (colDefs[colIndex].Width.IsStar) spansStar = true;
+                    if (info.Column + i < numCols && effectiveColDefs[info.Column + i].Width.IsStar)
+                    {
+                        spansOnlyAutoOrAbsolute = false;
+                        break;
+                    }
+                }
+
+                if (spansOnlyAutoOrAbsolute)
+                {
+                    var renderer = context.RendererFactory.GetRenderer(child);
+                    var childContext = context with { Element = child };
+                    var measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, float.PositiveInfinity, float.PositiveInfinity));
+                    childMeasures[child] = measure.Width;
                 }
             }
 
-            if (spansAuto && !spansStar)
+            foreach (int i in autoColumns)
             {
-                var renderer = context.RendererFactory.GetRenderer(child);
-                var childContext = context with { Element = child };
-                var measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, float.PositiveInfinity, float.PositiveInfinity));
-                childMeasures[child] = measure.Width;
-            }
-        }
-
-        bool changed;
-        do
-        {
-            changed = false;
-            for (int i = 0; i < numCols; i++)
-            {
-                if (colDefs[i].Width.IsAuto)
+                float maxAutoWidth = 0;
+                foreach (var child in children)
                 {
-                    float maxAutoWidth = 0;
-                    foreach (var child in children)
+                    var info = (IPdfGridCellInfo)child;
+                    if (info.Column <= i && (info.Column + info.ColumnSpan) > i && childMeasures.TryGetValue(child, out float desiredWidth))
                     {
-                        var info = (IPdfGridCellInfo)child;
-                        if (info.Column <= i && (info.Column + info.ColumnSpan) > i)
+                        float knownWidthInSpan = 0;
+                        int autoColsInSpan = 0;
+                        for (int j = 0; j < info.ColumnSpan; j++)
                         {
-                            if (childMeasures.TryGetValue(child, out float desiredWidth))
-                            {
-                                float knownWidthInSpan = 0;
-                                int autoColsInSpan = 0;
-                                for (int j = 0; j < info.ColumnSpan; j++)
-                                {
-                                    int colIndex = info.Column + j;
-                                    if (colDefs[colIndex].Width.IsAbsolute || (colDefs[colIndex].Width.IsAuto && columnWidths[colIndex] > 0))
-                                    {
-                                        knownWidthInSpan += columnWidths[colIndex];
-                                    }
-                                    else if (colDefs[colIndex].Width.IsAuto)
-                                    {
-                                        autoColsInSpan++;
-                                    }
-                                }
-
-                                if (autoColsInSpan > 0)
-                                {
-                                    float requiredWidth = (desiredWidth - knownWidthInSpan) / autoColsInSpan;
-                                    if (requiredWidth > maxAutoWidth)
-                                    {
-                                        maxAutoWidth = requiredWidth;
-                                    }
-                                }
-                            }
+                            int colIndex = info.Column + j;
+                            if (effectiveColDefs[colIndex].Width.IsAbsolute) knownWidthInSpan += columnWidths[colIndex];
+                            else if (effectiveColDefs[colIndex].Width.IsAuto) autoColsInSpan++;
+                        }
+                        if (autoColsInSpan > 0)
+                        {
+                            maxAutoWidth = Math.Max(maxAutoWidth, (desiredWidth - knownWidthInSpan) / autoColsInSpan);
                         }
                     }
-
-                    if (columnWidths[i] < maxAutoWidth)
-                    {
-                        columnWidths[i] = maxAutoWidth;
-                        changed = true;
-                    }
                 }
+                columnWidths[i] = maxAutoWidth;
+                if (isWidthConstrained) availableWidthForStars -= columnWidths[i];
             }
-        } while (changed);
+        }
 
-        assignedWidth += columnWidths.Where((w, i) => colDefs[i].Width.IsAuto).Sum();
-
-        if (isWidthConstrained)
+        if (isWidthConstrained && availableWidthForStars > 0)
         {
-            float remainingForStar = totalAvailableWidth - assignedWidth;
-            float totalStarValue = colDefs.Where(cd => cd.Width.IsStar).Sum(cd => (float)cd.Width.Value);
-
-            if (remainingForStar > 0 && totalStarValue > 0)
+            float totalStarValue = effectiveColDefs.Where(cd => cd.Width.IsStar).Sum(cd => (float)cd.Width.Value);
+            if (totalStarValue > 0)
             {
-                float starUnit = remainingForStar / totalStarValue;
+                float starUnit = availableWidthForStars / totalStarValue;
                 for (int i = 0; i < numCols; i++)
                 {
-                    if (colDefs[i].Width.IsStar)
+                    if (effectiveColDefs[i].Width.IsStar)
                     {
-                        columnWidths[i] = (float)colDefs[i].Width.Value * starUnit;
+                        columnWidths[i] = (float)effectiveColDefs[i].Width.Value * starUnit;
                     }
                 }
             }
@@ -293,7 +277,6 @@ internal class GridRenderer : IElementRenderer
         return columnWidths;
     }
 
-    // --- LÓGICA COMPLEJA RESTAURADA ---
     private float[] CalculateRowHeights(IReadOnlyList<RowDefinition> rowDefs, float totalAvailableHeight, float spacing, float[] autoSizes, List<ChildMeasureInfo> childInfos)
     {
         var result = new float[rowDefs.Count];
@@ -317,7 +300,7 @@ internal class GridRenderer : IElementRenderer
             }
             else if (def.Height.IsAuto)
             {
-                result[i] = autoSizes[i];
+                result[i] = autoSizes.Length > i ? autoSizes[i] : 0;
                 assigned += result[i];
             }
         }
@@ -373,7 +356,7 @@ internal class GridRenderer : IElementRenderer
             if (rowsToArrange.Contains(i)) continue;
 
             var childrenTouchingRow = allChildren.Where(c => c.GridRow <= i && (c.GridRow + c.GridRowSpan) > i).ToList();
-            if (childrenTouchingRow.Count == 0)
+            if (!childrenTouchingRow.Any())
             {
                 if (currentHeight + rowHeights[i] <= availableHeight)
                 {
@@ -395,7 +378,7 @@ internal class GridRenderer : IElementRenderer
 
             float heightWithBlock = (rowsToArrange.Count == 0) ? blockHeight : currentHeight + (float)grid.GetRowSpacing + blockHeight;
 
-            if (heightWithBlock <= availableHeight || rowsToArrange.Count == 0)
+            if (heightWithBlock <= availableHeight || !rowsToArrange.Any())
             {
                 for (int j = blockStartRow; j <= blockEndRow; j++)
                 {
@@ -441,8 +424,11 @@ internal class GridRenderer : IElementRenderer
             var measure = measureCache.ChildMeasures.First(m => m.Element == child);
             var renderer = context.RendererFactory.GetRenderer(child);
 
-            var cellWidth = Enumerable.Range(cellInfo.Column, cellInfo.ColumnSpan).Sum(c => measureCache.ColumnWidths[c]) + (float)grid.GetColumnSpacing * (cellInfo.ColumnSpan - 1);
-            var cellHeight = Enumerable.Range(cellInfo.Row, cellInfo.RowSpan).Sum(r => measureCache.RowHeights[r]) + (float)grid.GetRowSpacing * (cellInfo.RowSpan - 1);
+            var colSpan = Math.Min(cellInfo.ColumnSpan, measureCache.ColumnWidths.Length - cellInfo.Column);
+            var rowSpan = Math.Min(cellInfo.RowSpan, measureCache.RowHeights.Length - cellInfo.Row);
+
+            var cellWidth = Enumerable.Range(cellInfo.Column, colSpan).Sum(c => measureCache.ColumnWidths[c]) + (float)grid.GetColumnSpacing * (colSpan - 1);
+            var cellHeight = Enumerable.Range(cellInfo.Row, rowSpan).Sum(r => measureCache.RowHeights[r]) + (float)grid.GetRowSpacing * (rowSpan - 1);
 
             var childWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? cellWidth - (float)child.GetMargin.HorizontalThickness : measure.Width;
             var childHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? cellHeight - (float)child.GetMargin.VerticalThickness : measure.Height;

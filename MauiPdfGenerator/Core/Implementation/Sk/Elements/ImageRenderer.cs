@@ -44,6 +44,7 @@ internal class ImageRenderer : IElementRenderer
 
         float boxWidth, boxHeight;
 
+        // --- INICIO DE LA LÓGICA DE MEDIDA DEFINITIVA ---
         if (image.GetWidthRequest.HasValue && image.GetHeightRequest.HasValue)
         {
             boxWidth = (float)image.GetWidthRequest.Value;
@@ -59,20 +60,24 @@ internal class ImageRenderer : IElementRenderer
         {
             boxHeight = (float)image.GetHeightRequest.Value;
             float imageContentHeight = boxHeight - (float)image.GetPadding.VerticalThickness;
-            if (aspectRatio > 0)
-            {
-                boxWidth = (imageContentHeight / aspectRatio) + (float)image.GetPadding.HorizontalThickness;
-            }
-            else
-            {
-                boxWidth = imageWidth + (float)image.GetPadding.HorizontalThickness;
-            }
+            boxWidth = (aspectRatio > 0) ? (imageContentHeight / aspectRatio) + (float)image.GetPadding.HorizontalThickness : imageWidth + (float)image.GetPadding.HorizontalThickness;
+        }
+        else if (!float.IsInfinity(availableRect.Width) && availableRect.Width > 0)
+        {
+            // Caso del Grid: No hay Request, pero el padre (Grid) impone un ancho.
+            // Respetamos esa restricción.
+            boxWidth = availableRect.Width;
+            float imageContentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
+            boxHeight = (imageContentWidth * aspectRatio) + (float)image.GetPadding.VerticalThickness;
         }
         else
         {
+            // Fallback final: No hay Request y el padre no impone ancho (ej. HSL).
+            // Usamos el tamaño intrínseco de la imagen.
             boxWidth = imageWidth + (float)image.GetPadding.HorizontalThickness;
             boxHeight = imageHeight + (float)image.GetPadding.VerticalThickness;
         }
+        // --- FIN DE LA LÓGICA DE MEDIDA DEFINITIVA ---
 
         var totalWidth = boxWidth + (float)image.GetMargin.HorizontalThickness;
         var totalHeight = boxHeight + (float)image.GetMargin.VerticalThickness;
@@ -188,7 +193,6 @@ internal class ImageRenderer : IElementRenderer
         canvas.Restore();
     }
 
-    // --- MÉTODO CALCULATE TARGET RECT RECONSTRUIDO ---
     private static SKRect CalculateTargetRect(SKImage image, SKRect container, Aspect aspect)
     {
         float imageWidth = image.Width;
@@ -217,12 +221,12 @@ internal class ImageRenderer : IElementRenderer
             case Aspect.AspectFit:
                 float imageRatio = imageWidth / imageHeight;
                 float containerRatio = containerWidth / containerHeight;
-                if (imageRatio > containerRatio) // La imagen es más ancha (proporcionalmente) que el contenedor
+                if (imageRatio > containerRatio)
                 {
                     finalWidth = containerWidth;
                     finalHeight = containerWidth / imageRatio;
                 }
-                else // La imagen es más alta o tiene la misma proporción
+                else
                 {
                     finalHeight = containerHeight;
                     finalWidth = containerHeight * imageRatio;
@@ -232,12 +236,12 @@ internal class ImageRenderer : IElementRenderer
             case Aspect.AspectFill:
                 imageRatio = imageWidth / imageHeight;
                 containerRatio = containerWidth / containerHeight;
-                if (imageRatio > containerRatio) // La imagen es más ancha
+                if (imageRatio > containerRatio)
                 {
                     finalHeight = containerHeight;
                     finalWidth = containerHeight * imageRatio;
                 }
-                else // La imagen es más alta
+                else
                 {
                     finalWidth = containerWidth;
                     finalHeight = containerWidth / imageRatio;
@@ -245,7 +249,6 @@ internal class ImageRenderer : IElementRenderer
                 break;
         }
 
-        // CORRECCIÓN: Calcular el centrado para todos los modos excepto Fill.
         float x = container.Left + (containerWidth - finalWidth) / 2f;
         float y = container.Top + (containerHeight - finalHeight) / 2f;
 

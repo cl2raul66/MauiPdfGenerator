@@ -6,9 +6,15 @@
 
     <Grid
         Padding="30"
-        ColumnDefinitions="*,auto"
-        ColumnSpacing="30">
-        <VerticalStackLayout Spacing="25">
+        ColumnDefinitions="{OnIdiom Desktop='*,auto',
+                                    Default='*'}"
+        ColumnSpacing="{OnIdiom Default='30',
+                                Phone='0'}"
+        RowDefinitions="{OnIdiom Desktop='*',
+                                 Default='auto,*'}"
+        RowSpacing="{OnIdiom Default='0',
+                             Phone='30'}">
+        <VerticalStackLayout Spacing="{OnIdiom Default='25', Phone='8'}">
             <Image
                 Aspect="AspectFit"
                 HeightRequest="185"
@@ -24,8 +30,8 @@
                 Style="{StaticResource SubHeadline}"
                 Text="Welcome to &#10;.NET Multi-platform App UI" />
         </VerticalStackLayout>
-        <ScrollView Grid.Column="1">
-            <VerticalStackLayout Spacing="15">
+        <ScrollView Grid.Row="{OnIdiom Default='0', Phone='1'}" Grid.Column="{OnIdiom Default='1', Phone='0'}">
+            <VerticalStackLayout Spacing="{OnIdiom Default='15', Phone='12'}">
                 <Button
                     x:Name="GeneratePdfOnlyParagraph"
                     Clicked="GeneratePdfOnlyParagraph_Clicked"
@@ -48,7 +54,7 @@
                     Text="Generate PDF file, with stack layout" />
                 <Button
                     x:Name="GeneratePdfWithGrid"
-                    Clicked="GeneratePdfWithMiniGrid_Clicked"
+                    Clicked="GeneratePdfWithGrid_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, with grid" />
             </VerticalStackLayout>

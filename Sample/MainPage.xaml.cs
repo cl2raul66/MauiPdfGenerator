@@ -403,75 +403,41 @@ public partial class MainPage : ContentPage
             imageData = await httpClient.GetByteArrayAsync(uri);
         }
 
-        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Grid.pdf");
-        try
-        {
-            var doc = pdfDocFactory.CreateDocument();
-            await doc.Configuration(cfg =>
-            {
-                cfg.MetaData(data => data.Title("MauiPdfGenerator - Grid Showcase"));
-            })
-            .ContentPage() // Usamos un Grid como layout raíz
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+
+        var doc = pdfDocFactory.CreateDocument();
+        await doc.ContentPage<IPdfGrid>()
             .Content(c =>
             {
-                c.Children(ch =>
+                c.BackgroundColor(Colors.Snow).VerticalOptions(LayoutAlignment.Fill).HorizontalOptions(LayoutAlignment.Fill);
+                c.RowDefinitions(rd =>
                 {
-                    ch.Grid(g =>
-                    {
-                        g.Margin(20)
-                        .BackgroundColor(Colors.WhiteSmoke)
-                        .RowSpacing(5).ColumnSpacing(10)
-                        .ColumnDefinitions(cd =>
-                        {
-                            cd.GridLength(GridLength.Auto); // Col 0
-                            cd.GridLength(GridLength.Star); // Col 1
-                            cd.GridLength(100);             // Col 2
-                        })
-                        .RowDefinitions(rd =>
-                        {
-                            rd.GridLength(GridLength.Auto); // Fila 0
-                            rd.GridLength(GridLength.Auto); // Fila 1
-                            rd.GridLength(50);              // Fila 2
-                        })
-                        .Children(ch =>
-                        {
-                            // Fila 0
-                            ch.Paragraph("Header 1").FontAttributes(FontAttributes.Bold).Row(0).Column(0);
-                            ch.Paragraph("Header 2 (Star Column)").FontAttributes(FontAttributes.Bold).Row(0).Column(1);
-                            ch.Paragraph("Header 3 (Fixed)").FontAttributes(FontAttributes.Bold).Row(0).Column(2);
-
-                            // Fila 1
-                            ch.Image(new MemoryStream(imageData)).Row(1).Column(0).HeightRequest(40);
-                            ch.Paragraph("Este texto está en una columna Star, por lo que se ajustará para llenar el espacio disponible. Lorem ipsum dolor sit amet, consectetur adipiscing elit.")
-                                .Row(1).Column(1);
-                            ch.Paragraph("Contenido de ancho fijo, alineado a la derecha.")
-                                .Row(1).Column(2).HorizontalTextAlignment(TextAlignment.End);
-
-                            // Fila 2
-                            ch.Paragraph("Celda con ColumnSpan=2 y centrada")
-                                .Row(2).Column(0).ColumnSpan(2)
-                                .HorizontalOptions(LayoutAlignment.Center)
-                                .VerticalOptions(LayoutAlignment.Center)
-                                .BackgroundColor(Colors.LightBlue);
-
-                            ch.Paragraph("Celda (2,2)")
-                                .Row(2).Column(2)
-                                .VerticalOptions(LayoutAlignment.End)
-                                .HorizontalTextAlignment(TextAlignment.End)
-                                .BackgroundColor(Colors.LightGreen);
-                        });
-                    });
+                    rd.GridLength(GridLength.Auto);
+                    rd.GridLength(GridLength.Star);
+                    rd.GridLength(GridLength.Auto);
+                })
+                .Children(ch =>
+                {
+                    ch.Paragraph("Titulo")
+                    .BackgroundColor(Colors.LightCoral)
+                    .HorizontalTextAlignment(TextAlignment.Center)
+                    .Padding(5);
+                    ch.Paragraph("Cuerpo")
+                    .VerticalTextAlignment(TextAlignment.Center)
+                    .HorizontalTextAlignment(TextAlignment.Center)
+                    .BackgroundColor(Colors.LightCyan)
+                    .Row(1);
+                    ch.Paragraph("Pie de pagina")
+                    .HorizontalTextAlignment(TextAlignment.Center)
+                    .BackgroundColor(Colors.LightCoral)
+                    .Padding(5)
+                    .Row(2);
                 });
             })
             .Build()
             .SaveAsync(targetFilePath);
 
-            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
-        }
+        await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
     }
 
 }

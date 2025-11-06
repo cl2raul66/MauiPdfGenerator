@@ -54,7 +54,7 @@
                     Text="Generate PDF file, with stack layout" />
                 <Button
                     x:Name="GeneratePdfWithGrid"
-                    Clicked="GeneratePdfWithGrid_Clicked"
+                    Clicked="GeneratePdfWithGrid1_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, with grid" />
             </VerticalStackLayout>

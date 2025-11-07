@@ -409,7 +409,7 @@ public partial class MainPage : ContentPage
         await doc.ContentPage<IPdfGrid>()
             .Content(c =>
             {
-                c.BackgroundColor(Colors.Snow).VerticalOptions(LayoutAlignment.Fill).HorizontalOptions(LayoutAlignment.Fill);
+                c.BackgroundColor(Colors.Snow);
                 c.RowDefinitions(rd =>
                 {
                     rd.GridLength(GridLength.Auto);

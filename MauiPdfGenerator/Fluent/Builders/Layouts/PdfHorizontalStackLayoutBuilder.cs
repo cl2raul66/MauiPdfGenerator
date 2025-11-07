@@ -27,7 +27,9 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
 
     internal void Add(IBuildablePdfElement element)
     {
-        _model.Add(element.GetModel());
+        var elementModel = element.GetModel();
+        elementModel.ApplyContextualDefaults(LayoutAlignment.Start, LayoutAlignment.Fill);
+        _model.Add(elementModel);
     }
 
     #region Public API (Implements the most specific interface: IPdfGridChildHorizontalStackLayout)

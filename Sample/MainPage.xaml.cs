@@ -273,7 +273,7 @@ public partial class MainPage : ContentPage
                         ch.VerticalStackLayout(vsl =>
                         {
                             vsl.Spacing(5).Padding(10).BackgroundColor(Colors.LightPink)
-                               .HorizontalOptions(LayoutAlignment.Center).WidthRequest(400); // Es atómico porque VerticalOptions es Start (defecto)
+                               .HorizontalOptions(LayoutAlignment.Center).WidthRequest(400); 
                             vsl.Children(vsl_ch =>
                             {
                                 vsl_ch.Paragraph("Título del Bloque Atómico").FontAttributes(FontAttributes.Bold);
@@ -338,38 +338,35 @@ public partial class MainPage : ContentPage
             {
                 cfg.MetaData(data => data.Title("MauiPdfGenerator - Grid Showcase"));
             })
-            .ContentPage<IPdfGrid>() // Usamos un Grid como layout raíz
+            .ContentPage<IPdfGrid>() 
             .Content(grid =>
             {
                 grid.Margin(20).BackgroundColor(Colors.WhiteSmoke)
                     .RowSpacing(5).ColumnSpacing(10)
                     .ColumnDefinitions(cd =>
                     {
-                        cd.GridLength(GridLength.Auto); // Col 0
-                        cd.GridLength(GridLength.Star); // Col 1
-                        cd.GridLength(100);             // Col 2
+                        cd.GridLength(GridLength.Auto); 
+                        cd.GridLength(GridLength.Star); 
+                        cd.GridLength(100);             
                     })
                     .RowDefinitions(rd =>
                     {
-                        rd.GridLength(GridLength.Auto); // Fila 0
-                        rd.GridLength(GridLength.Auto); // Fila 1
-                        rd.GridLength(50);              // Fila 2
+                        rd.GridLength(GridLength.Auto); 
+                        rd.GridLength(GridLength.Auto); 
+                        rd.GridLength(50);              
                     })
                     .Children(ch =>
                     {
-                        // Fila 0
                         ch.Paragraph("Header 1").FontAttributes(FontAttributes.Bold).Row(0).Column(0);
                         ch.Paragraph("Header 2 (Star Column)").FontAttributes(FontAttributes.Bold).Row(0).Column(1);
                         ch.Paragraph("Header 3 (Fixed)").FontAttributes(FontAttributes.Bold).Row(0).Column(2);
 
-                        // Fila 1
                         ch.Image(new MemoryStream(imageData)).Row(1).Column(0).HeightRequest(40);
                         ch.Paragraph("Este texto está en una columna Star, por lo que se ajustará para llenar el espacio disponible. Lorem ipsum dolor sit amet, consectetur adipiscing elit.")
                             .Row(1).Column(1);
                         ch.Paragraph("Contenido de ancho fijo, alineado a la derecha.")
                             .Row(1).Column(2).HorizontalTextAlignment(TextAlignment.End);
 
-                        // Fila 2
                         ch.Paragraph("Celda con ColumnSpan=2 y centrada")
                             .Row(2).Column(0).ColumnSpan(2)
                             .HorizontalOptions(LayoutAlignment.Center)

@@ -2,6 +2,9 @@
 
 internal abstract class PdfElementData : IPdfGridCellInfo
 {
+    private bool _horizontalOptionsSet = false;
+    private bool _verticalOptionsSet = false;
+
     internal PdfElementData? Parent { get; set; }
 
     internal Thickness GetMargin { get; private set; }
@@ -10,8 +13,6 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     internal double? GetHeightRequest { get; private set; }
     internal Color? GetBackgroundColor { get; private set; }
 
-    // CORRECCIÓN: Se establece el valor predeterminado a Fill, que es el comportamiento
-    // base correcto para un hijo en un contexto de flujo vertical como el VSL raíz.
     internal LayoutAlignment GetHorizontalOptions { get; private set; } = LayoutAlignment.Fill;
     internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Start;
 
@@ -77,13 +78,27 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     public PdfElementData HorizontalOptions(LayoutAlignment layoutAlignment)
     {
         this.GetHorizontalOptions = layoutAlignment;
+        _horizontalOptionsSet = true;
         return this;
     }
 
     public PdfElementData VerticalOptions(LayoutAlignment layoutAlignment)
     {
         this.GetVerticalOptions = layoutAlignment;
+        _verticalOptionsSet = true;
         return this;
+    }
+
+    internal void ApplyContextualDefaults(LayoutAlignment horizontal, LayoutAlignment vertical)
+    {
+        if (!_horizontalOptionsSet)
+        {
+            this.GetHorizontalOptions = horizontal;
+        }
+        if (!_verticalOptionsSet)
+        {
+            this.GetVerticalOptions = vertical;
+        }
     }
 
     internal void SetRow(int row)

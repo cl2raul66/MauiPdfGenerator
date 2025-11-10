@@ -23,7 +23,12 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
         var childMeasures = new List<PdfLayoutInfo>();
-        var childAvailableSize = new SKSize(float.PositiveInfinity, availableSize.Height - (float)hsl.GetMargin.VerticalThickness - (float)hsl.GetPadding.VerticalThickness);
+
+        float heightConstraintForChildren = hsl.GetHeightRequest.HasValue
+            ? (float)hsl.GetHeightRequest.Value - (float)hsl.GetPadding.VerticalThickness
+            : availableSize.Height - (float)hsl.GetMargin.VerticalThickness - (float)hsl.GetPadding.VerticalThickness;
+
+        var childAvailableSize = new SKSize(float.PositiveInfinity, heightConstraintForChildren);
 
         foreach (var child in hsl.GetChildren)
         {
@@ -69,16 +74,9 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
         if (context.Element is not PdfHorizontalStackLayoutData hsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
-        var measure = await MeasureAsync(context, new SKSize(finalRect.Width, finalRect.Height));
-        if (measure.Height > finalRect.Height)
-        {
-            return new PdfLayoutInfo(hsl, finalRect.Width, 0, PdfRect.Empty, hsl);
-        }
-
         if (!context.LayoutState.TryGetValue(hsl, out var state) || state is not List<PdfLayoutInfo> childMeasures)
         {
-            context.Logger.LogError("HorizontalStackLayout measure state was not found before arranging.");
-            return new PdfLayoutInfo(hsl, finalRect.Width, finalRect.Height, finalRect);
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for HorizontalStackLayout. This indicates a bug in the layout orchestrator.");
         }
 
         var elementBox = new PdfRect(
@@ -150,10 +148,11 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             }
         }
 
-        var finalArrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, measure.Height);
+        float measuredHeight = hsl.GetHeightRequest.HasValue ? (float)hsl.GetHeightRequest.Value : (childMeasures.Any() ? childMeasures.Max(m => m.Height) : 0) + (float)hsl.GetPadding.VerticalThickness;
+        var finalArrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, measuredHeight + (float)hsl.GetMargin.VerticalThickness);
         context.LayoutState[hsl] = new HorizontalLayoutCache(arrangedChildren, overflowedChildren, finalArrangedRect);
 
-        return new PdfLayoutInfo(hsl, finalRect.Width, measure.Height, finalArrangedRect);
+        return new PdfLayoutInfo(hsl, finalRect.Width, finalArrangedRect.Height, finalArrangedRect);
     }
 
     public async Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)

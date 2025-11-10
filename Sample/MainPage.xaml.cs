@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator;
+using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fonts;
 
@@ -451,37 +452,21 @@ public partial class MainPage : ContentPage
 
         var doc = pdfDocFactory.CreateDocument();
         await doc.ContentPage()
-            .Padding(MauiPdfGenerator.Fluent.Enums.DefaultPagePaddingType.Narrow)
+            .Padding(DefaultPagePaddingType.Narrow)
             .Content(c =>
             {
-                c.Spacing(5);
                 c.Children(ch =>
                 {
-                    ch.Paragraph("Prueba")
-                    .HorizontalTextAlignment(TextAlignment.Center)
-                    .FontSize(14)
-                    .FontAttributes(FontAttributes.Bold)
-                    .TextTransform(TextTransform.Uppercase);
-
                     ch.HorizontalStackLayout(hsl =>
                     {
                         hsl.BackgroundColor(Colors.LightGrey)
-                        .HorizontalOptions(LayoutAlignment.Fill)
-                        .HeightRequest(50)
+                        .HeightRequest(75)
                         .Children(hslch =>
                         {
-                            hslch.Image(imageStream).Margin(5).BackgroundColor(Colors.Snow);
-                            hslch.Image(imageStream).Aspect(Aspect.AspectFit).Padding(5).BackgroundColor(Colors.Snow);
+                            hslch.Image(imageStream).BackgroundColor(Colors.Snow);
+                            hslch.Image(imageStream).BackgroundColor(Colors.Snow);
                         });
                     });
-
-                    ch.Image(imageStream)
-                    .HeightRequest(40)
-                    .BackgroundColor(Colors.WhiteSmoke);
-
-                    ch.Image(imageStream)
-                    .HeightRequest(50)
-                    .BackgroundColor(Colors.WhiteSmoke);
                 });
             })
             .Build()

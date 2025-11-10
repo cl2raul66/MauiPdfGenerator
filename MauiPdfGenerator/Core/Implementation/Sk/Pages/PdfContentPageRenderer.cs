@@ -29,15 +29,16 @@ internal class PdfContentPageRenderer : IPageRenderer
             var renderer = context.RendererFactory.GetRenderer(layoutToProcess);
             var elementContext = context with { Element = layoutToProcess };
 
+            await renderer.MeasureAsync(elementContext, new SKSize(contentRect.Width, contentRect.Height));
+
             var arrangeInfo = await renderer.ArrangeAsync(contentRect, elementContext);
 
-            if (arrangeInfo.Height <= 0 && arrangeInfo.RemainingElement != null)
+            if (arrangeInfo.Height <= 0 && arrangeInfo.RemainingElement is not null)
             {
                 var culprit = arrangeInfo.RemainingElement;
                 var culpritRenderer = context.RendererFactory.GetRenderer(culprit);
                 var culpritContext = context with { Element = culprit };
 
-                // --- CORRECCIÓN: Pasamos un SKSize en lugar de un SKRect ---
                 var measure = await culpritRenderer.MeasureAsync(culpritContext, new SKSize(contentRect.Width, float.PositiveInfinity));
 
                 if (measure.Height > contentRect.Height)
@@ -81,7 +82,7 @@ internal class PdfContentPageRenderer : IPageRenderer
         }
 
         var layoutInfo = arrangedPageBlock[0];
-        var element = (Common.Models.PdfElementData)layoutInfo.Element;
+        var element = (PdfElementData)layoutInfo.Element;
         var renderer = context.RendererFactory.GetRenderer(element);
         var elementContext = context with { Element = element };
         await renderer.RenderAsync(canvas, elementContext);

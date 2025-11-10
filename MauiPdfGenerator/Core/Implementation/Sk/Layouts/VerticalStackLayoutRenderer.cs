@@ -63,25 +63,33 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
 
     private async Task<PdfLayoutInfo> ArrangeAtomicAsync(PdfRect finalRect, PdfGenerationContext context, PdfVerticalStackLayoutData vsl)
     {
-        var measure = await MeasureAsync(context, new SKSize(finalRect.Width, float.PositiveInfinity));
+        if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<PdfLayoutInfo> childMeasures)
+        {
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for VerticalStackLayout. This indicates a bug in the layout orchestrator.");
+        }
 
-        if (measure.Height > finalRect.Height)
+        var totalMeasuredHeight = childMeasures.Sum(m => m.Height) + (childMeasures.Count > 1 ? vsl.GetSpacing * (childMeasures.Count - 1) : 0);
+
+        if (totalMeasuredHeight > finalRect.Height)
         {
             return new PdfLayoutInfo(vsl, finalRect.Width, 0, PdfRect.Empty, vsl);
         }
 
-        return await ArrangeInternal(finalRect, context, vsl, vsl.GetChildren);
+        return await ArrangeInternal(finalRect, context, vsl, vsl.GetChildren, childMeasures);
     }
 
     private async Task<PdfLayoutInfo> ArrangeDivisibleAsync(PdfRect finalRect, PdfGenerationContext context, PdfVerticalStackLayoutData vsl)
     {
+        if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<PdfLayoutInfo> childMeasures)
+        {
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for VerticalStackLayout. This indicates a bug in the layout orchestrator.");
+        }
+
         var childrenToArrange = new List<PdfElementData>();
         var remainingChildren = new List<PdfElementData>();
         float availableHeight = finalRect.Height - (float)vsl.GetPadding.VerticalThickness;
         float consumedHeight = 0;
         bool pageIsFull = false;
-
-        var childMeasures = (List<PdfLayoutInfo>?)context.LayoutState.GetValueOrDefault(vsl) ?? [];
 
         for (int i = 0; i < vsl.GetChildren.Count; i++)
         {
@@ -92,14 +100,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             }
 
             var child = vsl.GetChildren[i];
-            var renderer = context.RendererFactory.GetRenderer(child);
-            var childContext = context with { Element = child };
-
-            var measure = childMeasures.FirstOrDefault(m => m.Element == child);
-            if (measure.Element is null)
-            {
-                measure = await renderer.MeasureAsync(childContext, new SKSize(finalRect.Width, float.PositiveInfinity));
-            }
+            var measure = childMeasures[i];
 
             float requiredSpacing = i > 0 ? vsl.GetSpacing : 0;
             float remainingHeightForChild = availableHeight - consumedHeight - requiredSpacing;
@@ -120,6 +121,8 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             }
             else
             {
+                var renderer = context.RendererFactory.GetRenderer(child);
+                var childContext = context with { Element = child };
                 var partialRect = new PdfRect(finalRect.X, finalRect.Y + consumedHeight + requiredSpacing, finalRect.Width, remainingHeightForChild);
                 var partialArrange = await renderer.ArrangeAsync(partialRect, childContext);
 
@@ -141,7 +144,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             }
         }
 
-        var arrangedResult = await ArrangeInternal(finalRect, context, vsl, childrenToArrange);
+        var arrangedResult = await ArrangeInternal(finalRect, context, vsl, childrenToArrange, childMeasures);
 
         PdfVerticalStackLayoutData? continuationLayout = null;
         if (remainingChildren.Count != 0)
@@ -152,7 +155,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
         return arrangedResult with { RemainingElement = continuationLayout };
     }
 
-    private async Task<PdfLayoutInfo> ArrangeInternal(PdfRect finalRect, PdfGenerationContext context, PdfVerticalStackLayoutData vsl, IReadOnlyList<PdfElementData> childrenToArrange)
+    private async Task<PdfLayoutInfo> ArrangeInternal(PdfRect finalRect, PdfGenerationContext context, PdfVerticalStackLayoutData vsl, IReadOnlyList<PdfElementData> childrenToArrange, IReadOnlyList<PdfLayoutInfo> allMeasures)
     {
         var elementBox = new PdfRect(
             finalRect.Left + (float)vsl.GetMargin.Left,
@@ -169,10 +172,9 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
         for (int i = 0; i < childrenToArrange.Count; i++)
         {
             var child = childrenToArrange[i];
+            var measure = allMeasures.First(m => m.Element == child);
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
-
-            var measure = await renderer.MeasureAsync(childContext, new SKSize(contentWidth, float.PositiveInfinity));
 
             float childTotalWidth = measure.Width;
             float childTotalHeight = measure.Height;

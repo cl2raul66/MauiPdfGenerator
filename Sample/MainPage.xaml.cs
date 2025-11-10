@@ -460,7 +460,7 @@ public partial class MainPage : ContentPage
                     ch.HorizontalStackLayout(hsl =>
                     {
                         hsl.BackgroundColor(Colors.LightGrey)
-                        .HeightRequest(75)
+                        .HeightRequest(50)
                         .Children(hslch =>
                         {
                             hslch.Image(imageStream).BackgroundColor(Colors.Snow);

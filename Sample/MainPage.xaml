@@ -33,30 +33,35 @@
         <ScrollView Grid.Row="{OnIdiom Default='0', Phone='1'}" Grid.Column="{OnIdiom Default='1', Phone='0'}">
             <VerticalStackLayout Spacing="{OnIdiom Default='15', Phone='12'}">
                 <Button
-                    x:Name="GeneratePdfOnlyParagraph"
-                    Clicked="GeneratePdfOnlyParagraph_Clicked"
+                    x:Name="GeneratePdfParagraphs"
+                    Clicked="GeneratePdfParagraphs_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, only paragraph" />
                 <Button
-                    x:Name="GeneratePdfOnlyImage"
-                    Clicked="GeneratePdfOnlyImage_Clicked"
+                    x:Name="GeneratePdfImages"
+                    Clicked="GeneratePdfImages_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, only image" />
                 <Button
                     x:Name="GeneratePdfWithHorizontalLine"
-                    Clicked="GeneratePdfWithHorizontalLine_Clicked"
+                    Clicked="GeneratePdfHorizontalLine_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, with HorizontalLine" />
                 <Button
                     x:Name="GeneratePdfWithStackLayout"
-                    Clicked="GeneratePdfWithStackLayout_Clicked"
+                    Clicked="GeneratePdfLayouts_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, with stack layout" />
                 <Button
                     x:Name="GeneratePdfWithGrid"
-                    Clicked="GeneratePdfWithGrid_Clicked"
+                    Clicked="GeneratePdfGrid_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, with grid" />
+                <Button
+                    x:Name="GeneratePdfAdvancedLayout"
+                    Clicked="GeneratePdfAdvancedLayout_Clicked"
+                    HorizontalOptions="Fill"
+                    Text="Generate PDF file, with advanced layout" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

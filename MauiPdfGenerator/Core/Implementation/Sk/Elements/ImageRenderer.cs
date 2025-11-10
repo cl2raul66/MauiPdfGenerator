@@ -5,84 +5,95 @@ using SkiaSharp;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
+using System.Diagnostics;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
 internal class ImageRenderer : IElementRenderer
 {
-    private record ImageLayoutCache(SKImage? SkImage, SKRect RelativeTargetRect, PdfRect FinalRect);
+    private record ImageMeasureCache(
+        SKImage? SkImage,
+        float IntrinsicWidth,
+        float IntrinsicHeight,
+        float AspectRatio);
 
-    public Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    private record ImageArrangeCache(
+        ImageMeasureCache MeasureCache,
+        SKRect RelativeContentRect,
+        PdfRect ElementBounds);
+
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfImageData image)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfImageData)} or is null.");
 
-        SKImage? skImage = null;
-        try
-        {
-            if (image.ImageStream.CanRead)
-            {
-                if (image.ImageStream.CanSeek) image.ImageStream.Position = 0;
-                skImage = SKImage.FromEncodedData(image.ImageStream);
-            }
-        }
-        catch (Exception ex)
-        {
-            context.DiagnosticSink.Submit(new DiagnosticMessage(
-                DiagnosticSeverity.Warning,
-                DiagnosticCodes.ImageDecodeError,
-                $"Failed to decode image stream. A placeholder will be used. Error: {ex.Message}"
-            ));
-            skImage = null;
-        }
-
-        context.LayoutState[image] = new ImageLayoutCache(skImage, SKRect.Empty, PdfRect.Empty);
-
-        float imageWidth = skImage?.Width ?? 100f;
-        float imageHeight = skImage?.Height ?? 50f;
-        float aspectRatio = imageWidth > 0 ? imageHeight / imageWidth : 1;
+        var (skImage, imageWidth, imageHeight, aspectRatio) = await LoadImageMetadataAsync(image, context);
+        context.LayoutState[image] = new ImageMeasureCache(skImage, imageWidth, imageHeight, aspectRatio);
 
         float boxWidth, boxHeight;
 
-        // --- INICIO DE LA LÓGICA DE MEDIDA DEFINITIVA ---
-        if (image.GetWidthRequest.HasValue && image.GetHeightRequest.HasValue)
+        bool hasWidthRequest = image.GetWidthRequest.HasValue;
+        bool hasHeightRequest = image.GetHeightRequest.HasValue;
+        bool isWidthConstrained = !float.IsInfinity(availableSize.Width);
+        bool isHeightConstrained = !float.IsInfinity(availableSize.Height);
+
+        if (hasWidthRequest && hasHeightRequest)
         {
-            boxWidth = (float)image.GetWidthRequest.Value;
-            boxHeight = (float)image.GetHeightRequest.Value;
+            boxWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : 0;
+            boxHeight = image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : 0;
         }
-        else if (image.GetWidthRequest.HasValue)
+        else if (hasWidthRequest)
         {
-            boxWidth = (float)image.GetWidthRequest.Value;
-            float imageContentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
-            boxHeight = (imageContentWidth * aspectRatio) + (float)image.GetPadding.VerticalThickness;
+            boxWidth = image.GetWidthRequest.HasValue ? (float)image.GetWidthRequest.Value : 0;
+            float contentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
+            boxHeight = (aspectRatio > 0) ? (contentWidth * aspectRatio) + (float)image.GetPadding.VerticalThickness : (float)image.GetPadding.VerticalThickness;
         }
-        else if (image.GetHeightRequest.HasValue)
+        else if (hasHeightRequest)
         {
-            boxHeight = (float)image.GetHeightRequest.Value;
-            float imageContentHeight = boxHeight - (float)image.GetPadding.VerticalThickness;
-            boxWidth = (aspectRatio > 0) ? (imageContentHeight / aspectRatio) + (float)image.GetPadding.HorizontalThickness : imageWidth + (float)image.GetPadding.HorizontalThickness;
+            boxHeight = image.GetHeightRequest.HasValue ? (float)image.GetHeightRequest.Value : 0;
+            float contentHeight = boxHeight - (float)image.GetPadding.VerticalThickness;
+            boxWidth = (aspectRatio > 0) ? (contentHeight / aspectRatio) + (float)image.GetPadding.HorizontalThickness : (float)image.GetPadding.HorizontalThickness;
         }
-        else if (!float.IsInfinity(availableRect.Width) && availableRect.Width > 0)
+        else if (isWidthConstrained && isHeightConstrained)
         {
-            // Caso del Grid: No hay Request, pero el padre (Grid) impone un ancho.
-            // Respetamos esa restricción.
-            boxWidth = availableRect.Width;
-            float imageContentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
-            boxHeight = (imageContentWidth * aspectRatio) + (float)image.GetPadding.VerticalThickness;
+            float availableContentWidth = availableSize.Width - (float)image.GetMargin.HorizontalThickness - (float)image.GetPadding.HorizontalThickness;
+            float availableContentHeight = availableSize.Height - (float)image.GetMargin.VerticalThickness - (float)image.GetPadding.VerticalThickness;
+
+            float containerRatio = availableContentHeight / availableContentWidth;
+
+            if (aspectRatio > containerRatio)
+            {
+                boxHeight = availableContentHeight + (float)image.GetPadding.VerticalThickness;
+                boxWidth = (availableContentHeight / aspectRatio) + (float)image.GetPadding.HorizontalThickness;
+            }
+            else 
+            {
+                boxWidth = availableContentWidth + (float)image.GetPadding.HorizontalThickness;
+                boxHeight = (availableContentWidth * aspectRatio) + (float)image.GetPadding.VerticalThickness;
+            }
+        }
+        else if (isWidthConstrained)
+        {
+            boxWidth = availableSize.Width - (float)image.GetMargin.HorizontalThickness;
+            float contentWidth = boxWidth - (float)image.GetPadding.HorizontalThickness;
+            boxHeight = (contentWidth * aspectRatio) + (float)image.GetPadding.VerticalThickness;
+        }
+        else if (isHeightConstrained)
+        {
+            boxHeight = availableSize.Height - (float)image.GetMargin.VerticalThickness;
+            float contentHeight = boxHeight - (float)image.GetPadding.VerticalThickness;
+            boxWidth = (aspectRatio > 0) ? (contentHeight / aspectRatio) + (float)image.GetPadding.HorizontalThickness : (float)image.GetPadding.HorizontalThickness;
         }
         else
         {
-            // Fallback final: No hay Request y el padre no impone ancho (ej. HSL).
-            // Usamos el tamaño intrínseco de la imagen.
             boxWidth = imageWidth + (float)image.GetPadding.HorizontalThickness;
             boxHeight = imageHeight + (float)image.GetPadding.VerticalThickness;
         }
-        // --- FIN DE LA LÓGICA DE MEDIDA DEFINITIVA ---
 
         var totalWidth = boxWidth + (float)image.GetMargin.HorizontalThickness;
         var totalHeight = boxHeight + (float)image.GetMargin.VerticalThickness;
 
-        return Task.FromResult(new PdfLayoutInfo(image, totalWidth, totalHeight));
+        return new PdfLayoutInfo(image, totalWidth, totalHeight);
     }
 
     public Task<PdfLayoutInfo> ArrangeAsync(PdfRect finalRect, PdfGenerationContext context)
@@ -90,27 +101,30 @@ internal class ImageRenderer : IElementRenderer
         if (context.Element is not PdfImageData image)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfImageData)} or is null.");
 
-        if (!context.LayoutState.TryGetValue(image, out var state) || state is not ImageLayoutCache initialCache)
+        if (!context.LayoutState.TryGetValue(image, out var state) || state is not ImageMeasureCache measureCache)
         {
-            context.Logger.LogError("Image cache was not created during Measure pass.");
-            return Task.FromResult(new PdfLayoutInfo(image, finalRect.Width, finalRect.Height, finalRect));
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync. This indicates a bug in the layout orchestrator.");
         }
 
-        var elementBoxWidth = finalRect.Width - (float)image.GetMargin.HorizontalThickness;
-        var elementBoxHeight = finalRect.Height - (float)image.GetMargin.VerticalThickness;
+        var elementBounds = new PdfRect(
+            finalRect.X + (float)image.GetMargin.Left,
+            finalRect.Y + (float)image.GetMargin.Top,
+            finalRect.Width - (float)image.GetMargin.HorizontalThickness,
+            finalRect.Height - (float)image.GetMargin.VerticalThickness
+        );
 
         var contentRect = SKRect.Create(
             (float)image.GetPadding.Left,
             (float)image.GetPadding.Top,
-            elementBoxWidth - (float)image.GetPadding.HorizontalThickness,
-            elementBoxHeight - (float)image.GetPadding.VerticalThickness
+            elementBounds.Width - (float)image.GetPadding.HorizontalThickness,
+            elementBounds.Height - (float)image.GetPadding.VerticalThickness
         );
 
-        SKRect relativeTargetRect = initialCache.SkImage != null
-            ? CalculateTargetRect(initialCache.SkImage, contentRect, image.CurrentAspect)
+        var targetRect = measureCache.SkImage is not null
+            ? CalculateTargetRect(measureCache.SkImage, contentRect, image.CurrentAspect)
             : SKRect.Empty;
 
-        context.LayoutState[image] = initialCache with { RelativeTargetRect = relativeTargetRect, FinalRect = finalRect };
+        context.LayoutState[image] = new ImageArrangeCache(measureCache, targetRect, elementBounds);
 
         return Task.FromResult(new PdfLayoutInfo(image, finalRect.Width, finalRect.Height, finalRect));
     }
@@ -120,47 +134,70 @@ internal class ImageRenderer : IElementRenderer
         if (context.Element is not PdfImageData image)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfImageData)} or is null.");
 
-        if (!context.LayoutState.TryGetValue(image, out var state) || state is not ImageLayoutCache cache)
+        if (!context.LayoutState.TryGetValue(image, out var state) || state is not ImageArrangeCache arrangeCache)
         {
-            DrawImageError(canvas, new SKRect(0, 0, 100, 50), "[Image Layout Error]");
-            context.Logger.LogError("Image layout cache not found for element. ArrangeAsync was likely not called or failed.");
+            context.Logger.LogError("RenderAsync called without a prior successful ArrangeAsync. Element will not be rendered.");
             return Task.CompletedTask;
         }
 
-        var renderRect = new SKRect(cache.FinalRect.Left, cache.FinalRect.Top, cache.FinalRect.Right, cache.FinalRect.Bottom);
-        var elementBox = new SKRect(
-            renderRect.Left + (float)image.GetMargin.Left,
-            renderRect.Top + (float)image.GetMargin.Top,
-            renderRect.Right - (float)image.GetMargin.Right,
-            renderRect.Bottom - (float)image.GetMargin.Bottom
-        );
+        var elementBounds = new SKRect(arrangeCache.ElementBounds.Left, arrangeCache.ElementBounds.Top, arrangeCache.ElementBounds.Right, arrangeCache.ElementBounds.Bottom);
 
         if (image.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(image.GetBackgroundColor), Style = SKPaintStyle.Fill };
-            canvas.DrawRect(elementBox, bgPaint);
+            canvas.DrawRect(elementBounds, bgPaint);
         }
 
-        if (cache.SkImage is null)
+        var skImage = arrangeCache.MeasureCache.SkImage;
+        if (skImage is null)
         {
-            DrawImageError(canvas, elementBox, "[Image Load Error]");
-            cache.SkImage?.Dispose();
+            DrawImageError(canvas, elementBounds, "[Image Load Error]");
             return Task.CompletedTask;
         }
 
-        var skImage = cache.SkImage;
-
-        SKRect finalDrawRect = cache.RelativeTargetRect;
-        finalDrawRect.Offset(elementBox.Left, elementBox.Top);
+        SKRect finalDrawRect = arrangeCache.RelativeContentRect;
+        finalDrawRect.Offset(elementBounds.Left, elementBounds.Top);
 
         canvas.Save();
-        canvas.ClipRect(elementBox);
+        canvas.ClipRect(elementBounds);
         canvas.DrawImage(skImage, finalDrawRect);
         canvas.Restore();
 
         skImage.Dispose();
 
         return Task.CompletedTask;
+    }
+
+    private async Task<(SKImage? SkImage, float IntrinsicWidth, float IntrinsicHeight, float AspectRatio)> LoadImageMetadataAsync(PdfImageData image, PdfGenerationContext context)
+    {
+        try
+        {
+            if (image.ImageStream.CanRead)
+            {
+                if (image.ImageStream.CanSeek) image.ImageStream.Position = 0;
+                using var memoryStream = new MemoryStream();
+                await image.ImageStream.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                var skImage = SKImage.FromEncodedData(memoryStream);
+                if (skImage is not null)
+                {
+                    float width = skImage.Width;
+                    float height = skImage.Height;
+                    float ratio = width > 0 ? height / width : 1;
+                    return (skImage, width, height, ratio);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            context.DiagnosticSink.Submit(new DiagnosticMessage(
+                DiagnosticSeverity.Warning,
+                DiagnosticCodes.ImageDecodeError,
+                $"Failed to decode image stream. A placeholder will be used. Error: {ex.Message}"
+            ));
+        }
+        return (null, 100f, 50f, 0.5f);
     }
 
     public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)

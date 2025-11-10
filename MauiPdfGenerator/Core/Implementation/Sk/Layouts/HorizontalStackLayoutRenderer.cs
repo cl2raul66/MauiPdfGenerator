@@ -17,19 +17,24 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
         PdfRect FinalRect
     );
 
-    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfHorizontalStackLayoutData hsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
         var childMeasures = new List<PdfLayoutInfo>();
-        var childAvailableRect = new SKRect(0, 0, float.PositiveInfinity, availableRect.Height - (float)hsl.GetMargin.VerticalThickness - (float)hsl.GetPadding.VerticalThickness);
+
+        float heightConstraintForChildren = hsl.GetHeightRequest.HasValue
+            ? (float)hsl.GetHeightRequest.Value - (float)hsl.GetPadding.VerticalThickness
+            : availableSize.Height - (float)hsl.GetMargin.VerticalThickness - (float)hsl.GetPadding.VerticalThickness;
+
+        var childAvailableSize = new SKSize(float.PositiveInfinity, heightConstraintForChildren);
 
         foreach (var child in hsl.GetChildren)
         {
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
-            var measure = await renderer.MeasureAsync(childContext, childAvailableRect);
+            var measure = await renderer.MeasureAsync(childContext, childAvailableSize);
             childMeasures.Add(measure);
         }
 
@@ -38,9 +43,22 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
         {
             contentWidth += hsl.GetSpacing * (childMeasures.Count - 1);
         }
-        float contentHeight = childMeasures.Any() ? childMeasures.Max(m => m.Height) : 0;
+        float contentHeight = childMeasures.Count != 0 ? childMeasures.Max(m => m.Height) : 0;
 
-        float boxWidth = hsl.GetWidthRequest.HasValue ? (float)hsl.GetWidthRequest.Value : contentWidth + (float)hsl.GetPadding.HorizontalThickness;
+        float boxWidth;
+        if (hsl.GetWidthRequest.HasValue)
+        {
+            boxWidth = (float)hsl.GetWidthRequest.Value;
+        }
+        else if (hsl.GetHorizontalOptions is LayoutAlignment.Fill && !float.IsInfinity(availableSize.Width))
+        {
+            boxWidth = availableSize.Width - (float)hsl.GetMargin.HorizontalThickness;
+        }
+        else
+        {
+            boxWidth = contentWidth + (float)hsl.GetPadding.HorizontalThickness;
+        }
+
         float boxHeight = hsl.GetHeightRequest.HasValue ? (float)hsl.GetHeightRequest.Value : contentHeight + (float)hsl.GetPadding.VerticalThickness;
 
         context.LayoutState[hsl] = childMeasures;
@@ -56,16 +74,9 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
         if (context.Element is not PdfHorizontalStackLayoutData hsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalStackLayoutData)} or is null.");
 
-        var measure = await MeasureAsync(context, new SKRect(0, 0, finalRect.Width, float.PositiveInfinity));
-        if (measure.Height > finalRect.Height)
-        {
-            return new PdfLayoutInfo(hsl, finalRect.Width, 0, PdfRect.Empty, hsl);
-        }
-
         if (!context.LayoutState.TryGetValue(hsl, out var state) || state is not List<PdfLayoutInfo> childMeasures)
         {
-            context.Logger.LogError("HorizontalStackLayout measure state was not found before arranging.");
-            return new PdfLayoutInfo(hsl, finalRect.Width, finalRect.Height, finalRect);
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for HorizontalStackLayout. This indicates a bug in the layout orchestrator.");
         }
 
         var elementBox = new PdfRect(
@@ -90,53 +101,51 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
 
             var requiredSpacing = i > 0 ? hsl.GetSpacing : 0;
 
-            float childHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? contentHeight : childMeasure.Height;
+            float childTotalHeight = childMeasure.Height;
+            float childTotalWidth = childMeasure.Width;
+
+            float availableHeightForChild = contentHeight;
+            float finalChildHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? availableHeightForChild : childTotalHeight;
+
             float offsetY = child.GetVerticalOptions switch
             {
-                LayoutAlignment.Center => (contentHeight - childHeight) / 2f,
-                LayoutAlignment.End => contentHeight - childHeight,
+                LayoutAlignment.Center => (availableHeightForChild - finalChildHeight) / 2f,
+                LayoutAlignment.End => availableHeightForChild - finalChildHeight,
                 _ => 0f
             };
             float y = elementBox.Top + (float)hsl.GetPadding.Top + offsetY;
 
-            // --- INICIO DE LA CORRECCIÓN DEL BUG ---
-            // El espacio disponible es el borde derecho del área de contenido menos la posición actual.
             var spaceAvailableForChild = (elementBox.Right - (float)hsl.GetPadding.Right) - (currentX + requiredSpacing);
-            // --- FIN DE LA CORRECCIÓN DEL BUG ---
 
-            if (childMeasure.Width <= spaceAvailableForChild)
+            if (childTotalWidth <= spaceAvailableForChild)
             {
                 currentX += requiredSpacing;
-                var childRect = new PdfRect(currentX, y, childMeasure.Width, childHeight);
+                var childRect = new PdfRect(currentX, y, childTotalWidth, finalChildHeight);
                 var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
                 arrangedChildren.Add(arrangedChild);
-                currentX += childMeasure.Width;
+                currentX += childTotalWidth;
             }
             else
             {
-                currentX += requiredSpacing;
-                var overflowBounds = new PdfRect(currentX, y, childMeasure.Width, childHeight);
-                overflowedChildren.Add((child, overflowBounds));
-
                 context.DiagnosticSink.Submit(new DiagnosticMessage(
                     DiagnosticSeverity.Warning,
                     DiagnosticCodes.LayoutOverflow,
-                    $"Element '{child.GetType().Name}' with desired width {childMeasure.Width} overflows the available space of {spaceAvailableForChild} in the HorizontalStackLayout.",
-                    new DiagnosticRect(overflowBounds.X, overflowBounds.Y, overflowBounds.Width, overflowBounds.Height)
+                    $"Element '{child.GetType().Name}' with desired width {childMeasure.Width} overflows the available space of {spaceAvailableForChild} in the HorizontalStackLayout."
                 ));
 
-                var clippedRect = new PdfRect(currentX, y, spaceAvailableForChild, childHeight);
-                if (clippedRect.Width > 0)
-                {
-                    var arrangedChild = await renderer.ArrangeAsync(clippedRect, childContext);
-                    arrangedChildren.Add(arrangedChild);
-                }
-                currentX += childMeasure.Width;
+                currentX += requiredSpacing;
+                var childRect = new PdfRect(currentX, y, childTotalWidth, finalChildHeight);
+                var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
+                arrangedChildren.Add(arrangedChild);
+                currentX += childTotalWidth;
             }
         }
 
-        context.LayoutState[hsl] = new HorizontalLayoutCache(arrangedChildren, overflowedChildren, finalRect);
-        return new PdfLayoutInfo(hsl, finalRect.Width, measure.Height, new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, measure.Height));
+        float measuredHeight = hsl.GetHeightRequest.HasValue ? (float)hsl.GetHeightRequest.Value : (childMeasures.Count != 0 ? childMeasures.Max(m => m.Height) : 0) + (float)hsl.GetPadding.VerticalThickness;
+        var finalArrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, measuredHeight + (float)hsl.GetMargin.VerticalThickness);
+        context.LayoutState[hsl] = new HorizontalLayoutCache(arrangedChildren, overflowedChildren, finalArrangedRect);
+
+        return new PdfLayoutInfo(hsl, finalRect.Width, finalArrangedRect.Height, finalArrangedRect);
     }
 
     public async Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)
@@ -166,16 +175,8 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             canvas.DrawRect(elementBox, bgPaint);
         }
 
-        bool hasVisualDiagnostics = context.DiagnosticSink.GetType().Name.Contains("Visual");
-
         foreach (var childInfo in cache.ArrangedChildren)
         {
-            bool isOverflowed = cache.OverflowedChildren.Any(oc => oc.Element == childInfo.Element);
-            if (isOverflowed && hasVisualDiagnostics)
-            {
-                continue;
-            }
-
             var renderer = context.RendererFactory.GetRenderer(childInfo.Element);
             var childContext = context with { Element = (PdfElementData)childInfo.Element };
             await renderer.RenderAsync(canvas, childContext);

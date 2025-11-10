@@ -27,7 +27,9 @@ internal class PdfVerticalStackLayoutBuilder : IBuildablePdfElement, IPdfVertica
 
     internal void Add(IBuildablePdfElement element)
     {
-        _model.Add(element.GetModel());
+        var elementModel = element.GetModel();
+        elementModel.ApplyContextualDefaults(LayoutAlignment.Fill, LayoutAlignment.Start);
+        _model.Add(elementModel);
     }
 
     #region Public API (Implements the most specific interface: IPdfGridChildVerticalStackLayout)

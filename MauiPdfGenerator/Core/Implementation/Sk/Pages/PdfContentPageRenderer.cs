@@ -1,5 +1,4 @@
 ﻿using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Core.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
@@ -30,36 +29,30 @@ internal class PdfContentPageRenderer : IPageRenderer
             var renderer = context.RendererFactory.GetRenderer(layoutToProcess);
             var elementContext = context with { Element = layoutToProcess };
 
+            await renderer.MeasureAsync(elementContext, new SKSize(contentRect.Width, contentRect.Height));
+
             var arrangeInfo = await renderer.ArrangeAsync(contentRect, elementContext);
 
-            // --- INICIO DE LA LÓGICA ANTI-BUCLE DEFINITIVA ---
-            // Condición de bucle infinito: No se pudo colocar nada en la página (altura cero o negativa),
-            // pero el layout sigue reportando que tiene contenido sobrante.
-            if (arrangeInfo.Height <= 0 && arrangeInfo.RemainingElement != null)
+            if (arrangeInfo.Height <= 0 && arrangeInfo.RemainingElement is not null)
             {
-                // Estamos atascados. El elemento sobrante es el culpable.
                 var culprit = arrangeInfo.RemainingElement;
                 var culpritRenderer = context.RendererFactory.GetRenderer(culprit);
                 var culpritContext = context with { Element = culprit };
 
-                // Medimos el elemento culpable para ver si es simplemente demasiado grande para cualquier página.
-                var measure = await culpritRenderer.MeasureAsync(culpritContext, new SKRect(0, 0, contentRect.Width, float.PositiveInfinity));
+                var measure = await culpritRenderer.MeasureAsync(culpritContext, new SKSize(contentRect.Width, float.PositiveInfinity));
 
                 if (measure.Height > contentRect.Height)
                 {
-                    // El elemento es más grande que una página. Es un error irrecuperable.
                     context.DiagnosticSink.Submit(new Diagnostics.Models.DiagnosticMessage(
                         Diagnostics.Enums.DiagnosticSeverity.Warning,
                         Diagnostics.DiagnosticCodes.PageContentOversized,
                         $"The element of type '{culprit.GetType().Name}' has a required height of {measure.Height}, which is larger than the available page height of {contentRect.Height}. The element will be skipped to prevent an infinite loop."
                     ));
 
-                    // Rompemos el bucle descartando todo el contenido restante.
                     layoutToProcess = null;
-                    continue; // Salta a la siguiente iteración del while, que fallará y terminará.
+                    continue;
                 }
             }
-            // --- FIN DE LA LÓGICA ANTI-BUCLE ---
 
             if (arrangeInfo.FinalRect.HasValue && arrangeInfo.FinalRect.Value.Height > 0)
             {
@@ -81,7 +74,6 @@ internal class PdfContentPageRenderer : IPageRenderer
     {
         if (arrangedPageBlock.Count != 1)
         {
-            // Este log puede aparecer si un elemento se saltó, es normal en ese caso.
             if (arrangedPageBlock.Any())
             {
                 context.Logger.LogWarning("Expected a single root layout in the page block, but found {Count}. Rendering may be incorrect.", arrangedPageBlock.Count);
@@ -90,7 +82,7 @@ internal class PdfContentPageRenderer : IPageRenderer
         }
 
         var layoutInfo = arrangedPageBlock[0];
-        var element = (Common.Models.PdfElementData)layoutInfo.Element;
+        var element = (PdfElementData)layoutInfo.Element;
         var renderer = context.RendererFactory.GetRenderer(element);
         var elementContext = context with { Element = element };
         await renderer.RenderAsync(canvas, elementContext);

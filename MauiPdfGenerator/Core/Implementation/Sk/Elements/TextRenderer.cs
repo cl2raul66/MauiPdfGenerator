@@ -28,35 +28,34 @@ internal class TextRenderer : IElementRenderer
         float VisualBottomOffset = 0
     );
 
-    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfParagraphData paragraph)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
 
         var (font, paint, textToRender, horizontalAlignment, verticalTextAlignment, lineBreakMode, textDecorations, textTransform) = await GetTextPropertiesAsync(paragraph, context);
 
-        float widthForMeasure = (float?)paragraph.GetWidthRequest ?? (availableRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness);
+        float widthForMeasure = paragraph.GetWidthRequest.HasValue
+            ? (float)paragraph.GetWidthRequest.Value - (float)paragraph.GetPadding.HorizontalThickness
+            : availableSize.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness;
 
         var allLines = WrapTextToLines(textToRender, font, widthForMeasure, lineBreakMode);
 
         SKFontMetrics fontMetrics = font.Metrics;
         float lineAdvance = -fontMetrics.Ascent + fontMetrics.Descent;
 
-        // ✅ NUEVA CORRECCIÓN: Medir los límites visuales reales del texto
         float visualTopOffset = 0;
         float visualBottomOffset = 0;
 
         if (allLines.Count != 0)
         {
-            // Medir la primera línea para obtener el offset superior
             SKRect firstLineBounds = new();
             font.MeasureText(allLines[0], out firstLineBounds);
-            visualTopOffset = -firstLineBounds.Top; // Distancia desde baseline hasta el pixel más alto
+            visualTopOffset = -firstLineBounds.Top;
 
-            // Medir la última línea para obtener el offset inferior
             SKRect lastLineBounds = new();
             font.MeasureText(allLines[^1], out lastLineBounds);
-            visualBottomOffset = lastLineBounds.Bottom; // Distancia desde baseline hasta el pixel más bajo
+            visualBottomOffset = lastLineBounds.Bottom;
         }
 
         float totalTextHeight = 0;
@@ -64,22 +63,20 @@ internal class TextRenderer : IElementRenderer
         {
             if (allLines.Count == 1)
             {
-                // ✅ Para una sola línea: usar altura visual exacta
                 SKRect bounds = new();
                 font.MeasureText(allLines[0], out bounds);
                 totalTextHeight = bounds.Height;
             }
             else
             {
-                // ✅ Para múltiples líneas: altura visual de primera línea + espaciado + altura visual de última línea
                 totalTextHeight = visualTopOffset + ((allLines.Count - 1) * lineAdvance) + visualBottomOffset;
             }
         }
 
         float contentWidth = allLines.Count != 0 ? allLines.Max(line => font.MeasureText(line)) : 0;
 
-        float boxWidth = (float?)paragraph.GetWidthRequest ?? (contentWidth + (float)paragraph.GetPadding.HorizontalThickness);
-        float boxHeight = (float?)paragraph.GetHeightRequest ?? (totalTextHeight + (float)paragraph.GetPadding.VerticalThickness);
+        float boxWidth = paragraph.GetWidthRequest.HasValue ? (float)paragraph.GetWidthRequest.Value : contentWidth + (float)paragraph.GetPadding.HorizontalThickness;
+        float boxHeight = paragraph.GetHeightRequest.HasValue ? (float)paragraph.GetHeightRequest.Value : totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
 
         context.LayoutState[paragraph] = new TextLayoutCache(
             font, paint, horizontalAlignment, verticalTextAlignment, textDecorations,
@@ -103,7 +100,7 @@ internal class TextRenderer : IElementRenderer
             return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
-        var (font, paint, _, _, _, lineBreakMode, textToRender, cachedLineAdvance, cachedVisualTop, cachedVisualBottom) =
+        var (font, _, _, _, _, lineBreakMode, textToRender, cachedLineAdvance, cachedVisualTop, cachedVisualBottom) =
             (baseCache.Font, baseCache.Paint, baseCache.HorizontalAlignment, baseCache.VerticalTextAlignment,
              baseCache.TextDecorations, baseCache.LineBreakMode, baseCache.TransformedText,
              baseCache.LineAdvance, baseCache.VisualTopOffset, baseCache.VisualBottomOffset);
@@ -115,7 +112,6 @@ internal class TextRenderer : IElementRenderer
         SKFontMetrics fontMetrics = font.Metrics;
         float lineAdvance = cachedLineAdvance > 0 ? cachedLineAdvance : (-fontMetrics.Ascent + fontMetrics.Descent);
 
-        // ✅ Recalcular offsets visuales si es necesario
         float visualTopOffset = cachedVisualTop;
         float visualBottomOffset = cachedVisualBottom;
 
@@ -158,15 +154,13 @@ internal class TextRenderer : IElementRenderer
                 VisualBottomOffset = visualBottomOffset
             };
             context.LayoutState[paragraph] = finalCache;
-            var arrangedHeight = (float?)paragraph.GetHeightRequest ?? totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
-            var arrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, arrangedHeight + (float)paragraph.GetMargin.VerticalThickness);
-            return Task.FromResult(new PdfLayoutInfo(paragraph, arrangedRect.Width, arrangedRect.Height, arrangedRect));
+
+            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
         int linesThatFit = 0;
         if (availableHeightForText >= lineAdvance && lineAdvance > 0)
         {
-            // Calcular cuántas líneas caben considerando los offsets visuales
             float remainingHeight = availableHeightForText - visualTopOffset;
             if (remainingHeight >= visualBottomOffset)
             {
@@ -184,7 +178,6 @@ internal class TextRenderer : IElementRenderer
         var remainingLinesText = string.Join("\n", allLines.Skip(linesThatFit));
         var continuationParagraph = new PdfParagraphData(remainingLinesText, paragraph);
 
-        // Recalcular visualBottomOffset para la última línea de esta página
         SKRect lastPageLineBounds = new();
         font.MeasureText(linesForThisPage[^1], out lastPageLineBounds);
         float thisPageVisualBottom = lastPageLineBounds.Bottom;
@@ -257,7 +250,6 @@ internal class TextRenderer : IElementRenderer
             elementBox.Bottom - (float)paragraph.GetPadding.Bottom
         );
 
-        // ✅ Calcular altura visual real
         float actualTextHeight;
         if (linesToDraw.Count == 1)
         {
@@ -280,7 +272,6 @@ internal class TextRenderer : IElementRenderer
             _ => 0f
         };
 
-        // ✅ CORRECCIÓN CRÍTICA: Baseline debe estar ajustado al límite visual superior
         float baselineY = contentRect.Top + verticalOffset + visualTopOffset;
 
         foreach (string line in linesToDraw)
@@ -507,14 +498,14 @@ internal class TextRenderer : IElementRenderer
             if ((int)startCount >= textLength - tempEndString.Length && textLength > 0 && tempEndString.Length == 0 && ellipsisWidth > 0)
             {
                 long countTail = font.BreakText(textSegment, availableWidthForText);
-                return textSegment.Substring(0, (int)Math.Max(0, countTail)) + Ellipsis;
+                return string.Concat(textSegment.AsSpan(0, (int)Math.Max(0, countTail)), Ellipsis);
             }
-            return textSegment.Substring(0, (int)startCount) + Ellipsis + tempEndString;
+            return string.Concat(textSegment.AsSpan(0, (int)startCount), Ellipsis, tempEndString);
         }
         return textSegment;
     }
 
-    private IEnumerable<string> ApplyLineBreakModeWrapping(string singleLine, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
+    private List<string> ApplyLineBreakModeWrapping(string singleLine, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
     {
         var resultingLines = new List<string>();
         if (string.IsNullOrEmpty(singleLine)) { resultingLines.Add(string.Empty); return resultingLines; }

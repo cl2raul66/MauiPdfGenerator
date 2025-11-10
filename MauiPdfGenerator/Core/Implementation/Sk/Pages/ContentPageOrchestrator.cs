@@ -2,7 +2,6 @@
 using MauiPdfGenerator.Common.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
-using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
@@ -30,8 +29,9 @@ internal class ContentPageOrchestrator
             var elementContext = context with { Element = element };
 
             context.Logger.LogTrace("Measuring element {ElementType}", element.GetType().Name);
-            var availableRectForMeasure = new SKRect(0, 0, contentRect.Width, float.PositiveInfinity);
-            var measureInfo = await renderer.MeasureAsync(elementContext, availableRectForMeasure);
+            // --- CORRECCIÓN: Pasamos un SKSize en lugar de un SKRect ---
+            var availableSizeForMeasure = new SKSize(contentRect.Width, float.PositiveInfinity);
+            var measureInfo = await renderer.MeasureAsync(elementContext, availableSizeForMeasure);
             context.Logger.LogTrace("Element measured. Desired height: {DesiredHeight}", measureInfo.Height);
 
             if (measureInfo.Height <= remainingHeight)
@@ -111,8 +111,8 @@ internal class ContentPageOrchestrator
         float currentY,
         float availableHeight)
     {
-        // Medimos de nuevo solo para obtener el ancho deseado, ya que la altura la define availableHeight.
-        var measureInfo = await renderer.MeasureAsync(elementContext, new SKRect(0, 0, contentRect.Width, float.PositiveInfinity));
+        // --- CORRECCIÓN: Pasamos un SKSize en lugar de un SKRect ---
+        var measureInfo = await renderer.MeasureAsync(elementContext, new SKSize(contentRect.Width, float.PositiveInfinity));
 
         var elementWidth = element.GetHorizontalOptions is LayoutAlignment.Fill
             ? contentRect.Width

@@ -14,12 +14,12 @@ internal class GridRenderer : IElementRenderer
     private record GridArrangeCache(PdfRect FinalRect, List<GridArrangeInfo> ArrangedCells);
     private record ChildMeasureInfo(IPdfGridCellInfo Child, PdfLayoutInfo Measure);
 
-    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfGridData grid)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfGridData)} or is null.");
 
-        var contentAvailableWidth = availableRect.Width - (float)grid.GetMargin.HorizontalThickness - (float)grid.GetPadding.HorizontalThickness;
+        var contentAvailableWidth = availableSize.Width - (float)grid.GetMargin.HorizontalThickness - (float)grid.GetPadding.HorizontalThickness;
         if (grid.GetWidthRequest.HasValue)
         {
             contentAvailableWidth = (float)grid.GetWidthRequest.Value - (float)grid.GetPadding.HorizontalThickness;
@@ -48,7 +48,7 @@ internal class GridRenderer : IElementRenderer
 
         if (!context.LayoutState.TryGetValue(grid, out var state) || state is not GridCache measureCache)
         {
-            await MeasureAsync(context, new SKRect(0, 0, finalRect.Width, float.PositiveInfinity));
+            await MeasureAsync(context, new SKSize(finalRect.Width, float.PositiveInfinity));
             if (!context.LayoutState.TryGetValue(grid, out state) || state is not GridCache)
             {
                 context.Logger.LogError("Grid measure cache not found before arranging and could not be recreated.");
@@ -60,7 +60,7 @@ internal class GridRenderer : IElementRenderer
         var finalRowHeights = measureCache.RowHeights;
         var availableContentHeight = finalRect.Height - (float)grid.GetPadding.VerticalThickness - (float)grid.GetMargin.VerticalThickness;
 
-        if (grid.GetVerticalOptions == LayoutAlignment.Fill && availableContentHeight > measureCache.RowHeights.Sum())
+        if (grid.GetVerticalOptions is LayoutAlignment.Fill && availableContentHeight > measureCache.RowHeights.Sum())
         {
             var zippedChildInfo = grid.GetChildren.Cast<PdfElementData>()
                 .Zip(measureCache.ChildMeasures, (c, m) => new ChildMeasureInfo(c, m))
@@ -179,7 +179,7 @@ internal class GridRenderer : IElementRenderer
             var colSpan = Math.Min(cellInfo.ColumnSpan, numCols - cellInfo.Column);
             var childAvailableWidth = Enumerable.Range(cellInfo.Column, colSpan).Sum(c => columnWidths[c]) + (float)grid.GetColumnSpacing * (colSpan - 1);
 
-            var measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, childAvailableWidth, float.PositiveInfinity));
+            var measure = await renderer.MeasureAsync(childContext, new SKSize(childAvailableWidth, float.PositiveInfinity));
             childMeasures.Add(measure);
 
             if (cellInfo.RowSpan == 1 && rowDefs[cellInfo.Row].Height.IsAuto)
@@ -248,7 +248,7 @@ internal class GridRenderer : IElementRenderer
                 {
                     var renderer = context.RendererFactory.GetRenderer(child);
                     var childContext = context with { Element = child };
-                    var measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, float.PositiveInfinity, float.PositiveInfinity));
+                    var measure = await renderer.MeasureAsync(childContext, new SKSize(float.PositiveInfinity, float.PositiveInfinity));
                     childMeasures[child] = measure.Width;
                 }
             }
@@ -449,20 +449,20 @@ internal class GridRenderer : IElementRenderer
             var cellWidth = Enumerable.Range(cellInfo.Column, colSpan).Sum(c => columnWidths[c]) + (float)grid.GetColumnSpacing * (colSpan - 1);
             var cellHeight = Enumerable.Range(cellInfo.Row, rowSpan).Sum(r => rowHeights[r]) + (float)grid.GetRowSpacing * (rowSpan - 1);
 
-            var slotWidth = child.GetHorizontalOptions == LayoutAlignment.Fill ? cellWidth : measure.Width;
-            var slotHeight = child.GetVerticalOptions == LayoutAlignment.Fill ? cellHeight : measure.Height;
+            var slotWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? cellWidth : measure.Width;
+            var slotHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? cellHeight : measure.Height;
 
             var offsetX = child.GetHorizontalOptions switch
             {
                 LayoutAlignment.Center => (cellWidth - slotWidth) / 2f,
                 LayoutAlignment.End => cellWidth - slotWidth,
-                _ => 0 
+                _ => 0
             };
             var offsetY = child.GetVerticalOptions switch
             {
                 LayoutAlignment.Center => (cellHeight - slotHeight) / 2f,
                 LayoutAlignment.End => cellHeight - slotHeight,
-                _ => 0 
+                _ => 0
             };
 
             var childRect = new PdfRect(

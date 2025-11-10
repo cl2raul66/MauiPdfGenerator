@@ -57,6 +57,11 @@
                     Clicked="GeneratePdfWithGrid_Clicked"
                     HorizontalOptions="Fill"
                     Text="Generate PDF file, with grid" />
+                <Button
+                    x:Name="GeneratePdf"
+                    Clicked="GeneratePdf_Clicked"
+                    HorizontalOptions="Fill"
+                    Text="Generate PDF file" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

@@ -8,7 +8,7 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
 internal class VerticalStackLayoutRenderer : IElementRenderer
 {
-    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfVerticalStackLayoutData vsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayoutData)} or is null.");
@@ -17,14 +17,14 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
         float maxWidth = 0;
         var childMeasures = new List<PdfLayoutInfo>();
 
-        var constrainedWidth = (float?)vsl.GetWidthRequest ?? availableRect.Width;
+        var constrainedWidth = vsl.GetWidthRequest.HasValue ? (float)vsl.GetWidthRequest.Value : availableSize.Width;
         var childAvailableWidth = constrainedWidth - (float)vsl.GetPadding.HorizontalThickness - (float)vsl.GetMargin.HorizontalThickness;
 
         foreach (var child in vsl.GetChildren)
         {
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
-            var measure = await renderer.MeasureAsync(childContext, SKRect.Create(0, 0, childAvailableWidth, float.PositiveInfinity));
+            var measure = await renderer.MeasureAsync(childContext, new SKSize(childAvailableWidth, float.PositiveInfinity));
             childMeasures.Add(measure);
             totalHeight += measure.Height;
             maxWidth = Math.Max(maxWidth, measure.Width);
@@ -51,7 +51,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
         if (context.Element is not PdfVerticalStackLayoutData vsl)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfVerticalStackLayoutData)} or is null.");
 
-        if (vsl.GetVerticalOptions == LayoutAlignment.Fill)
+        if (vsl.GetVerticalOptions is LayoutAlignment.Fill)
         {
             return await ArrangeDivisibleAsync(finalRect, context, vsl);
         }
@@ -63,7 +63,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
 
     private async Task<PdfLayoutInfo> ArrangeAtomicAsync(PdfRect finalRect, PdfGenerationContext context, PdfVerticalStackLayoutData vsl)
     {
-        var measure = await MeasureAsync(context, new SKRect(0, 0, finalRect.Width, float.PositiveInfinity));
+        var measure = await MeasureAsync(context, new SKSize(finalRect.Width, float.PositiveInfinity));
 
         if (measure.Height > finalRect.Height)
         {
@@ -96,15 +96,15 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             var childContext = context with { Element = child };
 
             var measure = childMeasures.FirstOrDefault(m => m.Element == child);
-            if (measure.Element == null)
+            if (measure.Element is null)
             {
-                measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, finalRect.Width, float.PositiveInfinity));
+                measure = await renderer.MeasureAsync(childContext, new SKSize(finalRect.Width, float.PositiveInfinity));
             }
 
             float requiredSpacing = i > 0 ? vsl.GetSpacing : 0;
             float remainingHeightForChild = availableHeight - consumedHeight - requiredSpacing;
 
-            bool isAtomic = child is PdfImageData or PdfHorizontalLineData or PdfHorizontalStackLayoutData || (child is PdfVerticalStackLayoutData cvsl && cvsl.GetVerticalOptions != LayoutAlignment.Fill);
+            bool isAtomic = child is PdfImageData or PdfHorizontalLineData or PdfHorizontalStackLayoutData || (child is PdfVerticalStackLayoutData cvsl && cvsl.GetVerticalOptions is not LayoutAlignment.Fill);
 
             if (isAtomic && measure.Height > remainingHeightForChild)
             {
@@ -128,7 +128,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
                     childrenToArrange.Add(child);
                 }
 
-                if (partialArrange.RemainingElement != null)
+                if (partialArrange.RemainingElement is not null)
                 {
                     remainingChildren.Add(partialArrange.RemainingElement);
                 }
@@ -144,7 +144,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
         var arrangedResult = await ArrangeInternal(finalRect, context, vsl, childrenToArrange);
 
         PdfVerticalStackLayoutData? continuationLayout = null;
-        if (remainingChildren.Any())
+        if (remainingChildren.Count != 0)
         {
             continuationLayout = new PdfVerticalStackLayoutData(remainingChildren, vsl);
         }
@@ -172,41 +172,23 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
 
-            var measure = await renderer.MeasureAsync(childContext, new SKRect(0, 0, contentWidth, float.PositiveInfinity));
+            var measure = await renderer.MeasureAsync(childContext, new SKSize(contentWidth, float.PositiveInfinity));
 
-            // --- INICIO DE LA LÓGICA DE ARRANGE CORREGIDA Y DEFINITIVA ---
-            var horizontalOptions = child.GetHorizontalOptions;
+            float childTotalWidth = measure.Width;
+            float childTotalHeight = measure.Height;
 
-            // Regla de degradación: Si el HorizontalOptions es Fill (por defecto) pero el hijo
-            // tiene CUALQUIER restricción de tamaño explícita, el comportamiento de alineación
-            // efectivo debe ser Start, para emular a .NET MAUI.
-            if (horizontalOptions == LayoutAlignment.Fill && (child.GetWidthRequest.HasValue || child.GetHeightRequest.HasValue))
-            {
-                horizontalOptions = LayoutAlignment.Start;
-            }
+            float finalChildWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? contentWidth : childTotalWidth;
 
-            float childWidth;
-            if (child.GetWidthRequest.HasValue)
+            float offsetX = child.GetHorizontalOptions switch
             {
-                childWidth = (float)child.GetWidthRequest.Value;
-            }
-            else
-            {
-                // Si es Fill (y no hay restricción de tamaño), ocupa todo el ancho. Si no, su ancho medido.
-                childWidth = horizontalOptions == LayoutAlignment.Fill ? contentWidth : measure.Width;
-            }
-
-            float offsetX = horizontalOptions switch
-            {
-                LayoutAlignment.Center => (contentWidth - childWidth) / 2f,
-                LayoutAlignment.End => contentWidth - childWidth,
-                _ => 0f // Start o Fill
+                LayoutAlignment.Center => (contentWidth - childTotalWidth) / 2f,
+                LayoutAlignment.End => contentWidth - childTotalWidth,
+                _ => 0f
             };
-            // --- FIN DE LA LÓGICA DE ARRANGE CORREGIDA Y DEFINITIVA ---
 
             float x = elementBox.Left + (float)vsl.GetPadding.Left + offsetX;
 
-            var childRect = new PdfRect(x, currentY, childWidth, measure.Height);
+            var childRect = new PdfRect(x, currentY, finalChildWidth, childTotalHeight);
 
             var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
             arrangedChildren.Add(arrangedChild);

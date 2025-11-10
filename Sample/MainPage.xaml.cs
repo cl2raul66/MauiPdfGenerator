@@ -353,7 +353,7 @@ public partial class MainPage : ContentPage
                     {
                         rd.GridLength(GridLength.Auto); 
                         rd.GridLength(GridLength.Auto); 
-                        rd.GridLength(50);              
+                        rd.GridLength(50);    
                     })
                     .Children(ch =>
                     {
@@ -429,6 +429,59 @@ public partial class MainPage : ContentPage
                     .BackgroundColor(Colors.LightCoral)
                     .Padding(5)
                     .Row(2);
+                });
+            })
+            .Build()
+            .SaveAsync(targetFilePath);
+
+        await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
+    }
+
+    private async void GeneratePdf_Clicked(object sender, EventArgs e)
+    {
+        Stream imageStream;
+        using (var httpClient = new HttpClient())
+        {
+            var uri = new Uri("https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b?ver=5c31");
+            var imageData = await httpClient.GetByteArrayAsync(uri);
+            imageStream = new MemoryStream(imageData);
+        }
+
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample.pdf");
+
+        var doc = pdfDocFactory.CreateDocument();
+        await doc.ContentPage()
+            .Padding(MauiPdfGenerator.Fluent.Enums.DefaultPagePaddingType.Narrow)
+            .Content(c =>
+            {
+                c.Spacing(5);
+                c.Children(ch =>
+                {
+                    ch.Paragraph("Prueba")
+                    .HorizontalTextAlignment(TextAlignment.Center)
+                    .FontSize(14)
+                    .FontAttributes(FontAttributes.Bold)
+                    .TextTransform(TextTransform.Uppercase);
+
+                    ch.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.BackgroundColor(Colors.LightGrey)
+                        .HorizontalOptions(LayoutAlignment.Fill)
+                        .HeightRequest(50)
+                        .Children(hslch =>
+                        {
+                            hslch.Image(imageStream).Margin(5).BackgroundColor(Colors.Snow);
+                            hslch.Image(imageStream).Aspect(Aspect.AspectFit).Padding(5).BackgroundColor(Colors.Snow);
+                        });
+                    });
+
+                    ch.Image(imageStream)
+                    .HeightRequest(40)
+                    .BackgroundColor(Colors.WhiteSmoke);
+
+                    ch.Image(imageStream)
+                    .HeightRequest(50)
+                    .BackgroundColor(Colors.WhiteSmoke);
                 });
             })
             .Build()

@@ -28,14 +28,16 @@ internal class TextRenderer : IElementRenderer
         float VisualBottomOffset = 0
     );
 
-    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfParagraphData paragraph)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
 
         var (font, paint, textToRender, horizontalAlignment, verticalTextAlignment, lineBreakMode, textDecorations, textTransform) = await GetTextPropertiesAsync(paragraph, context);
 
-        float widthForMeasure = (float?)paragraph.GetWidthRequest ?? (availableRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness);
+        float widthForMeasure = paragraph.GetWidthRequest.HasValue
+            ? (float)paragraph.GetWidthRequest.Value - (float)paragraph.GetPadding.HorizontalThickness
+            : availableSize.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness;
 
         var allLines = WrapTextToLines(textToRender, font, widthForMeasure, lineBreakMode);
 
@@ -53,7 +55,7 @@ internal class TextRenderer : IElementRenderer
 
             SKRect lastLineBounds = new();
             font.MeasureText(allLines[^1], out lastLineBounds);
-            visualBottomOffset = lastLineBounds.Bottom; 
+            visualBottomOffset = lastLineBounds.Bottom;
         }
 
         float totalTextHeight = 0;
@@ -73,8 +75,8 @@ internal class TextRenderer : IElementRenderer
 
         float contentWidth = allLines.Count != 0 ? allLines.Max(line => font.MeasureText(line)) : 0;
 
-        float boxWidth = (float?)paragraph.GetWidthRequest ?? (contentWidth + (float)paragraph.GetPadding.HorizontalThickness);
-        float boxHeight = (float?)paragraph.GetHeightRequest ?? (totalTextHeight + (float)paragraph.GetPadding.VerticalThickness);
+        float boxWidth = paragraph.GetWidthRequest.HasValue ? (float)paragraph.GetWidthRequest.Value : contentWidth + (float)paragraph.GetPadding.HorizontalThickness;
+        float boxHeight = paragraph.GetHeightRequest.HasValue ? (float)paragraph.GetHeightRequest.Value : totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
 
         context.LayoutState[paragraph] = new TextLayoutCache(
             font, paint, horizontalAlignment, verticalTextAlignment, textDecorations,
@@ -98,7 +100,7 @@ internal class TextRenderer : IElementRenderer
             return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
-        var (font, paint, _, _, _, lineBreakMode, textToRender, cachedLineAdvance, cachedVisualTop, cachedVisualBottom) =
+        var (font, _, _, _, _, lineBreakMode, textToRender, cachedLineAdvance, cachedVisualTop, cachedVisualBottom) =
             (baseCache.Font, baseCache.Paint, baseCache.HorizontalAlignment, baseCache.VerticalTextAlignment,
              baseCache.TextDecorations, baseCache.LineBreakMode, baseCache.TransformedText,
              baseCache.LineAdvance, baseCache.VisualTopOffset, baseCache.VisualBottomOffset);
@@ -503,7 +505,7 @@ internal class TextRenderer : IElementRenderer
         return textSegment;
     }
 
-    private IEnumerable<string> ApplyLineBreakModeWrapping(string singleLine, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
+    private List<string> ApplyLineBreakModeWrapping(string singleLine, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
     {
         var resultingLines = new List<string>();
         if (string.IsNullOrEmpty(singleLine)) { resultingLines.Add(string.Empty); return resultingLines; }

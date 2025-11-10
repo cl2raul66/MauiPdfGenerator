@@ -9,7 +9,7 @@ internal class HorizontalLineRenderer : IElementRenderer
 {
     private record LineLayoutCache(SKPoint RelativeStart, SKPoint RelativeEnd, PdfRect FinalRect);
 
-    public Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKRect availableRect)
+    public Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfHorizontalLineData line)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfHorizontalLineData)} or is null.");
@@ -21,7 +21,7 @@ internal class HorizontalLineRenderer : IElementRenderer
         }
         else
         {
-            boxWidth = availableRect.Width - (float)line.GetMargin.HorizontalThickness;
+            boxWidth = availableSize.Width - (float)line.GetMargin.HorizontalThickness;
         }
 
         float boxHeight = line.GetHeightRequest.HasValue
@@ -102,7 +102,6 @@ internal class HorizontalLineRenderer : IElementRenderer
 
     public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)
     {
-        // Una línea desbordada simplemente no se dibuja.
         return Task.CompletedTask;
     }
 }

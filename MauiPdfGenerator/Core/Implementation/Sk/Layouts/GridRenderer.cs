@@ -2,6 +2,9 @@
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
@@ -10,7 +13,7 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 internal class GridRenderer : IElementRenderer
 {
     private record GridArrangeInfo(PdfRect CellRect, PdfLayoutInfo ArrangedChild);
-    private record GridCache(float[] ColumnWidths, float[] RowHeights, List<PdfLayoutInfo> ChildMeasures, IReadOnlyList<RowDefinition> RowDefs);
+    private record GridCache(float[] ColumnWidths, float[] RowHeights, List<PdfLayoutInfo> ChildMeasures, IReadOnlyList<RowDefinition> RowDefs, IReadOnlyList<ColumnDefinition> ColumnDefs);
     private record GridArrangeCache(PdfRect FinalRect, List<GridArrangeInfo> ArrangedCells);
     private record ChildMeasureInfo(IPdfGridCellInfo Child, PdfLayoutInfo Measure);
 
@@ -25,7 +28,7 @@ internal class GridRenderer : IElementRenderer
             contentAvailableWidth = (float)grid.GetWidthRequest.Value - (float)grid.GetPadding.HorizontalThickness;
         }
 
-        var (columnWidths, rowHeights, childMeasures, rowDefs) = await MeasureGridContent(grid, context, new SKSize(contentAvailableWidth, float.PositiveInfinity));
+        var (columnWidths, rowHeights, childMeasures, rowDefs, colDefs) = await MeasureGridContent(grid, context, new SKSize(contentAvailableWidth, float.PositiveInfinity));
 
         float finalContentWidth = columnWidths.Sum() + (float)grid.GetColumnSpacing * Math.Max(0, columnWidths.Length - 1);
         float finalContentHeight = rowHeights.Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowHeights.Length - 1);
@@ -33,7 +36,7 @@ internal class GridRenderer : IElementRenderer
         float boxWidth = finalContentWidth + (float)grid.GetPadding.HorizontalThickness;
         float boxHeight = finalContentHeight + (float)grid.GetPadding.VerticalThickness;
 
-        context.LayoutState[grid] = new GridCache(columnWidths, rowHeights, childMeasures, rowDefs);
+        context.LayoutState[grid] = new GridCache(columnWidths, rowHeights, childMeasures, rowDefs, colDefs);
 
         var totalWidth = boxWidth + (float)grid.GetMargin.HorizontalThickness;
         var totalHeight = boxHeight + (float)grid.GetMargin.VerticalThickness;
@@ -48,13 +51,7 @@ internal class GridRenderer : IElementRenderer
 
         if (!context.LayoutState.TryGetValue(grid, out var state) || state is not GridCache measureCache)
         {
-            await MeasureAsync(context, new SKSize(finalRect.Width, float.PositiveInfinity));
-            if (!context.LayoutState.TryGetValue(grid, out state) || state is not GridCache)
-            {
-                context.Logger.LogError("Grid measure cache not found before arranging and could not be recreated.");
-                return new PdfLayoutInfo(grid, finalRect.Width, finalRect.Height, finalRect);
-            }
-            measureCache = (GridCache)state;
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for Grid. This indicates a bug in the layout orchestrator.");
         }
 
         var finalRowHeights = measureCache.RowHeights;
@@ -99,7 +96,7 @@ internal class GridRenderer : IElementRenderer
         );
 
         var childrenForThisPage = grid.GetChildren.Cast<PdfElementData>().Where(c => !remainingChildren.Contains(c)).ToList();
-        var arrangedCells = await ArrangeChildrenInRows(grid, context, measureCache.ColumnWidths, finalRowHeights, measureCache.ChildMeasures, childrenForThisPage, contentBox);
+        var arrangedCells = await ArrangeChildrenInRows(grid, context, measureCache.ColumnWidths, finalRowHeights, measureCache.ChildMeasures, childrenForThisPage, contentBox, measureCache.ColumnDefs, measureCache.RowDefs);
 
         float arrangedContentHeight = rowsForThisPage.Count != 0 ? rowsForThisPage.Select(r => finalRowHeights[r]).Sum() + (float)grid.GetRowSpacing * Math.Max(0, rowsForThisPage.Count - 1) : 0;
         float finalHeightForThisPage = arrangedContentHeight + (float)grid.GetPadding.VerticalThickness + (float)grid.GetMargin.VerticalThickness;
@@ -130,6 +127,9 @@ internal class GridRenderer : IElementRenderer
             arrangeCache.FinalRect.Bottom - (float)grid.GetMargin.Bottom
         );
 
+        canvas.Save();
+        canvas.ClipRect(elementBox);
+
         if (grid.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(grid.GetBackgroundColor), Style = SKPaintStyle.Fill };
@@ -142,12 +142,10 @@ internal class GridRenderer : IElementRenderer
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
 
-            canvas.Save();
-            var childRect = cellInfo.ArrangedChild.FinalRect ?? cellInfo.CellRect;
-            canvas.ClipRect(new SKRect(childRect.Left, childRect.Top, childRect.Right, childRect.Bottom));
             await renderer.RenderAsync(canvas, childContext);
-            canvas.Restore();
         }
+
+        canvas.Restore();
     }
 
     public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)
@@ -155,7 +153,7 @@ internal class GridRenderer : IElementRenderer
         return Task.CompletedTask;
     }
 
-    private async Task<(float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, IReadOnlyList<RowDefinition> rowDefs)> MeasureGridContent(PdfGridData grid, PdfGenerationContext context, SKSize availableContentSize)
+    private async Task<(float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, IReadOnlyList<RowDefinition> rowDefs, IReadOnlyList<ColumnDefinition> colDefs)> MeasureGridContent(PdfGridData grid, PdfGenerationContext context, SKSize availableContentSize)
     {
         var children = grid.GetChildren.Cast<PdfElementData>().ToList();
         var numCols = grid.GetColumnDefinitions.Any() ? grid.GetColumnDefinitions.Count : children.Count != 0 ? children.Max(c => c.GridColumn + c.GridColumnSpan) : 1;
@@ -191,7 +189,7 @@ internal class GridRenderer : IElementRenderer
         var zippedChildInfo = children.Zip(childMeasures, (c, m) => new ChildMeasureInfo((IPdfGridCellInfo)c, m)).ToList();
         var rowHeights = CalculateRowHeights(rowDefs, float.PositiveInfinity, (float)grid.GetRowSpacing, rowAutoHeights, zippedChildInfo);
 
-        return (columnWidths, rowHeights, childMeasures, rowDefs);
+        return (columnWidths, rowHeights, childMeasures, rowDefs, colDefs);
     }
 
     private async Task<float[]> CalculateColumnWidthsAsync(PdfGridData grid, PdfGenerationContext context, float totalAvailableWidth, IReadOnlyList<ColumnDefinition> colDefs, int numCols)
@@ -422,7 +420,7 @@ internal class GridRenderer : IElementRenderer
         return (rowsToArrange, remainingChildren);
     }
 
-    private async Task<List<GridArrangeInfo>> ArrangeChildrenInRows(PdfGridData grid, PdfGenerationContext context, float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, List<PdfElementData> childrenToArrange, PdfRect contentBox)
+    private async Task<List<GridArrangeInfo>> ArrangeChildrenInRows(PdfGridData grid, PdfGenerationContext context, float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, List<PdfElementData> childrenToArrange, PdfRect contentBox, IReadOnlyList<ColumnDefinition> colDefs, IReadOnlyList<RowDefinition> rowDefs)
     {
         var arrangedCells = new List<GridArrangeInfo>();
         var rowOffsets = new float[rowHeights.Length];
@@ -448,6 +446,31 @@ internal class GridRenderer : IElementRenderer
 
             var cellWidth = Enumerable.Range(cellInfo.Column, colSpan).Sum(c => columnWidths[c]) + (float)grid.GetColumnSpacing * (colSpan - 1);
             var cellHeight = Enumerable.Range(cellInfo.Row, rowSpan).Sum(r => rowHeights[r]) + (float)grid.GetRowSpacing * (rowSpan - 1);
+
+            if (child.GetWidthRequest.HasValue && colDefs[cellInfo.Column].Width.IsStar)
+            {
+                context.DiagnosticSink.Submit(new DiagnosticMessage(
+                    DiagnosticSeverity.Info,
+                    "LAYOUT-005",
+                    $"The WidthRequest of {child.GetWidthRequest.Value} on element '{child.GetType().Name}' may be ignored because it is in a 'Star' column."
+                ));
+            }
+            if (child.GetHeightRequest.HasValue && rowDefs[cellInfo.Row].Height.IsStar)
+            {
+                context.DiagnosticSink.Submit(new DiagnosticMessage(
+                    DiagnosticSeverity.Info,
+                    "LAYOUT-005",
+                    $"The HeightRequest of {child.GetHeightRequest.Value} on element '{child.GetType().Name}' may be ignored because it is in a 'Star' row."
+                ));
+            }
+            if (measure.Width > cellWidth || measure.Height > cellHeight)
+            {
+                context.DiagnosticSink.Submit(new DiagnosticMessage(
+                    DiagnosticSeverity.Warning,
+                    DiagnosticCodes.LayoutOverflow,
+                    $"Element '{child.GetType().Name}' with desired size ({measure.Width}x{measure.Height}) overflows its assigned cell of size ({cellWidth}x{cellHeight}) in the Grid."
+                ));
+            }
 
             var slotWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? cellWidth : measure.Width;
             var slotHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? cellHeight : measure.Height;

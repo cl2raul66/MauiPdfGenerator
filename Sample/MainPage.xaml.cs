@@ -457,14 +457,18 @@ public partial class MainPage : ContentPage
             {
                 c.Children(ch =>
                 {
-                    ch.HorizontalStackLayout(hsl =>
+                    ch.Grid(g =>
                     {
-                        hsl.BackgroundColor(Colors.LightGrey)
-                        .HeightRequest(50)
-                        .Children(hslch =>
+                        g.BackgroundColor(Colors.Snow);
+                        g.ColumnDefinitions(cd =>
                         {
-                            hslch.Image(imageStream).BackgroundColor(Colors.Snow);
-                            hslch.Image(imageStream).BackgroundColor(Colors.Snow);
+                            cd.GridLength(GridLength.Star);
+                            cd.GridLength(GridLength.Star);
+                        })
+                        .Children(gch =>
+                        {
+                            gch.Image(imageStream).Aspect(Aspect.AspectFit).BackgroundColor(Colors.LightCyan);
+                            gch.Image(imageStream).BackgroundColor(Colors.LightCyan).WidthRequest(200).Column(1);
                         });
                     });
                 });

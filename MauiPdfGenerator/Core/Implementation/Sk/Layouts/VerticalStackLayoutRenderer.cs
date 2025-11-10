@@ -2,6 +2,9 @@
 using MauiPdfGenerator.Common.Models.Elements;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Models;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
@@ -179,6 +182,15 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             float childTotalWidth = measure.Width;
             float childTotalHeight = measure.Height;
 
+            if (childTotalWidth > contentWidth)
+            {
+                context.DiagnosticSink.Submit(new DiagnosticMessage(
+                    DiagnosticSeverity.Warning,
+                    DiagnosticCodes.LayoutOverflow,
+                    $"Element '{child.GetType().Name}' with desired width {childTotalWidth} overflows the available space of {contentWidth} in the VerticalStackLayout."
+                ));
+            }
+
             float finalChildWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? contentWidth : childTotalWidth;
 
             float offsetX = child.GetHorizontalOptions switch
@@ -229,6 +241,9 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             finalRect.Bottom - (float)vsl.GetMargin.Bottom
         );
 
+        canvas.Save();
+        canvas.ClipRect(elementBox);
+
         if (vsl.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(vsl.GetBackgroundColor), Style = SKPaintStyle.Fill };
@@ -241,6 +256,8 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             var childContext = context with { Element = (PdfElementData)childInfo.Element };
             await renderer.RenderAsync(canvas, childContext);
         }
+
+        canvas.Restore();
     }
 
     public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)

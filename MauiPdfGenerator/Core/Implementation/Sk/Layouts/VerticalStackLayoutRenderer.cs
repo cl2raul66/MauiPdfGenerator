@@ -202,7 +202,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
 
             float x = elementBox.Left + (float)vsl.GetPadding.Left + offsetX;
 
-            var childRect = new PdfRect(x, currentY, finalChildWidth, childTotalHeight);
+            var childRect = new PdfRect(x, currentY, contentWidth, childTotalHeight);
 
             var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
             arrangedChildren.Add(arrangedChild);

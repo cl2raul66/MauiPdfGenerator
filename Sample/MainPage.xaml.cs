@@ -110,7 +110,7 @@ public partial class MainPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
         }
     }
 
@@ -174,7 +174,7 @@ public partial class MainPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
         }
     }
 
@@ -226,7 +226,7 @@ public partial class MainPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
         }
     }
 
@@ -302,7 +302,7 @@ public partial class MainPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
         }
     }
 
@@ -372,7 +372,7 @@ public partial class MainPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"Error generando PDF: {ex.Message}", "OK");
+            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
         }
     }
 
@@ -388,45 +388,71 @@ public partial class MainPage : ContentPage
             {
                 c.Spacing(15).Padding(20);
                 c.Children(ch =>
+                {
+                    ch.Paragraph("Layouts Avanzados: Overflow y Reparto de Espacio").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.HorizontalLine();
+
+                    ch.Paragraph("0. HSL con un solo hijo (Comportamiento por defecto)").FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Por defecto, el HSL se ajusta al ancho de su contenido (HorizontalOptions='Start').")
+                        .FontSize(10);
+                    ch.HorizontalStackLayout(hsl =>
                     {
-                        ch.Paragraph("Layouts Avanzados: Overflow y Reparto de Espacio").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.HorizontalLine();
-
-                        ch.Paragraph("1. Desbordamiento (Overflow) en HorizontalStackLayout").FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Un HSL crece con su contenido. Si los hijos son más anchos que la página, se desbordarán y serán recortados. El sistema de diagnóstico (si está habilitado) advertirá sobre esto.")
-                            .FontSize(10);
-                        ch.HorizontalStackLayout(hsl =>
+                        hsl.BackgroundColor(Colors.LightCoral);
+                        hsl.Children(hsl_ch =>
                         {
-                            hsl.BackgroundColor(Colors.LightCoral);
-                            hsl.Children(hsl_ch =>
-                            {
-                                hsl_ch.Image(imageStream);
-                                hsl_ch.Image(imageStream);
-                                hsl_ch.Image(imageStream); // Esta imagen probablemente se cortará
-                            });
-                        });
-                        ch.HorizontalLine();
-
-                        ch.Paragraph("2. Solución: Reparto de Espacio con Grid y Columnas 'Star'").FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Para repartir el espacio disponible equitativamente, la herramienta correcta es un Grid con columnas 'Star'. Cada columna 'Star' recibe una porción del espacio restante.")
-                            .FontSize(10);
-                        ch.Grid(g =>
-                        {
-                            g.ColumnSpacing(5);
-                            g.ColumnDefinitions(cd =>
-                            {
-                                cd.GridLength(GridUnitType.Star);
-                                cd.GridLength(GridUnitType.Star);
-                                cd.GridLength(GridUnitType.Star);
-                            });
-                            g.Children(gch =>
-                            {
-                                gch.Image(imageStream).Column(0).BackgroundColor(Colors.LightCyan);
-                                gch.Image(imageStream).Column(1).BackgroundColor(Colors.LightCyan);
-                                gch.Image(imageStream).Column(2).BackgroundColor(Colors.LightCyan);
-                            });
+                            hsl_ch.Image(imageStream);
                         });
                     });
+                    ch.HorizontalLine();
+
+                    ch.Paragraph("0.1 Solución: Forzar Expansión con HorizontalOptions.Fill").FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Para que el HSL ocupe todo el ancho disponible, como en MAUI, se debe especificar 'Fill' explícitamente.")
+                        .FontSize(10);
+                    ch.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.HorizontalOptions(LayoutAlignment.Fill).BackgroundColor(Colors.LightBlue);
+                        hsl.Children(hsl_ch =>
+                        {
+                            hsl_ch.Image(imageStream);
+                        });
+                    });
+                    ch.HorizontalLine();
+
+                    ch.Paragraph("1. Desbordamiento (Overflow) en HorizontalStackLayout").FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Un HSL crece con su contenido. Si los hijos son más anchos que la página, se desbordarán y serán recortados. El sistema de diagnóstico (si está habilitado) advertirá sobre esto.")
+                        .FontSize(10);
+                    ch.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.BackgroundColor(Colors.LightCoral);
+                        hsl.Children(hsl_ch =>
+                        {
+                            hsl_ch.Image(imageStream);
+                            hsl_ch.Image(imageStream);
+                            hsl_ch.Image(imageStream); // Esta imagen probablemente se cortará
+                        });
+                    });
+                    ch.HorizontalLine();
+
+                    ch.Paragraph("2. Solución: Reparto de Espacio con Grid y Columnas 'Star'").FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Para repartir el espacio disponible equitativamente, la herramienta correcta es un Grid con columnas 'Star'. Cada columna 'Star' recibe una porción del espacio restante.")
+                        .FontSize(10);
+                    ch.Grid(g =>
+                    {
+                        g.ColumnSpacing(5);
+                        g.ColumnDefinitions(cd =>
+                        {
+                            cd.GridLength(GridUnitType.Star);
+                            cd.GridLength(GridUnitType.Star);
+                            cd.GridLength(GridUnitType.Star);
+                        });
+                        g.Children(gch =>
+                        {
+                            gch.Image(imageStream).Column(0).BackgroundColor(Colors.LightCyan);
+                            gch.Image(imageStream).Column(1).BackgroundColor(Colors.LightCyan);
+                            gch.Image(imageStream).Column(2).BackgroundColor(Colors.LightCyan);
+                        });
+                    });
+                });
             })
             .Build()
             .SaveAsync(targetFilePath);

@@ -472,27 +472,38 @@ internal class GridRenderer : IElementRenderer
                 ));
             }
 
-            var slotWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? cellWidth : measure.Width;
-            var slotHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? cellHeight : measure.Height;
+            // --- LÓGICA DE DECISIÓN DE TAMAÑO (BOX MODEL) ---
+
+            // 1. Ancho
+            float finalChildWidth;
+            if (child.GetWidthRequest.HasValue) finalChildWidth = (float)child.GetWidthRequest.Value;
+            else if (child.GetHorizontalOptions is LayoutAlignment.Fill) finalChildWidth = cellWidth;
+            else finalChildWidth = Math.Min(measure.Width, cellWidth);
+
+            // 2. Alto
+            float finalChildHeight;
+            if (child.GetHeightRequest.HasValue) finalChildHeight = (float)child.GetHeightRequest.Value;
+            else if (child.GetVerticalOptions is LayoutAlignment.Fill) finalChildHeight = cellHeight;
+            else finalChildHeight = Math.Min(measure.Height, cellHeight);
 
             var offsetX = child.GetHorizontalOptions switch
             {
-                LayoutAlignment.Center => (cellWidth - slotWidth) / 2f,
-                LayoutAlignment.End => cellWidth - slotWidth,
+                LayoutAlignment.Center => (cellWidth - finalChildWidth) / 2f,
+                LayoutAlignment.End => cellWidth - finalChildWidth,
                 _ => 0
             };
             var offsetY = child.GetVerticalOptions switch
             {
-                LayoutAlignment.Center => (cellHeight - slotHeight) / 2f,
-                LayoutAlignment.End => cellHeight - slotHeight,
+                LayoutAlignment.Center => (cellHeight - finalChildHeight) / 2f,
+                LayoutAlignment.End => cellHeight - finalChildHeight,
                 _ => 0
             };
 
             var childRect = new PdfRect(
                 contentBox.X + colOffsets[cellInfo.Column] + offsetX,
                 contentBox.Y + rowOffsets[cellInfo.Row] + offsetY,
-                Math.Max(0, slotWidth),
-                Math.Max(0, slotHeight)
+                Math.Max(0, finalChildWidth),
+                Math.Max(0, finalChildHeight)
             );
 
             var childContext = context with { Element = child };

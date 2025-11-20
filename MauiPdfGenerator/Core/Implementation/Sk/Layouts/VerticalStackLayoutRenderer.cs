@@ -1,6 +1,7 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Elements;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
@@ -191,18 +192,43 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
                 ));
             }
 
-            float finalChildWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? contentWidth : childTotalWidth;
+            // --- LÓGICA DE DECISIÓN DE ANCHO (BOX MODEL) ---
+            float finalChildWidth;
 
+            if (child.GetWidthRequest.HasValue)
+            {
+                // Prioridad 1: WidthRequest explícito.
+                // Si el usuario pide 300, le damos 300. Si pide 600 (y desborda), le damos 600.
+                finalChildWidth = (float)child.GetWidthRequest.Value;
+            }
+            else if (child.GetHorizontalOptions is LayoutAlignment.Fill)
+            {
+                // Prioridad 2: Fill.
+                // Ocupa todo el ancho disponible del padre.
+                finalChildWidth = contentWidth;
+            }
+            else
+            {
+                // Prioridad 3: Auto (Start/Center/End).
+                // Usamos el ancho medido (lo que ocupa el contenido), PERO lo limitamos al ancho disponible.
+                // Esto arregla el caso del HSL gigante: aunque mida 600, le damos 500 para que se recorte (clip)
+                // correctamente al borde de la página, en lugar de pintar el fondo fuera.
+                // Esto también arregla el caso del Párrafo pequeño: si mide 200, le damos 200, permitiendo
+                // que la lógica de alineación (offsetX) lo centre correctamente.
+                finalChildWidth = Math.Min(childTotalWidth, contentWidth);
+            }
+
+            // Calculamos el desplazamiento basado en el ancho FINAL decidido.
             float offsetX = child.GetHorizontalOptions switch
             {
-                LayoutAlignment.Center => (contentWidth - childTotalWidth) / 2f,
-                LayoutAlignment.End => contentWidth - childTotalWidth,
+                LayoutAlignment.Center => (contentWidth - finalChildWidth) / 2f,
+                LayoutAlignment.End => contentWidth - finalChildWidth,
                 _ => 0f
             };
 
             float x = elementBox.Left + (float)vsl.GetPadding.Left + offsetX;
 
-            var childRect = new PdfRect(x, currentY, contentWidth, childTotalHeight);
+            var childRect = new PdfRect(x, currentY, finalChildWidth, childTotalHeight);
 
             var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
             arrangedChildren.Add(arrangedChild);

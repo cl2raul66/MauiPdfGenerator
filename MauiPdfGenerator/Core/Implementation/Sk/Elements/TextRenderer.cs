@@ -237,6 +237,7 @@ internal class TextRenderer : IElementRenderer
             renderRect.Bottom - (float)paragraph.GetMargin.Bottom
         );
 
+        // 1. Dibujar Fondo (Sin Clipping estricto, o clip al MarginBox)
         if (paragraph.GetBackgroundColor is not null)
         {
             using var bgPaint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(paragraph.GetBackgroundColor), Style = SKPaintStyle.Fill };
@@ -274,27 +275,86 @@ internal class TextRenderer : IElementRenderer
 
         float baselineY = contentRect.Top + verticalOffset + visualTopOffset;
 
-        foreach (string line in linesToDraw)
+        // 2. CLIPPING ESTRICTO PARA EL TEXTO
+        // Esto asegura que si es NoWrap y se sale, se corte visualmente en el borde del Padding.
+        canvas.Save();
+        canvas.ClipRect(contentRect);
+
+        for (int i = 0; i < linesToDraw.Count; i++)
         {
+            string line = linesToDraw[i];
             float measuredWidth = font.MeasureText(line);
             float drawX = contentRect.Left;
 
-            if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
-            else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
+            // Lógica de Justificación
+            bool isLastLine = (i == linesToDraw.Count - 1);
+            bool shouldJustify = horizontalAlignment == TextAlignment.Justify && !isLastLine && line.Contains(' ');
 
-            canvas.DrawText(line, drawX, baselineY, font, paint);
-
-            if (textDecorations is not TextDecorations.None)
+            if (shouldJustify)
             {
-                DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                DrawJustifiedLine(canvas, line, contentRect.Left, contentRect.Width, baselineY, font, paint);
+                if (textDecorations is not TextDecorations.None)
+                {
+                    DrawTextDecorations(canvas, font, paint, textDecorations, contentRect.Left, baselineY, contentRect.Width);
+                }
+            }
+            else
+            {
+                if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
+                else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
+
+                canvas.DrawText(line, drawX, baselineY, font, paint);
+
+                if (textDecorations is not TextDecorations.None)
+                {
+                    DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                }
             }
 
             baselineY += lineAdvance;
         }
 
+        // Restaurar el estado del canvas (quitar el clipping)
+        canvas.Restore();
+
         font.Dispose();
         paint.Dispose();
         return Task.CompletedTask;
+    }
+
+    private void DrawJustifiedLine(SKCanvas canvas, string line, float x, float totalWidth, float y, SKFont font, SKPaint paint)
+    {
+        string[] words = line.Split(' ');
+        if (words.Length <= 1)
+        {
+            canvas.DrawText(line, x, y, font, paint);
+            return;
+        }
+
+        float totalWordWidth = words.Sum(w => font.MeasureText(w));
+        float spaceWidth = font.MeasureText(" ");
+        float totalSpaceWidth = (words.Length - 1) * spaceWidth;
+        float extraSpace = totalWidth - totalWordWidth - totalSpaceWidth;
+
+        if (extraSpace < 0)
+        {
+            canvas.DrawText(line, x, y, font, paint);
+            return;
+        }
+
+        float extraSpacePerGap = extraSpace / (words.Length - 1);
+        float currentX = x;
+
+        for (int i = 0; i < words.Length; i++)
+        {
+            canvas.DrawText(words[i], currentX, y, font, paint);
+            currentX += font.MeasureText(words[i]);
+
+            if (i < words.Length - 1)
+            {
+                currentX += spaceWidth + extraSpacePerGap;
+            }
+        }
     }
 
     public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)

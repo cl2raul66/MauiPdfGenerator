@@ -127,8 +127,29 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             var childContext = context with { Element = child };
 
             var requiredSpacing = i > 0 ? hsl.GetSpacing : 0;
-            float childTotalWidth = childMeasure.Width;
-            float finalChildHeight = child.GetVerticalOptions is LayoutAlignment.Fill ? availableContentHeight : childMeasure.Height;
+
+            // --- LÓGICA DE DECISIÓN DE TAMAÑO (BOX MODEL) ---
+
+            // 1. Ancho (Eje Principal): En HSL es acumulativo, usamos lo medido (que ya incluye WidthRequest si existe).
+            float finalChildWidth = childMeasure.Width;
+
+            // 2. Alto (Eje Transversal): Aplicamos la jerarquía de restricciones.
+            float finalChildHeight;
+            if (child.GetHeightRequest.HasValue)
+            {
+                // Prioridad 1: HeightRequest explícito
+                finalChildHeight = (float)child.GetHeightRequest.Value;
+            }
+            else if (child.GetVerticalOptions is LayoutAlignment.Fill)
+            {
+                // Prioridad 2: Fill
+                finalChildHeight = availableContentHeight;
+            }
+            else
+            {
+                // Prioridad 3: Auto (Start/Center/End) -> Clamp al espacio disponible
+                finalChildHeight = Math.Min(childMeasure.Height, availableContentHeight);
+            }
 
             float offsetY = child.GetVerticalOptions switch
             {
@@ -139,20 +160,20 @@ internal class HorizontalStackLayoutRenderer : IElementRenderer
             float y = renderRect.Top + (float)hsl.GetPadding.Top + offsetY;
 
             var spaceAvailableForChild = (renderRect.Right - (float)hsl.GetPadding.Right) - (currentX + requiredSpacing);
-            if (childTotalWidth > spaceAvailableForChild)
+            if (finalChildWidth > spaceAvailableForChild)
             {
                 context.DiagnosticSink.Submit(new DiagnosticMessage(
                     DiagnosticSeverity.Warning,
                     DiagnosticCodes.LayoutOverflow,
-                    $"Element '{child.GetType().Name}' with desired width {childMeasure.Width} overflows the available space of {Math.Max(0, spaceAvailableForChild)} in the HorizontalStackLayout."
+                    $"Element '{child.GetType().Name}' with width {finalChildWidth} overflows the available space of {Math.Max(0, spaceAvailableForChild)} in the HorizontalStackLayout."
                 ));
             }
 
             currentX += requiredSpacing;
-            var childRect = new PdfRect(currentX, y, childTotalWidth, finalChildHeight);
+            var childRect = new PdfRect(currentX, y, finalChildWidth, finalChildHeight);
             var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
             arrangedChildren.Add(arrangedChild);
-            currentX += childTotalWidth;
+            currentX += finalChildWidth;
         }
 
         context.LayoutState[hsl] = new HorizontalLayoutCache(arrangedChildren, renderRect, clipRect);

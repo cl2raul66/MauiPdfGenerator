@@ -139,43 +139,103 @@ public partial class MainPage : ContentPage
                 .ContentPage()
                 .Content(async c =>
                 {
-                    c.Spacing(10).Padding(20);
+                    c.Spacing(15).Padding(20);
                     c.Children(ch =>
                     {
+                        // --- TÍTULO ---
                         ch.Paragraph("Image Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
-                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
+                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 10);
 
+                        // --- SECCIÓN 1: Comportamiento por Defecto ---
                         ch.Paragraph("1. Comportamiento por Defecto").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Por defecto, la caja de la imagen ocupa todo el ancho (Fill) y la imagen se ajusta dentro (AspectFit). El fondo revela el tamaño de la caja.")
-                            .FontSize(10);
+                        ch.Paragraph("Al pasar solo el stream, la imagen ocupa todo el ancho disponible (Fill) y ajusta su altura proporcionalmente para mostrarse completa (AspectFit).").FontSize(10).FontAttributes(FontAttributes.Italic);
                         ch.Image(imageStream).BackgroundColor(Colors.LightGray);
-                        ch.HorizontalLine().Margin(0, 10);
+                        ch.HorizontalLine();
 
-                        ch.Paragraph("2. Tamaño y Posicionamiento").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("WidthRequest(200) cambia el HorizontalOptions implícito a 'Start'.").FontSize(10);
-                        ch.Image(imageStream).WidthRequest(200).BackgroundColor(Colors.LightPink);
-                        ch.Paragraph("Se puede centrar la caja explícitamente con HorizontalOptions.").FontSize(10);
-                        ch.Image(imageStream).WidthRequest(200).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightGreen);
-                        ch.HorizontalLine().Margin(0, 10);
+                        // --- SECCIÓN 2: Modos de Aspecto (Aspect) ---
+                        ch.Paragraph("2. Modos de Aspecto (Aspect)").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Controla cómo se dibuja la imagen dentro de su caja asignada. Para visualizarlo, forzamos una caja fija de 200x80 con fondo azul claro.").FontSize(10).FontAttributes(FontAttributes.Italic);
 
-                        ch.Paragraph("3. Modos de Aspecto (en una caja de 150x75)").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("AspectFit (defecto): cabe completa, puede dejar espacio.").FontSize(10);
-                        ch.Image(imageStream).WidthRequest(150).HeightRequest(75).Aspect(Aspect.AspectFit).BackgroundColor(Colors.LightSteelBlue);
-                        ch.Paragraph("AspectFill: llena la caja, puede recortar.").FontSize(10);
-                        ch.Image(imageStream).WidthRequest(150).HeightRequest(75).Aspect(Aspect.AspectFill).BackgroundColor(Colors.LightSteelBlue);
-                        ch.Paragraph("Fill: estira para llenar la caja, deforma la imagen.").FontSize(10);
-                        ch.Image(imageStream).WidthRequest(150).HeightRequest(75).Aspect(Aspect.Fill).BackgroundColor(Colors.LightSteelBlue);
-                        ch.HorizontalLine().Margin(0, 10);
+                        ch.Paragraph("AspectFit (Defecto): La imagen se escala para caber completa sin deformarse. Pueden sobrar espacios (letterboxing).").FontSize(10).FontAttributes(FontAttributes.Bold);
+                        ch.Image(imageStream).WidthRequest(200).HeightRequest(80).Aspect(Aspect.AspectFit).BackgroundColor(Colors.LightBlue);
 
-                        ch.Paragraph("4. Composición Final").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Imagen de 80x80, alineada al final, con margen y padding, usando AspectFill.").FontSize(10);
-                        ch.Image(imageStream)
-                            .WidthRequest(80).HeightRequest(80)
-                            .HorizontalOptions(LayoutAlignment.End)
-                            .Margin(0, 0, 20, 0)
-                            .Padding(5)
-                            .Aspect(Aspect.AspectFill)
-                            .BackgroundColor(Colors.LightGoldenrodYellow);
+                        ch.Paragraph("AspectFill: La imagen llena la caja manteniendo proporción, recortando lo que sobre (zoom).").FontSize(10).FontAttributes(FontAttributes.Bold);
+                        ch.Image(imageStream).WidthRequest(200).HeightRequest(80).Aspect(Aspect.AspectFill).BackgroundColor(Colors.LightBlue);
+
+                        ch.Paragraph("Fill: La imagen se estira para llenar la caja exactamente (se deforma).").FontSize(10).FontAttributes(FontAttributes.Bold);
+                        ch.Image(imageStream).WidthRequest(200).HeightRequest(80).Aspect(Aspect.Fill).BackgroundColor(Colors.LightBlue);
+
+                        ch.Paragraph("Center: La imagen no se escala, se centra en la caja. Si es más grande, se recorta.").FontSize(10).FontAttributes(FontAttributes.Bold);
+                        ch.Image(imageStream).WidthRequest(200).HeightRequest(80).Aspect(Aspect.Center).BackgroundColor(Colors.LightBlue);
+                        ch.HorizontalLine();
+
+                        // --- SECCIÓN 3: Dimensiones Automáticas ---
+                        ch.Paragraph("3. Dimensiones Automáticas").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Si defines solo una dimensión, la otra se calcula automáticamente manteniendo la proporción.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
+                        ch.Paragraph("Solo WidthRequest(100): La altura se ajusta sola.").FontSize(10);
+                        ch.Image(imageStream).WidthRequest(100).BackgroundColor(Colors.LightGreen);
+
+                        ch.Paragraph("Solo HeightRequest(40): El ancho se ajusta solo.").FontSize(10);
+                        ch.Image(imageStream).HeightRequest(40).HorizontalOptions(LayoutAlignment.Start).BackgroundColor(Colors.LightGreen);
+                        ch.HorizontalLine();
+
+                        // --- SECCIÓN 4: Alineación Horizontal ---
+                        ch.Paragraph("4. Alineación Horizontal").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Si la imagen (o su caja) es más pequeña que el ancho de la página, 'HorizontalOptions' define su posición.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
+                        ch.Paragraph("Start (Inicio)").FontSize(10);
+                        ch.Image(imageStream).WidthRequest(100).HorizontalOptions(LayoutAlignment.Start).BackgroundColor(Colors.LightPink);
+
+                        ch.Paragraph("Center (Centro)").FontSize(10);
+                        ch.Image(imageStream).WidthRequest(100).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightPink);
+
+                        ch.Paragraph("End (Final)").FontSize(10);
+                        ch.Image(imageStream).WidthRequest(100).HorizontalOptions(LayoutAlignment.End).BackgroundColor(Colors.LightPink);
+                        ch.HorizontalLine();
+
+                        // --- SECCIÓN 5: Modelo de Caja (Padding y Margin) ---
+                        ch.Paragraph("5. Modelo de Caja").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Padding: Espacio entre el borde de la caja (fondo) y la imagen.").FontSize(10);
+                        ch.Image(imageStream).WidthRequest(150).Padding(10).BackgroundColor(Colors.Orange);
+
+                        ch.Paragraph("Margin: Espacio fuera de la caja.").FontSize(10);
+                        ch.Image(imageStream).WidthRequest(150).Margin(20, 0, 0, 0).BackgroundColor(Colors.Orange);
+                        ch.HorizontalLine();
+
+                        // --- SECCIÓN 6: Composición Final (Estilo Polaroid) ---
+                        ch.Paragraph("6. Ejemplo Complejo: Estilo Polaroid").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Combinando Padding, BackgroundColor y Alineación para crear un marco.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
+                        ch.VerticalStackLayout(card =>
+                        {
+                            card.WidthRequest(200)
+                                .HorizontalOptions(LayoutAlignment.Center)
+                                .BackgroundColor(Colors.WhiteSmoke)
+                                .Padding(10) // Marco blanco
+                                .Spacing(5);
+
+                            card.Children(cardContent =>
+                            {
+                                // Imagen cuadrada
+                                cardContent.Image(imageStream)
+                                    .HeightRequest(180)
+                                    .Aspect(Aspect.AspectFill)
+                                    .BackgroundColor(Colors.LightGray);
+
+                                // Texto al pie
+                                cardContent.Paragraph("Microsoft Logo")
+                                    .HorizontalTextAlignment(TextAlignment.Center)
+                                    .FontFamily(PdfFonts.Comic)
+                                    .FontSize(14)
+                                    .TextColor(Colors.Black);
+
+                                cardContent.Paragraph("Ejemplo de composición")
+                                    .HorizontalTextAlignment(TextAlignment.Center)
+                                    .FontSize(8)
+                                    .TextColor(Colors.Gray);
+                            });
+                        });
                     });
                 })
                 .Build()
@@ -199,33 +259,60 @@ public partial class MainPage : ContentPage
             .ContentPage()
             .Content(c =>
             {
-                c.Spacing(10).Padding(20);
+                c.Spacing(15).Padding(20);
                 c.Children(ch =>
                 {
                     ch.Paragraph("HorizontalLine Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
-                        .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
+                        .HorizontalTextAlignment(TextAlignment.Center);
 
-                    ch.Paragraph("1. Línea por Defecto").FontSize(18).FontAttributes(FontAttributes.Bold);
-                    ch.Paragraph("Ocupa todo el ancho (Fill), grosor 1, color negro.").FontSize(10);
-                    ch.HorizontalLine().BackgroundColor(Colors.LightGray);
-                    ch.HorizontalLine().Margin(0, 10);
+                    // --- SECCIÓN 1: Básicos ---
+                    ch.Paragraph("1. Línea Básica").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Por defecto ocupa todo el ancho (Fill), grosor 1pt, color negro.").FontSize(10).FontAttributes(FontAttributes.Italic);
+                    ch.HorizontalLine();
 
-                    ch.Paragraph("2. Propiedades: Grosor y Color").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Con Padding vertical para separar del texto:").FontSize(10);
+                    ch.HorizontalLine().Padding(0, 10);
+
+                    // --- SECCIÓN 2: Estilizado ---
+                    ch.Paragraph("2. Estilizado (Grosor y Color)").FontSize(18).FontAttributes(FontAttributes.Bold);
+
+                    ch.Paragraph("Grosor 5pt, Color Rojo:").FontSize(10);
                     ch.HorizontalLine().Thickness(5).Color(Colors.Red);
-                    ch.HorizontalLine().Margin(0, 10);
 
-                    ch.Paragraph("3. Tamaño y Posicionamiento").FontSize(18).FontAttributes(FontAttributes.Bold);
-                    ch.Paragraph("WidthRequest(200) cambia el HorizontalOptions a 'Start'.").FontSize(10);
-                    ch.HorizontalLine().WidthRequest(200).Color(Colors.Green).Thickness(2);
-                    ch.Paragraph("Centrada explícitamente.").FontSize(10);
-                    ch.HorizontalLine().WidthRequest(200).HorizontalOptions(LayoutAlignment.Center).Color(Colors.Green).Thickness(2);
-                    ch.HorizontalLine().Margin(0, 10);
+                    ch.Paragraph("Grosor 0.5pt (Línea fina), Color Gris:").FontSize(10);
+                    ch.HorizontalLine().Thickness(0.5f).Color(Colors.Gray);
 
-                    ch.Paragraph("4. Composición Final").FontSize(18).FontAttributes(FontAttributes.Bold);
-                    ch.Paragraph("Línea azul de 3pt de grosor, centrada, con padding vertical de 10 y fondo gris.").FontSize(10);
-                    ch.HorizontalLine().Thickness(3).Color(Colors.DarkBlue)
-                        .HorizontalOptions(LayoutAlignment.Center).WidthRequest(300)
-                        .Padding(0, 10).BackgroundColor(Colors.LightGray);
+                    ch.Paragraph("Nota: Útil para separadores sutiles en listas.").FontSize(9).FontAttributes(FontAttributes.Italic);
+                    ch.HorizontalLine();
+
+                    // --- SECCIÓN 3: Control de Ancho y Alineación ---
+                    ch.Paragraph("3. Ancho y Alineación").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Las líneas no tienen que ocupar todo el ancho. Pueden usarse como adornos.").FontSize(10);
+
+                    ch.Paragraph("Ancho 100pt, Alineada al Inicio (Start):").FontSize(10);
+                    ch.HorizontalLine().WidthRequest(100).Color(Colors.Blue).Thickness(2);
+
+                    ch.Paragraph("Ancho 50%, Alineada al Centro (Center):").FontSize(10);
+                    // Simulamos 50% de una página A4 (~500pt de contenido) -> 250pt
+                    ch.HorizontalLine().WidthRequest(250).HorizontalOptions(LayoutAlignment.Center).Color(Colors.Blue).Thickness(2);
+
+                    ch.Paragraph("Ancho 100pt, Alineada al Final (End):").FontSize(10);
+                    ch.HorizontalLine().WidthRequest(100).HorizontalOptions(LayoutAlignment.End).Color(Colors.Blue).Thickness(2);
+                    ch.HorizontalLine();
+
+                    // --- SECCIÓN 4: Uso en Contexto ---
+                    ch.Paragraph("4. Ejemplo en Contexto (Título con Adornos)").FontSize(18).FontAttributes(FontAttributes.Bold);
+
+                    ch.HorizontalStackLayout(hsl =>
+                    {
+                        hsl.HorizontalOptions(LayoutAlignment.Center).Spacing(10);
+                        hsl.Children(h =>
+                        {
+                            h.HorizontalLine().WidthRequest(50).Thickness(2).Color(Colors.DarkGoldenrod).VerticalOptions(LayoutAlignment.Center);
+                            h.Paragraph("CAPÍTULO 1").FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkGoldenrod);
+                            h.HorizontalLine().WidthRequest(50).Thickness(2).Color(Colors.DarkGoldenrod).VerticalOptions(LayoutAlignment.Center);
+                        });
+                    });
                 });
             })
             .Build()
@@ -233,10 +320,7 @@ public partial class MainPage : ContentPage
 
             await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
-        }
+        catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }
     }
 
     private async void GenerateVerticalStackLayoutShowcase_Clicked(object sender, EventArgs e)
@@ -253,52 +337,83 @@ public partial class MainPage : ContentPage
                     c.Spacing(15).Padding(20);
                     c.Children(ch =>
                     {
-                        ch.Paragraph("VerticalStackLayout Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
-                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
+                        ch.Paragraph("VerticalStackLayout (VSL)").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
+                            .HorizontalTextAlignment(TextAlignment.Center);
 
-                        ch.Paragraph("1. Comportamiento por Defecto").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Un VSL es un contenedor que apila hijos verticalmente. Por defecto, se expande horizontalmente (Fill) y se ajusta a su contenido verticalmente (Start).").FontSize(10);
+                        // --- SECCIÓN 1: Mezcla de Vistas (Texto + Línea + Imagen) ---
+                        ch.Paragraph("1. Mezcla de Vistas").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("El VSL maneja elementos de distinta naturaleza. Aquí vemos Texto, Línea e Imagen apilados.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
                         ch.VerticalStackLayout(vsl =>
                         {
-                            vsl.Padding(5).BackgroundColor(Colors.LightGray);
-                            vsl.Children(vsl_ch =>
+                            vsl.BackgroundColor(Colors.WhiteSmoke).Padding(15).Spacing(10);
+                            vsl.Children(items =>
                             {
-                                vsl_ch.Paragraph("Hijo 1");
-                                vsl_ch.Paragraph("Hijo 2");
+                                items.Paragraph("Encabezado del Reporte").FontAttributes(FontAttributes.Bold).HorizontalTextAlignment(TextAlignment.Center);
+                                items.HorizontalLine().Color(Colors.DarkGray).Thickness(2);
+                                items.Image(imageStream).HeightRequest(60).Aspect(Aspect.AspectFit).BackgroundColor(Colors.LightGray);
+                                items.Paragraph("Pie de foto descriptivo.").FontSize(9).TextColor(Colors.Gray).HorizontalTextAlignment(TextAlignment.Center);
                             });
                         });
-                        ch.HorizontalLine().Margin(0, 10);
+                        ch.HorizontalLine();
 
-                        ch.Paragraph("2. Propiedades del Layout").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("'Spacing' añade espacio entre hijos. 'Padding' crea un borde interno.").FontSize(10);
+                        // --- SECCIÓN 2: Alineación Transversal (Cross-Axis) con Imágenes ---
+                        ch.Paragraph("2. Alineación de Imágenes").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Las imágenes suelen ser más estrechas que el contenedor. 'HorizontalOptions' es vital aquí.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
                         ch.VerticalStackLayout(vsl =>
                         {
-                            vsl.Spacing(10).Padding(10).BackgroundColor(Colors.LightBlue);
-                            vsl.Children(vsl_ch =>
+                            vsl.BackgroundColor(Colors.AliceBlue).Padding(10).Spacing(5);
+                            vsl.Children(items =>
                             {
-                                vsl_ch.Paragraph("Item 1").BackgroundColor(Colors.White);
-                                vsl_ch.Paragraph("Item 2").BackgroundColor(Colors.White);
+                                items.Paragraph("Start (Izquierda):");
+                                items.Image(imageStream).WidthRequest(50).HorizontalOptions(LayoutAlignment.Start);
+
+                                items.Paragraph("Center (Centro):");
+                                items.Image(imageStream).WidthRequest(50).HorizontalOptions(LayoutAlignment.Center);
+
+                                items.Paragraph("End (Derecha):");
+                                items.Image(imageStream).WidthRequest(50).HorizontalOptions(LayoutAlignment.End);
                             });
                         });
-                        ch.HorizontalLine().Margin(0, 10);
+                        ch.HorizontalLine();
 
-                        ch.Paragraph("3. Composición: Anidamiento").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Anidar layouts permite crear estructuras complejas. Aquí, un HSL dentro de un VSL.").FontSize(10);
-                        ch.VerticalStackLayout(vsl_outer =>
+                        // --- SECCIÓN 3: Caso Real (Tarjeta de Perfil) ---
+                        ch.Paragraph("3. Caso Real: Tarjeta de Perfil").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Combinando Padding, Bordes (simulados con líneas) y Alineación.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
+                        ch.VerticalStackLayout(card =>
                         {
-                            vsl_outer.Padding(10).BackgroundColor(Colors.LightSteelBlue).Spacing(5);
-                            vsl_outer.Children(vsl_outer_ch =>
+                            card.WidthRequest(250).HorizontalOptions(LayoutAlignment.Center)
+                                .BackgroundColor(Colors.White).Padding(0); // Sin padding externo para simular borde
+
+                            // Borde Superior
+                            card.Children(content =>
                             {
-                                vsl_outer_ch.Paragraph("Contenedor Principal (VSL)");
-                                vsl_outer_ch.HorizontalStackLayout(hsl_inner =>
+                                content.HorizontalLine().Color(Colors.DarkBlue).Thickness(5);
+
+                                content.VerticalStackLayout(inner =>
                                 {
-                                    hsl_inner.Spacing(10).Padding(5).BackgroundColor(Colors.White);
-                                    hsl_inner.Children(hsl_inner_ch =>
+                                    inner.Padding(15).Spacing(10);
+                                    inner.Children(c =>
                                     {
-                                        hsl_inner_ch.Image(imageStream).HeightRequest(30);
-                                        hsl_inner_ch.Paragraph("Texto junto a la imagen");
+                                        // Avatar Centrado
+                                        c.Image(imageStream).WidthRequest(80).HeightRequest(80).Aspect(Aspect.AspectFill).HorizontalOptions(LayoutAlignment.Center);
+
+                                        // Nombre y Cargo
+                                        c.Paragraph("Jane Doe").FontSize(16).FontAttributes(FontAttributes.Bold).HorizontalTextAlignment(TextAlignment.Center);
+                                        c.Paragraph("Senior Architect").TextColor(Colors.Gray).HorizontalTextAlignment(TextAlignment.Center);
+
+                                        // Separador interno
+                                        c.HorizontalLine().Color(Colors.LightGray).Padding(20, 5);
+
+                                        // Detalles
+                                        c.Paragraph("ID: 8493-22").FontSize(10).HorizontalTextAlignment(TextAlignment.Center);
                                     });
                                 });
+
+                                // Borde Inferior
+                                content.HorizontalLine().Color(Colors.DarkBlue).Thickness(2);
                             });
                         });
                     });
@@ -308,10 +423,7 @@ public partial class MainPage : ContentPage
 
             await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
-        }
+        catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }
     }
 
     private async void GenerateHorizontalStackLayoutShowcase_Clicked(object sender, EventArgs e)
@@ -328,49 +440,78 @@ public partial class MainPage : ContentPage
                     c.Spacing(15).Padding(20);
                     c.Children(ch =>
                     {
-                        ch.Paragraph("HorizontalStackLayout Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
-                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
+                        ch.Paragraph("HorizontalStackLayout (HSL)").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
+                            .HorizontalTextAlignment(TextAlignment.Center);
 
-                        ch.Paragraph("1. Comportamiento por Defecto ('Start')").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Por defecto, un HSL se ajusta al ancho de su contenido. El fondo lo demuestra.")
-                            .FontSize(10);
+                        // --- SECCIÓN 1: Patrón Icono + Texto ---
+                        ch.Paragraph("1. Patrón Icono + Texto").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("El uso más común del HSL. Alineamos verticalmente al centro para que el texto cuadre con el icono.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
                         ch.HorizontalStackLayout(hsl =>
                         {
-                            hsl.Spacing(10).Padding(5).BackgroundColor(Colors.LightYellow);
-                            hsl.Children(hsl_ch =>
+                            hsl.Spacing(10).Padding(10).BackgroundColor(Colors.WhiteSmoke);
+                            hsl.Children(items =>
                             {
-                                hsl_ch.Paragraph("Texto 1");
-                                hsl_ch.Image(imageStream).HeightRequest(20);
-                                hsl_ch.Paragraph("Texto 2");
+                                // Icono
+                                items.Image(imageStream).WidthRequest(24).HeightRequest(24).VerticalOptions(LayoutAlignment.Center);
+                                // Texto
+                                items.Paragraph("Configuración del Sistema").FontSize(14).VerticalTextAlignment(TextAlignment.Center);
                             });
                         });
-                        ch.HorizontalLine().Margin(0, 10);
+                        ch.HorizontalLine();
 
-                        ch.Paragraph("2. Forzar Expansión ('Fill')").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Para que el HSL ocupe todo el ancho disponible, se debe especificar 'Fill' explícitamente.")
-                            .FontSize(10);
+                        // --- SECCIÓN 2: Separadores Verticales (Simulados) ---
+                        ch.Paragraph("2. Separadores Verticales").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Usamos HorizontalLine con un ancho pequeño para simular guiones o separadores entre elementos.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
                         ch.HorizontalStackLayout(hsl =>
                         {
-                            hsl.HorizontalOptions(LayoutAlignment.Fill).BackgroundColor(Colors.LightBlue).Padding(5);
-                            hsl.Children(hsl_ch =>
+                            hsl.Spacing(5).HorizontalOptions(LayoutAlignment.Center);
+                            hsl.Children(items =>
                             {
-                                hsl_ch.Image(imageStream).HeightRequest(30);
-                                hsl_ch.Paragraph("Este texto está en un HSL que ocupa todo el ancho.");
+                                items.Paragraph("Inicio").TextColor(Colors.Blue);
+                                items.HorizontalLine().WidthRequest(10).Color(Colors.Black).VerticalOptions(LayoutAlignment.Center); // Guión
+                                items.Paragraph("Productos").TextColor(Colors.Blue);
+                                items.HorizontalLine().WidthRequest(10).Color(Colors.Black).VerticalOptions(LayoutAlignment.Center); // Guión
+                                items.Paragraph("Detalle").FontAttributes(FontAttributes.Bold);
                             });
                         });
-                        ch.HorizontalLine().Margin(0, 10);
+                        ch.HorizontalLine();
 
-                        ch.Paragraph("3. Desbordamiento (Overflow)").FontSize(18).FontAttributes(FontAttributes.Bold);
-                        ch.Paragraph("Si los hijos son más anchos que la página, se desbordarán y serán recortados. El sistema de diagnóstico advertirá sobre esto.")
-                            .FontSize(10);
+                        // --- SECCIÓN 3: Alineación Vertical Mixta ---
+                        ch.Paragraph("3. Alineación Vertical Mixta").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Elementos de distinta altura (Imagen alta vs Texto bajo) alineados de formas diferentes.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
                         ch.HorizontalStackLayout(hsl =>
                         {
-                            hsl.BackgroundColor(Colors.LightCoral);
-                            hsl.Children(hsl_ch =>
+                            hsl.BackgroundColor(Colors.AliceBlue).HeightRequest(80).Padding(5);
+                            hsl.Children(items =>
                             {
-                                hsl_ch.Image(imageStream);
-                                hsl_ch.Image(imageStream);
-                                hsl_ch.Image(imageStream);
+                                items.Image(imageStream).WidthRequest(60).HeightRequest(60).VerticalOptions(LayoutAlignment.Start).BackgroundColor(Colors.LightPink);
+                                items.Paragraph("Top").VerticalOptions(LayoutAlignment.Start);
+
+                                items.Image(imageStream).WidthRequest(60).HeightRequest(60).VerticalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightGreen);
+                                items.Paragraph("Center").VerticalOptions(LayoutAlignment.Center);
+
+                                items.Image(imageStream).WidthRequest(60).HeightRequest(60).VerticalOptions(LayoutAlignment.End).BackgroundColor(Colors.LightBlue);
+                                items.Paragraph("Bottom").VerticalOptions(LayoutAlignment.End);
+                            });
+                        });
+                        ch.HorizontalLine();
+
+                        // --- SECCIÓN 4: Galería de Imágenes (Overflow) ---
+                        ch.Paragraph("4. Galería de Imágenes (Overflow)").FontSize(18).FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("Varias imágenes en fila. Si exceden el ancho, se recortan (clipping).").FontSize(10).FontAttributes(FontAttributes.Italic);
+
+                        ch.HorizontalStackLayout(hsl =>
+                        {
+                            hsl.Spacing(2);
+                            hsl.Children(items =>
+                            {
+                                for (int i = 0; i < 6; i++)
+                                {
+                                    items.Image(imageStream).WidthRequest(100).HeightRequest(80).Aspect(Aspect.AspectFill);
+                                }
                             });
                         });
                     });
@@ -380,10 +521,7 @@ public partial class MainPage : ContentPage
 
             await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
-        }
+        catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }
     }
 
     private async void GenerateGridShowcase_Clicked(object sender, EventArgs e)
@@ -401,69 +539,102 @@ public partial class MainPage : ContentPage
                 c.Children(ch =>
                 {
                     ch.Paragraph("Grid Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
-                        .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 20);
+                        .HorizontalTextAlignment(TextAlignment.Center);
 
-                    ch.Paragraph("1. Grid Básico").FontSize(18).FontAttributes(FontAttributes.Bold);
-                    ch.Paragraph("Definición de filas y columnas con tamaños 'Auto', 'Star' (proporcional) y Fijo. Los hijos se posicionan con .Row() y .Column().").FontSize(10);
+                    // --- SECCIÓN 1: Media Object (Imagen + Texto) ---
+                    ch.Paragraph("1. Patrón Media Object").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Columna Auto para la imagen, Star para el texto. Típico en listas de noticias.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
                     ch.Grid(g =>
                     {
-                        g.BackgroundColor(Colors.WhiteSmoke).RowSpacing(5).ColumnSpacing(10).Padding(5);
-                        g.ColumnDefinitions(cd =>
+                        g.ColumnSpacing(10).Padding(10).BackgroundColor(Colors.WhiteSmoke);
+                        g.ColumnDefinitions(cd => { cd.GridLength(GridLength.Auto); cd.GridLength(GridLength.Star); });
+
+                        g.Children(cells =>
                         {
-                            cd.GridLength(GridLength.Auto);
-                            cd.GridLength(GridLength.Star);
-                            cd.GridLength(100);
-                        });
-                        g.RowDefinitions(rd =>
-                        {
-                            rd.GridLength(GridLength.Auto);
-                            rd.GridLength(50);
-                        });
-                        g.Children(g_ch =>
-                        {
-                            g_ch.Paragraph("Col 0 (Auto)").Row(0).Column(0).BackgroundColor(Colors.LightGray);
-                            g_ch.Paragraph("Col 1 (Star)").Row(0).Column(1).BackgroundColor(Colors.LightGray);
-                            g_ch.Paragraph("Col 2 (100)").Row(0).Column(2).BackgroundColor(Colors.LightGray);
+                            // Imagen (Auto)
+                            cells.Image(imageStream).WidthRequest(80).HeightRequest(60).Aspect(Aspect.AspectFill).VerticalOptions(LayoutAlignment.Start);
+
+                            // Contenido (Star)
+                            cells.VerticalStackLayout(vsl =>
+                            {
+                                vsl.Column(1);
+                                vsl.Children(t =>
+                                {
+                                    t.Paragraph("Título de la Noticia").FontAttributes(FontAttributes.Bold);
+                                    t.Paragraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor.").FontSize(10).TextColor(Colors.Gray);
+                                });
+                            });
                         });
                     });
-                    ch.HorizontalLine().Margin(0, 10);
+                    ch.HorizontalLine();
 
-                    ch.Paragraph("2. RowSpan y ColumnSpan").FontSize(18).FontAttributes(FontAttributes.Bold);
-                    ch.Paragraph("Un hijo puede ocupar múltiples celdas.").FontSize(10);
+                    // --- SECCIÓN 2: Alineación en Celdas (Imagen vs Texto) ---
+                    ch.Paragraph("2. Alineación en Celdas").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Centrando una imagen pequeña en una celda grande.").FontSize(10).FontAttributes(FontAttributes.Italic);
+
                     ch.Grid(g =>
                     {
-                        g.BackgroundColor(Colors.WhiteSmoke).RowSpacing(5).ColumnSpacing(5).Padding(5);
+                        g.BackgroundColor(Colors.AliceBlue).HeightRequest(100);
                         g.ColumnDefinitions(cd => { cd.GridLength(GridUnitType.Star); cd.GridLength(GridUnitType.Star); });
-                        g.RowDefinitions(rd => { rd.GridLength(GridUnitType.Auto); rd.GridLength(GridUnitType.Auto); });
-                        g.Children(g_ch =>
+
+                        g.Children(cells =>
                         {
-                            g_ch.Paragraph("Celda (0,0)").Row(0).Column(0).BackgroundColor(Colors.LightBlue);
-                            g_ch.Paragraph("Celda (0,1)").Row(0).Column(1).BackgroundColor(Colors.LightBlue);
-                            g_ch.Paragraph("Esta celda ocupa dos columnas (ColumnSpan=2)")
-                                .Row(1).Column(0).ColumnSpan(2)
-                                .HorizontalTextAlignment(TextAlignment.Center)
-                                .BackgroundColor(Colors.LightGreen);
+                            // Celda 1: Texto
+                            cells.Paragraph("Texto Centrado").HorizontalTextAlignment(TextAlignment.Center).VerticalTextAlignment(TextAlignment.Center)
+                                .Column(0).BackgroundColor(Colors.LightBlue);
+
+                            // Celda 2: Imagen
+                            cells.Image(imageStream).WidthRequest(40).HeightRequest(40)
+                                .HorizontalOptions(LayoutAlignment.Center).VerticalOptions(LayoutAlignment.Center)
+                                .Column(1).BackgroundColor(Colors.LightGreen);
                         });
                     });
-                    ch.HorizontalLine().Margin(0, 10);
+                    ch.HorizontalLine();
 
-                    ch.Paragraph("3. Caso de Uso: Reparto de Espacio").FontSize(18).FontAttributes(FontAttributes.Bold);
-                    ch.Paragraph("El Grid es la solución correcta para repartir el espacio disponible equitativamente.").FontSize(10);
-                    ch.Grid(g =>
+                    // --- SECCIÓN 3: Tabla Compleja (Factura) ---
+                    ch.Paragraph("3. Ejemplo Real: Detalle de Factura").FontSize(18).FontAttributes(FontAttributes.Bold);
+                    ch.Paragraph("Mezcla de Texto, Líneas (bordes) e Imágenes (miniaturas de producto).").FontSize(10).FontAttributes(FontAttributes.Italic);
+
+                    ch.Grid(table =>
                     {
-                        g.ColumnSpacing(5);
-                        g.ColumnDefinitions(cd =>
+                        table.RowSpacing(5);
+                        table.ColumnDefinitions(cd =>
                         {
-                            cd.GridLength(GridUnitType.Star);
-                            cd.GridLength(GridUnitType.Star);
-                            cd.GridLength(GridUnitType.Star);
+                            cd.GridLength(40);              // Miniatura
+                            cd.GridLength(GridUnitType.Star); // Descripción
+                            cd.GridLength(60);              // Total
                         });
-                        g.Children(gch =>
+
+                        // Encabezados
+                        table.Children(c =>
                         {
-                            gch.Image(imageStream).Column(0).BackgroundColor(Colors.LightCyan);
-                            gch.Image(imageStream).Column(1).BackgroundColor(Colors.LightCyan);
-                            gch.Image(imageStream).Column(2).BackgroundColor(Colors.LightCyan);
+                            c.Paragraph("Img").FontAttributes(FontAttributes.Bold).Column(0);
+                            c.Paragraph("Producto").FontAttributes(FontAttributes.Bold).Column(1);
+                            c.Paragraph("Total").FontAttributes(FontAttributes.Bold).HorizontalTextAlignment(TextAlignment.End).Column(2);
+
+                            // Línea separadora debajo de encabezados (Span 3 columnas)
+                            c.HorizontalLine().Color(Colors.Black).Thickness(1).Row(1).Column(0).ColumnSpan(3);
                         });
+
+                        // Fila de Datos 1
+                        table.Children(c =>
+                        {
+                            c.Image(imageStream).WidthRequest(30).HeightRequest(30).Aspect(Aspect.AspectFill).Row(2).Column(0);
+                            c.Paragraph("Laptop Gamer X500\nIntel i9, 32GB RAM").FontSize(10).Row(2).Column(1).VerticalTextAlignment(TextAlignment.Center);
+                            c.Paragraph("$1200.00").HorizontalTextAlignment(TextAlignment.End).VerticalTextAlignment(TextAlignment.Center).Row(2).Column(2);
+                        });
+
+                        // Fila de Datos 2
+                        table.Children(c =>
+                        {
+                            c.Image(imageStream).WidthRequest(30).HeightRequest(30).Aspect(Aspect.AspectFill).Row(3).Column(0);
+                            c.Paragraph("Mouse Inalámbrico\nErgonómico").FontSize(10).Row(3).Column(1).VerticalTextAlignment(TextAlignment.Center);
+                            c.Paragraph("$25.50").HorizontalTextAlignment(TextAlignment.End).VerticalTextAlignment(TextAlignment.Center).Row(3).Column(2);
+                        });
+
+                        // Línea final
+                        table.Children(c => c.HorizontalLine().Color(Colors.Black).Thickness(1).Row(4).Column(0).ColumnSpan(3));
                     });
                 });
             })
@@ -472,10 +643,7 @@ public partial class MainPage : ContentPage
 
             await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
-        }
+        catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }
     }
 
     async Task<Stream> GetSampleImageStream()

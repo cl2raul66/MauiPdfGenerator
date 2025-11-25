@@ -1,11 +1,12 @@
-﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models;
-using MauiPdfGenerator.Common.Models.Elements;
-using Microsoft.Extensions.Logging;
-using SkiaSharp;
+﻿using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Utils;
+using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
+using MauiPdfGenerator.Fluent.Models;
+using Microsoft.Extensions.Logging;
+using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
@@ -175,7 +176,7 @@ internal class TextRenderer : IElementRenderer
         }
 
         var linesForThisPage = allLines.Take(linesThatFit).ToList();
-        var remainingLinesText = string.Join("\n", allLines.Skip(linesThatFit));
+        var remainingLinesText = string.Join(PdfStringUtils.NormalizeNewline, allLines.Skip(linesThatFit));
         var continuationParagraph = new PdfParagraphData(remainingLinesText, paragraph);
 
         SKRect lastPageLineBounds = new();
@@ -288,7 +289,7 @@ internal class TextRenderer : IElementRenderer
 
             // Lógica de Justificación
             bool isLastLine = (i == linesToDraw.Count - 1);
-            bool shouldJustify = horizontalAlignment == TextAlignment.Justify && !isLastLine && line.Contains(' ');
+            bool shouldJustify = horizontalAlignment is TextAlignment.Justify && !isLastLine && line.Contains(' ');
 
             if (shouldJustify)
             {
@@ -473,7 +474,12 @@ internal class TextRenderer : IElementRenderer
         var lines = new List<string>();
         if (string.IsNullOrEmpty(text)) return lines;
 
-        string[] textSegments = text.Split(['\n']);
+        // USO DE LA UTILIDAD: Normalizamos antes de procesar
+        string normalizedText = PdfStringUtils.NormalizeNewlines(text);
+
+        // Ahora el split es seguro y consistente usando solo \n
+        string[] textSegments = normalizedText.Split(PdfStringUtils.NormalizeNewline);
+
         foreach (string segment in textSegments)
         {
             if (maxWidth <= 0 || lineBreakMode is LineBreakMode.NoWrap)

@@ -72,6 +72,10 @@
                     Clicked="GenerateGridShowcase_Clicked"
                     HorizontalOptions="Fill"
                     Text="Grid Showcase" />
+                <Button
+                    HorizontalOptions="Fill"
+                    Clicked="GenerateIssue"
+                    Text="issue 28" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

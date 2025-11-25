@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator;
+using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fonts;
 
@@ -144,12 +145,12 @@ public partial class MainPage : ContentPage
                     {
                         // --- TÍTULO ---
                         ch.Paragraph("Image Showcase").FontSize(24).FontAttributes(FontAttributes.Bold).TextColor(Colors.DarkBlue)
-                            .HorizontalTextAlignment(TextAlignment.Center).Margin(0, 0, 0, 10);
+                            .HorizontalTextAlignment(TextAlignment.Center);
 
                         // --- SECCIÓN 1: Comportamiento por Defecto ---
                         ch.Paragraph("1. Comportamiento por Defecto").FontSize(18).FontAttributes(FontAttributes.Bold);
                         ch.Paragraph("Al pasar solo el stream, la imagen ocupa todo el ancho disponible (Fill) y ajusta su altura proporcionalmente para mostrarse completa (AspectFit).").FontSize(10).FontAttributes(FontAttributes.Italic);
-                        ch.Image(imageStream).BackgroundColor(Colors.LightGray);
+                        ch.Image(imageStream);
                         ch.HorizontalLine();
 
                         // --- SECCIÓN 2: Modos de Aspecto (Aspect) ---
@@ -220,7 +221,6 @@ public partial class MainPage : ContentPage
                                 // Imagen cuadrada
                                 cardContent.Image(imageStream)
                                     .HeightRequest(180)
-                                    .Aspect(Aspect.AspectFill)
                                     .BackgroundColor(Colors.LightGray);
 
                                 // Texto al pie
@@ -366,13 +366,13 @@ public partial class MainPage : ContentPage
                             vsl.BackgroundColor(Colors.AliceBlue).Padding(10).Spacing(5);
                             vsl.Children(items =>
                             {
-                                items.Paragraph("Start (Izquierda):");
+                                items.Paragraph("Start (Izquierda):").HorizontalOptions(LayoutAlignment.Start);
                                 items.Image(imageStream).WidthRequest(50).HorizontalOptions(LayoutAlignment.Start);
 
-                                items.Paragraph("Center (Centro):");
+                                items.Paragraph("Center (Centro):").HorizontalOptions(LayoutAlignment.Center);
                                 items.Image(imageStream).WidthRequest(50).HorizontalOptions(LayoutAlignment.Center);
 
-                                items.Paragraph("End (Derecha):");
+                                items.Paragraph("End (Derecha):").HorizontalOptions(LayoutAlignment.End);
                                 items.Image(imageStream).WidthRequest(50).HorizontalOptions(LayoutAlignment.End);
                             });
                         });
@@ -398,7 +398,7 @@ public partial class MainPage : ContentPage
                                     inner.Children(c =>
                                     {
                                         // Avatar Centrado
-                                        c.Image(imageStream).WidthRequest(80).HeightRequest(80).Aspect(Aspect.AspectFill).HorizontalOptions(LayoutAlignment.Center);
+                                        c.Image(imageStream).WidthRequest(80).HeightRequest(80).HorizontalOptions(LayoutAlignment.Center);
 
                                         // Nombre y Cargo
                                         c.Paragraph("Jane Doe").FontSize(16).FontAttributes(FontAttributes.Bold).HorizontalTextAlignment(TextAlignment.Center);
@@ -641,6 +641,35 @@ public partial class MainPage : ContentPage
             .Build()
             .SaveAsync(targetFilePath);
 
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
+        }
+        catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }
+    }
+
+    private async void GenerateIssue(object sender, EventArgs e)
+    {
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Issue.pdf");
+        try
+        {
+            var doc = pdfDocFactory.CreateDocument();
+            await doc.Configuration(cfg =>
+            {
+                cfg.PageSize(PageSizeType.Letter); 
+                cfg.PageOrientation(PageOrientationType.Landscape);
+                cfg.Padding(100);
+                cfg.MetaData(data => data.Title("MauiPdfGenerator - Issue Showcase"));
+            })
+            .ContentPage()
+            .Content(async c =>
+            {
+                c.BackgroundColor(Colors.WhiteSmoke);
+                c.Children(ch =>
+                {
+                    ch.Paragraph("Lorem ipsum dolor sit amet Justo magna rebum et gubergren molestie ipsum sit lorem commodo hendrerit eirmod at. Et ad sed invidunt magna. Nulla dolore commodo duis ex kasd. Vero iusto ipsum et ipsum no takimata accusam eirmod at sed nam magna ut dolore veniam qui in sit. Exerci vero vel ea labore dolor elitr tation elitr. Dolore molestie ipsum odio erat ipsum voluptua iriure exerci. Dolor magna labore lorem sit commodo. Et sit dolor ipsum no ex amet eos duis invidunt gubergren eirmod congue dolores magna erat nulla rebum. Facilisi sed est illum elitr eos. Et clita amet diam diam ea est velit et veniam sed luptatum eos labore enim et lorem.\r\n\r\nFacilisi no aliquyam. Ipsum consetetur nulla voluptua diam ipsum dolores amet tincidunt vero at sed tempor diam suscipit invidunt aliquip. No dolor esse magna sea diam diam. Sit laoreet et ipsum. Vero at sed sadipscing feugiat eos et rebum lorem ipsum magna lorem in commodo laoreet. Ipsum accumsan tempor ullamcorper diam sit et erat. Invidunt praesent justo sit id gubergren rebum accusam facilisi amet ut. Consectetuer sadipscing dolores diam stet gubergren. Lorem eu dolores veniam amet erat at sit et sit sea vero elitr. Kasd stet tincidunt eirmod rebum vero exerci sit enim labore. Eos dolor lorem diam et at. Sed facilisi sit illum clita takimata invidunt est. Takimata dolor at ea ad tation consetetur sea congue exerci suscipit sanctus ex dolore cum lorem et zzril. Eos accusam eirmod. Diam nam et lorem tempor eros consetetur duo justo ullamcorper est tempor esse.\r\n\r\nGubergren elit sit veniam et consetetur et dolor sanctus. Vel volutpat eirmod at sadipscing. Ad et vel et no erat diam sea eu suscipit consetetur. Dolore et ea ea accumsan rebum dolores ea at. Est ipsum et et gubergren ea. Sanctus diam sadipscing no dolores iusto ut justo odio in invidunt diam. Dolor iriure lorem lorem consequat et iriure dolore. Eos sea sed rebum at dolore ex tincidunt labore et at soluta at minim sit sit et kasd. Dolor lorem volutpat dolore et. No dolor ipsum dolores. Tempor et in gubergren dolores ut magna diam duis dolore tempor dolor dolor dolor rebum sed eos aliquyam.\r\n\r\nVel clita in vel sadipscing eirmod duis dolore et dolores nonumy. Tation at consectetuer lorem kasd ea duis dolores ea duis lorem et euismod sanctus diam amet diam. Molestie quis cum consectetuer iriure eros. Accusam duo sed nisl feugiat et nonummy elitr nonumy nulla qui ipsum gubergren dolores. Lorem dolore esse eirmod rebum ut elitr tempor clita nobis consetetur dolor no amet duis vero eleifend. Laoreet diam ipsum consequat sed est.\r\n\r\nAt eos et facilisis sadipscing et molestie delenit ipsum invidunt consetetur tempor eum. Erat ad dolores sanctus labore diam amet luptatum tation. Justo aliquyam nisl diam gubergren augue eos et doming. Ea molestie lorem aliquip lobortis nulla nonummy. Sit in aliquyam sit gubergren accusam consetetur ea. Justo accusam eirmod. Facilisis clita dolore. Augue vel veniam tempor vel vel duis no dolor dolor diam sed. Et accumsan nonummy luptatum dignissim ut cum eos et vel et diam dolor sit amet sea et. Diam accusam magna gubergren amet dolores aliquyam amet sed dolor tempor elitr et labore odio accusam. Vel at est sanctus diam. Ut tincidunt lorem dolor voluptua voluptua magna dolores qui erat at et takimata amet ullamcorper facilisis veniam. No et invidunt invidunt kasd stet et takimata eirmod. Lorem et vulputate lorem stet takimata sit sit sit sed lorem ut sit esse invidunt aliquyam.\r\n\r\nNulla et justo ipsum gubergren enim wisi clita. Amet magna tempor voluptua. Labore lorem justo consequat et in sanctus lorem est nonumy eu ut volutpat sed nibh sit enim eu. Invidunt diam dolores no sit eos et nonumy nostrud sit wisi justo gubergren delenit ut dolor. Ad amet aliquyam esse sed feugiat ea. Assum dolore sit et accumsan kasd enim amet justo laoreet elitr lorem sed et stet est consequat. Lorem nulla justo eos euismod consectetuer sed. Justo dolore kasd vel. Eu dolor facilisis voluptua ut. Amet eirmod vel dolor ut elitr eirmod sadipscing veniam. No est labore et wisi nostrud elitr consetetur et sadipscing molestie sit. Elitr amet et tempor magna illum duo congue. Dolor clita duo facilisi dolor eros ut magna est hendrerit et. Consetetur doming diam gubergren stet dolores gubergren nisl kasd elitr dolores consequat. Euismod ipsum duis est sea nulla sadipscing ut rebum dolore ea lorem vero. Ea feugait ut nonumy ipsum magna invidunt eu diam nonummy doming vulputate quis elitr.\r\n\r\nSit ipsum ex elitr suscipit quis eos at diam sea mazim. Dolore et clita sanctus assum dolor dolore consetetur gubergren lorem. Nam stet kasd sea ea. Velit et dolor diam sea tation amet laoreet ex. Invidunt invidunt takimata at invidunt tation ea adipiscing. Dolore nonumy ipsum eos clita sit te ipsum labore consetetur sit duis accusam elitr et. Elitr in vero vero elitr duo labore eirmod et in nibh aliquam dolor augue amet diam amet consequat. Nonumy lorem dolor invidunt magna lorem minim eu vero est vero ea consetetur elitr eos magna dolores sed clita. Consequat eirmod gubergren invidunt. In at illum accusam amet vel esse et gubergren diam accusam lorem dolores eirmod vero aliquyam lobortis. Praesent sit facilisis adipiscing eros et dolore et consequat et dolor amet sit amet voluptua tempor. Eos in suscipit autem qui tation amet ex ea kasd et lorem lorem nonumy justo sadipscing stet consetetur facer. Clita praesent ex et clita ipsum ea ea gubergren voluptua. Sanctus aliquyam takimata duo tempor ipsum feugiat dolor takimata duis sed. Lorem dolore et autem augue dignissim takimata eirmod. Invidunt augue duo et at invidunt ut odio. Rebum nulla nonumy est nulla. Dolor lorem dolore consetetur qui dolor.\r\n\r\nLabore sanctus ex vulputate augue ut. Erat dolore eirmod nonumy et esse eirmod gubergren clita stet iriure sed ut ipsum et erat dolore tincidunt. Amet suscipit assum clita et possim molestie accusam vel justo in rebum diam. Et esse et sit luptatum ullamcorper ipsum no amet et dolore. Et zzril eos rebum ipsum dolore et et duo lorem gubergren gubergren duo et dolor. Diam ullamcorper diam erat ipsum est consectetuer duo. Ut sit justo. Sed facilisis duo magna no ut eirmod et iusto et at ipsum diam accusam ut at clita et. Lorem dolore dolor est et consectetuer sea ea rebum est ea dolores luptatum dolor. No volutpat sed augue no eu stet dolore zzril quod clita et clita qui dolores sadipscing tempor ipsum. Rebum eirmod wisi iriure commodo. Amet liber at clita facilisi. Sed dolor justo stet delenit et et ullamcorper. Et nulla voluptua dolore eos clita nonumy enim. Dolore sed ea nulla dolore praesent exerci. Takimata rebum dolor sed assum invidunt eos voluptua labore dolor dolor facilisi dignissim iriure laoreet kasd.").BackgroundColor(Colors.LightGray);
+                });
+            })
+            .Build()
+            .SaveAsync(targetFilePath);
             await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
         catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }

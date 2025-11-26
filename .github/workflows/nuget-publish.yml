@@ -25,11 +25,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Configuración para .NET 10
-      - name: Setup .NET 10
+      # Configuración para .NET 10 Preview
+      - name: Setup .NET 10 (Preview)
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      # --- NUEVO PASO OBLIGATORIO PARA MAUI ---
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui
+      # ----------------------------------------
 
       # 1. Diagnostics
       - name: Build & Pack Diagnostics
@@ -82,24 +88,19 @@ jobs:
           foreach ($package in $packages) {
               Write-Host "Procesando: $($package.Name)"
               
-              # Ejecutamos el push y capturamos TODA la salida (éxito y error)
-              # Usamos --skip-duplicate para que no lance excepción, pero leemos el texto
+              # Ejecutamos el push y capturamos TODA la salida
               $output = dotnet nuget push $package.FullName --api-key $apiKey --source $source --skip-duplicate 2>&1 | Out-String
 
               Write-Host $output
 
               # ANÁLISIS DE RESULTADOS
               if ($output -match "already exists" -or $output -match "409") {
-                  # CASO: VERSIÓN DUPLICADA -> Generamos ADVERTENCIA de GitHub
-                  # Esto crea una caja amarilla en la UI de GitHub Actions
-                  Write-Host "::warning title=Versión Duplicada::$($package.Name) ya existe en NuGet. No se publicó nada. Recuerda subir la versión en el .csproj."
+                  Write-Host "::warning title=Versión Duplicada::$($package.Name) ya existe en NuGet. No se publicó nada."
               }
               elseif ($output -match "Pushed") {
-                  # CASO: ÉXITO
                   Write-Host "::notice title=Publicado::$($package.Name) se ha publicado correctamente."
               }
               elseif ($LASTEXITCODE -ne 0) {
-                  # CASO: ERROR REAL (Red, Auth, etc)
                   Write-Host "::error title=Error Crítico::Fallo al publicar $($package.Name)."
                   $hasErrors = $true
               }

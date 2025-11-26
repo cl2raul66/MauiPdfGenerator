@@ -1,181 +1,111 @@
-name: Publish NuGet Packages
+name: Build & Publish NuGet
 
 on:
   push:
-    branches: [ master ] 
+    branches: [ master ]
     paths-ignore:
-      - 'README.md'
-      - '.github/FUNDING.yml'
-      - '.github/workflows/nuget-publish.yml'
+      - '**/*.md'
+      - '.github/**'
       - 'LICENSE.txt'
-      - '.github/ISSUE_TEMPLATE/feature_request.md'
-      - '.github/ISSUE_TEMPLATE/bug_report.md'
-    
+  workflow_dispatch:
+    inputs:
+      force_publish:
+        description: 'Ejecutar publicación manual'
+        required: false
+        default: true
+        type: boolean
+
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      sourcegen_changed: ${{ steps.changed-files-sourcegen.outputs.any_changed }}
-      diagnostics_changed: ${{ steps.changed-files-diagnostics.outputs.any_changed }}
-      main_changed: ${{ steps.changed-files-main.outputs.any_changed }}
+  # TRABAJO 1: COMPILAR Y EMPAQUETAR
+  build-and-pack:
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get changed files for SourceGenerators
-        id: changed-files-sourcegen
-        uses: tj-actions/changed-files@v46 
+      # Configuración para .NET 10 Preview
+      - name: Setup .NET 10 (Preview)
+        uses: actions/setup-dotnet@v4
         with:
-          files: MauiPdfGenerator.SourceGenerators/**
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
 
-      - name: Debug SourceGenerators changes
-        if: always()
+      # 1. Diagnostics
+      - name: Build & Pack Diagnostics
         run: |
-          echo "SourceGen All Changed Files: ${{ steps.changed-files-sourcegen.outputs.all_changed_files }}"
-          echo "SourceGen Any Changed: ${{ steps.changed-files-sourcegen.outputs.any_changed }}"
+          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj
+          dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj -c Release --no-restore
+          dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj -c Release --no-build -o ./nupkgs
 
-      - name: Get changed files for Diagnostics
-        id: changed-files-diagnostics
-        uses: tj-actions/changed-files@v46 
+      # 2. Main Library
+      - name: Build & Pack Main Library
+        run: |
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj -c Release --no-restore
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj -c Release --no-build -o ./nupkgs
+
+      # 3. Source Generators
+      - name: Build & Pack SourceGenerators
+        run: |
+          dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
+          dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj -c Release --no-restore
+          dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj -c Release --no-build -o ./nupkgs
+
+      # Guardar artefactos
+      - name: Upload NuGet Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: MauiPdfGenerator.Diagnostics/**
+          name: nuget-packages
+          path: ./nupkgs/*.nupkg
+          retention-days: 5
 
-      - name: Debug Diagnostics changes
-        if: always()
-        run: |
-          echo "Diagnostics All Changed Files: ${{ steps.changed-files-diagnostics.outputs.all_changed_files }}"
-          echo "Diagnostics Any Changed: ${{ steps.changed-files-diagnostics.outputs.any_changed }}"
-
-      - name: Get changed files for Main library
-        id: changed-files-main
-        uses: tj-actions/changed-files@v46 
+  # TRABAJO 2: PUBLICAR CON ADVERTENCIAS
+  publish-nuget:
+    needs: build-and-pack
+    runs-on: windows-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
         with:
-          files: MauiPdfGenerator/**
+          name: nuget-packages
+          path: ./nupkgs
 
-      - name: Debug Main library changes
-        if: always()
+      - name: Publish to NuGet with Warnings
+        shell: pwsh
         run: |
-          echo "Main All Changed Files: ${{ steps.changed-files-main.outputs.all_changed_files }}"
-          echo "Main Any Changed: ${{ steps.changed-files-main.outputs.any_changed }}"
+          $packages = Get-ChildItem ./nupkgs/*.nupkg
+          $apiKey = "${{ secrets.NUGET_API_KEY }}"
+          $source = "https://api.nuget.org/v3/index.json"
+          $hasErrors = $false
 
-  # Trabajo para publicar MauiPdfGenerator.SourceGenerators
-  publish-sourcegen:
-    needs: detect-changes
-    runs-on: windows-latest
-    if: needs.detect-changes.outputs.sourcegen_changed == 'true'
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
-        
-    - name: Restore dependencies
-      run: dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
-      
-    - name: Build
-      run: dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
-      
-    - name: Pack SourceGenerators
-      run: dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs-sourcegen
-      
-    - name: Check for nupkgs directory (SourceGen)
-      if: always()
-      run: |
-        echo "Checking ./nupkgs-sourcegen for SourceGen:"
-        Test-Path ./nupkgs-sourcegen
-        Get-ChildItem ./nupkgs-sourcegen -Filter *.nupkg
-      shell: pwsh
+          foreach ($package in $packages) {
+              Write-Host "Procesando: $($package.Name)"
+              
+              # Ejecutamos el push y capturamos TODA la salida (éxito y error)
+              # Usamos --skip-duplicate para que no lance excepción, pero leemos el texto
+              $output = dotnet nuget push $package.FullName --api-key $apiKey --source $source --skip-duplicate 2>&1 | Out-String
 
-    - name: Publish SourceGenerators to NuGet
-      run: |
-        Get-ChildItem -Path ./nupkgs-sourcegen -Filter *.nupkg | ForEach-Object { 
-          Write-Host "Pushing package: $($_.FullName)"
-          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        }
-      shell: pwsh
+              Write-Host $output
 
-  # Trabajo para publicar MauiPdfGenerator.Diagnostics
-  publish-diagnostic:
-    needs: detect-changes
-    runs-on: windows-latest
-    if: needs.detect-changes.outputs.diagnostics_changed == 'true'
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
-        
-    - name: Restore dependencies
-      run: dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj
-      
-    - name: Build
-      run: dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore
-      
-    - name: Pack Diagnostics
-      run: dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./nupkgs-diagnostics
-      
-    - name: Check for nupkgs directory (Diagnostics)
-      if: always()
-      run: |
-        echo "Checking ./nupkgs-diagnostics for Diagnostics:"
-        Test-Path ./nupkgs-diagnostics
-        Get-ChildItem ./nupkgs-diagnostics -Filter *.nupkg
-      shell: pwsh
+              # ANÁLISIS DE RESULTADOS
+              if ($output -match "already exists" -or $output -match "409") {
+                  # CASO: VERSIÓN DUPLICADA -> Generamos ADVERTENCIA de GitHub
+                  # Esto crea una caja amarilla en la UI de GitHub Actions
+                  Write-Host "::warning title=Versión Duplicada::$($package.Name) ya existe en NuGet. No se publicó nada. Recuerda subir la versión en el .csproj."
+              }
+              elseif ($output -match "Pushed") {
+                  # CASO: ÉXITO
+                  Write-Host "::notice title=Publicado::$($package.Name) se ha publicado correctamente."
+              }
+              elseif ($LASTEXITCODE -ne 0) {
+                  # CASO: ERROR REAL (Red, Auth, etc)
+                  Write-Host "::error title=Error Crítico::Fallo al publicar $($package.Name)."
+                  $hasErrors = $true
+              }
+          }
 
-    - name: Publish Diagnostics to NuGet
-      run: |
-        Get-ChildItem -Path ./nupkgs-diagnostics -Filter *.nupkg | ForEach-Object { 
-          Write-Host "Pushing package: $($_.FullName)"
-          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        }
-      shell: pwsh
-
-  # Trabajo para publicar MauiPdfGenerator
-  publish-main:
-    needs: detect-changes
-    runs-on: windows-latest
-    if: needs.detect-changes.outputs.main_changed == 'true'
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x 
-        
-    - name: Restore dependencies
-      run: dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj
-      
-    - name: Build
-      run: dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
-      
-    - name: Pack Main Library
-      run: dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs-main
-      
-    - name: Check for nupkgs directory (Main)
-      if: always()
-      run: |
-        echo "Checking ./nupkgs-main for Main:"
-        Test-Path ./nupkgs-main
-        Get-ChildItem ./nupkgs-main -Filter *.nupkg
-      shell: pwsh
-
-    - name: Publish Main Library to NuGet
-      run: |
-        Get-ChildItem -Path ./nupkgs-main -Filter *.nupkg | ForEach-Object { 
-          Write-Host "Pushing package: $($_.FullName)"
-          dotnet nuget push $_.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        }
-      shell: pwsh
+          if ($hasErrors) {
+              exit 1
+          }

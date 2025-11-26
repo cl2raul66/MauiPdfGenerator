@@ -1,6 +1,7 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Elements;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
@@ -68,7 +69,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
     {
         if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<PdfLayoutInfo> childMeasures)
         {
-            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for VerticalStackLayout. This indicates a bug in the layout orchestrator.");
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for VerticalStackLayout.");
         }
 
         var totalMeasuredHeight = childMeasures.Sum(m => m.Height) + (childMeasures.Count > 1 ? vsl.GetSpacing * (childMeasures.Count - 1) : 0);
@@ -85,7 +86,7 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
     {
         if (!context.LayoutState.TryGetValue(vsl, out var state) || state is not List<PdfLayoutInfo> childMeasures)
         {
-            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for VerticalStackLayout. This indicates a bug in the layout orchestrator.");
+            throw new InvalidOperationException("ArrangeAsync called without a prior successful MeasureAsync for VerticalStackLayout.");
         }
 
         var childrenToArrange = new List<PdfElementData>();
@@ -108,42 +109,56 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
             float requiredSpacing = i > 0 ? vsl.GetSpacing : 0;
             float remainingHeightForChild = availableHeight - consumedHeight - requiredSpacing;
 
-            bool isAtomic = child is PdfImageData or PdfHorizontalLineData or PdfHorizontalStackLayoutData || (child is PdfVerticalStackLayoutData cvsl && cvsl.GetVerticalOptions is not LayoutAlignment.Fill);
+            bool isAtomic = IsAtomicElement(child);
 
-            if (isAtomic && measure.Height > remainingHeightForChild)
+            if (isAtomic)
             {
-                remainingChildren.Add(child);
-                pageIsFull = true;
-                continue;
-            }
-
-            if (measure.Height <= remainingHeightForChild)
-            {
-                childrenToArrange.Add(child);
-                consumedHeight += measure.Height + requiredSpacing;
+                // Lógica Atómica: Todo o Nada
+                if (measure.Height > remainingHeightForChild)
+                {
+                    remainingChildren.Add(child);
+                    pageIsFull = true;
+                }
+                else
+                {
+                    childrenToArrange.Add(child);
+                    consumedHeight += measure.Height + requiredSpacing;
+                }
             }
             else
             {
-                var renderer = context.RendererFactory.GetRenderer(child);
-                var childContext = context with { Element = child };
-                var partialRect = new PdfRect(finalRect.X, finalRect.Y + consumedHeight + requiredSpacing, finalRect.Width, remainingHeightForChild);
-                var partialArrange = await renderer.ArrangeAsync(partialRect, childContext);
-
-                if (partialArrange.Height > 0)
+                // Lógica Divisible: Intentar partir
+                if (measure.Height <= remainingHeightForChild)
                 {
                     childrenToArrange.Add(child);
+                    consumedHeight += measure.Height + requiredSpacing;
                 }
-
-                if (partialArrange.RemainingElement is not null)
+                else
                 {
-                    remainingChildren.Add(partialArrange.RemainingElement);
-                }
-                else if (partialArrange.Height <= 0)
-                {
-                    remainingChildren.Add(child);
-                }
+                    var renderer = context.RendererFactory.GetRenderer(child);
+                    var childContext = context with { Element = child };
 
-                pageIsFull = true;
+                    // Pasamos el espacio restante exacto para forzar el corte
+                    var partialRect = new PdfRect(finalRect.X, finalRect.Y + consumedHeight + requiredSpacing, finalRect.Width, remainingHeightForChild);
+                    var partialArrange = await renderer.ArrangeAsync(partialRect, childContext);
+
+                    if (partialArrange.Height > 0)
+                    {
+                        childrenToArrange.Add(child);
+                        consumedHeight += partialArrange.Height + requiredSpacing;
+                    }
+
+                    if (partialArrange.RemainingElement is not null)
+                    {
+                        remainingChildren.Add(partialArrange.RemainingElement);
+                        pageIsFull = true;
+                    }
+                    else if (partialArrange.Height <= 0)
+                    {
+                        remainingChildren.Add(child);
+                        pageIsFull = true;
+                    }
+                }
             }
         }
 
@@ -175,34 +190,55 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
         for (int i = 0; i < childrenToArrange.Count; i++)
         {
             var child = childrenToArrange[i];
-            var measure = allMeasures.First(m => m.Element == child);
+            var measure = allMeasures.FirstOrDefault(m => m.Element == child);
+
             var renderer = context.RendererFactory.GetRenderer(child);
             var childContext = context with { Element = child };
 
             float childTotalWidth = measure.Width;
-            float childTotalHeight = measure.Height;
 
-            if (childTotalWidth > contentWidth)
+            float finalChildWidth;
+            if (child.GetWidthRequest.HasValue)
             {
-                context.DiagnosticSink.Submit(new DiagnosticMessage(
-                    DiagnosticSeverity.Warning,
-                    DiagnosticCodes.LayoutOverflow,
-                    $"Element '{child.GetType().Name}' with desired width {childTotalWidth} overflows the available space of {contentWidth} in the VerticalStackLayout."
-                ));
+                finalChildWidth = (float)child.GetWidthRequest.Value;
             }
-
-            float finalChildWidth = child.GetHorizontalOptions is LayoutAlignment.Fill ? contentWidth : childTotalWidth;
+            else if (child.GetHorizontalOptions is LayoutAlignment.Fill)
+            {
+                finalChildWidth = contentWidth;
+            }
+            else
+            {
+                finalChildWidth = Math.Min(childTotalWidth, contentWidth);
+            }
 
             float offsetX = child.GetHorizontalOptions switch
             {
-                LayoutAlignment.Center => (contentWidth - childTotalWidth) / 2f,
-                LayoutAlignment.End => contentWidth - childTotalWidth,
+                LayoutAlignment.Center => (contentWidth - finalChildWidth) / 2f,
+                LayoutAlignment.End => contentWidth - finalChildWidth,
                 _ => 0f
             };
 
             float x = elementBox.Left + (float)vsl.GetPadding.Left + offsetX;
 
-            var childRect = new PdfRect(x, currentY, finalChildWidth, childTotalHeight);
+            // --- CORRECCIÓN DEFINITIVA DE LA REGRESIÓN ---
+            float heightConstraint;
+
+            if (IsAtomicElement(child))
+            {
+                // CASO ATÓMICO (Imágenes, Texto Fijo, etc.):
+                // Le damos EXACTAMENTE lo que midió. Esto evita que se expanda
+                // para llenar el espacio restante de la página, lo que causaba los huecos.
+                heightConstraint = measure.Height;
+            }
+            else
+            {
+                // CASO FLUJO (Texto Largo):
+                // Le damos TODO el espacio restante para que pueda calcular dónde cortarse.
+                float remainingSpaceInContainer = (elementBox.Bottom - (float)vsl.GetPadding.Bottom) - currentY;
+                heightConstraint = remainingSpaceInContainer;
+            }
+
+            var childRect = new PdfRect(x, currentY, finalChildWidth, heightConstraint);
 
             var arrangedChild = await renderer.ArrangeAsync(childRect, childContext);
             arrangedChildren.Add(arrangedChild);
@@ -222,6 +258,22 @@ internal class VerticalStackLayoutRenderer : IElementRenderer
         var finalArrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, finalHeight);
 
         return new PdfLayoutInfo(vsl, finalRect.Width, finalHeight + (float)vsl.GetMargin.VerticalThickness, finalArrangedRect);
+    }
+
+    private bool IsAtomicElement(PdfElementData element)
+    {
+        if (element is PdfParagraphData p)
+        {
+            // Párrafo es atómico SI tiene altura fija.
+            return p.GetHeightRequest.HasValue;
+        }
+        if (element is PdfVerticalStackLayoutData vsl)
+        {
+            // VSL es atómico SI NO es Fill.
+            return vsl.GetVerticalOptions is not LayoutAlignment.Fill;
+        }
+        // Imágenes, Líneas, Grids, HSL son atómicos por defecto.
+        return true;
     }
 
     public async Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)

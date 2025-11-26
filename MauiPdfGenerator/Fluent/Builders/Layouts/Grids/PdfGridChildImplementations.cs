@@ -85,6 +85,7 @@ internal class PdfGridChildVerticalStackLayoutBuilder : PdfGridChildBuilder<PdfV
     public IPdfGridChildVerticalStackLayout BackgroundColor(Color? color) { _internalBuilder.BackgroundColor(color); return this; }
     public IPdfGridChildVerticalStackLayout HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildVerticalStackLayout VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
+    public void Children(Action<IPdfStackLayoutBuilder> childrenSetup){ _internalBuilder.Children(childrenSetup); }
 }
 
 internal class PdfGridChildHorizontalStackLayoutBuilder : PdfGridChildBuilder<PdfHorizontalStackLayoutBuilder, IPdfGridChildHorizontalStackLayout>, IPdfGridChildHorizontalStackLayout
@@ -103,6 +104,7 @@ internal class PdfGridChildHorizontalStackLayoutBuilder : PdfGridChildBuilder<Pd
     public IPdfGridChildHorizontalStackLayout BackgroundColor(Color? color) { _internalBuilder.BackgroundColor(color); return this; }
     public IPdfGridChildHorizontalStackLayout HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildHorizontalStackLayout VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
+    public void Children(Action<IPdfStackLayoutBuilder> childrenSetup){ _internalBuilder.Children(childrenSetup); }
 }
 
 internal class PdfGridChildGridBuilder : PdfGridChildBuilder<PdfGridBuilder, IPdfGridChildGrid>, IPdfGridChildGrid

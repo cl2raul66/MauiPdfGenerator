@@ -10,7 +10,6 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiPdfGenerator()
-            //.EnableDiagnosticVisualizer()
             .PdfConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

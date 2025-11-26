@@ -28,40 +28,50 @@
                 SemanticProperties.Description="Welcome to dot net Multi platform App U I"
                 SemanticProperties.HeadingLevel="Level2"
                 Style="{StaticResource SubHeadline}"
-                Text="Welcome to &#10;.NET Multi-platform App UI" />
+                Text="Welcome to &#10; Maui PDF Generator library" />
         </VerticalStackLayout>
         <ScrollView Grid.Row="{OnIdiom Default='0', Phone='1'}" Grid.Column="{OnIdiom Default='1', Phone='0'}">
             <VerticalStackLayout Spacing="{OnIdiom Default='15', Phone='12'}">
+                <Label
+                    FontAttributes="Bold"
+                    FontSize="16"
+                    Text="View Showcases" />
                 <Button
-                    x:Name="GeneratePdfParagraphs"
-                    Clicked="GeneratePdfParagraphs_Clicked"
+                    x:Name="GenerateParagraphShowcase"
+                    Clicked="GenerateParagraphShowcase_Clicked"
                     HorizontalOptions="Fill"
-                    Text="Generate PDF file, only paragraph" />
+                    Text="Paragraph Showcase" />
                 <Button
-                    x:Name="GeneratePdfImages"
-                    Clicked="GeneratePdfImages_Clicked"
+                    x:Name="GenerateImageShowcase"
+                    Clicked="GenerateImageShowcase_Clicked"
                     HorizontalOptions="Fill"
-                    Text="Generate PDF file, only image" />
+                    Text="Image Showcase" />
                 <Button
-                    x:Name="GeneratePdfWithHorizontalLine"
-                    Clicked="GeneratePdfHorizontalLine_Clicked"
+                    x:Name="GenerateHorizontalLineShowcase"
+                    Clicked="GenerateHorizontalLineShowcase_Clicked"
                     HorizontalOptions="Fill"
-                    Text="Generate PDF file, with HorizontalLine" />
+                    Text="HorizontalLine Showcase" />
+
+                <Label
+                    Margin="0,15,0,0"
+                    FontAttributes="Bold"
+                    FontSize="16"
+                    Text="Layout Showcases" />
                 <Button
-                    x:Name="GeneratePdfWithStackLayout"
-                    Clicked="GeneratePdfLayouts_Clicked"
+                    x:Name="GenerateVerticalStackLayoutShowcase"
+                    Clicked="GenerateVerticalStackLayoutShowcase_Clicked"
                     HorizontalOptions="Fill"
-                    Text="Generate PDF file, with stack layout" />
+                    Text="VerticalStackLayout Showcase" />
                 <Button
-                    x:Name="GeneratePdfWithGrid"
-                    Clicked="GeneratePdfGrid_Clicked"
+                    x:Name="GenerateHorizontalStackLayoutShowcase"
+                    Clicked="GenerateHorizontalStackLayoutShowcase_Clicked"
                     HorizontalOptions="Fill"
-                    Text="Generate PDF file, with grid" />
+                    Text="HorizontalStackLayout Showcase" />
                 <Button
-                    x:Name="GeneratePdfAdvancedLayout"
-                    Clicked="GeneratePdfAdvancedLayout_Clicked"
+                    x:Name="GenerateGridShowcase"
+                    Clicked="GenerateGridShowcase_Clicked"
                     HorizontalOptions="Fill"
-                    Text="Generate PDF file, with advanced layout" />
+                    Text="Grid Showcase" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

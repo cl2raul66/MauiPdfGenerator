@@ -52,8 +52,6 @@ internal class SkComposer : IPdfCoreGenerator
 
             var layoutState = new Dictionary<object, object>();
 
-            // El SkComposer actúa como el DocumentOrchestrator de alto nivel.
-            // Itera sobre las PÁGINAS DEFINIDAS POR EL USUARIO.
             for (int i = 0; i < documentData.Pages.Count; i++)
             {
                 var pageDefinition = documentData.Pages[i];
@@ -62,13 +60,10 @@ internal class SkComposer : IPdfCoreGenerator
                 var context = new PdfGenerationContext(pageDefinition, fontRegistry, layoutState, _logger, _elementRendererFactory, _diagnosticSink);
                 IPageRenderer pageRenderer = _pageRendererFactory.GetRenderer(pageDefinition);
 
-                // El PageRenderer es responsable de la paginación por desbordamiento.
-                // Puede devolver múltiples bloques, cada uno representando una página física.
                 var pageBlocks = await pageRenderer.LayoutAsync(context);
 
                 _logger.LogDebug("Page Definition {PageIndex} resulted in {PageCount} physical page(s).", i + 1, pageBlocks.Count);
 
-                // Itera sobre las PÁGINAS FÍSICAS generadas a partir de la definición de página actual.
                 foreach (var block in pageBlocks)
                 {
                     SKSize pageSize = SkiaUtils.GetSkPageSize(pageDefinition.Size, pageDefinition.Orientation);

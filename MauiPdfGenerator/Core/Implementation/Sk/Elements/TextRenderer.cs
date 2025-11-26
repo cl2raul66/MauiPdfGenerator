@@ -1,11 +1,13 @@
-﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Fluent.Models;
+﻿using System.Diagnostics;
 using MauiPdfGenerator.Common.Models.Elements;
-using Microsoft.Extensions.Logging;
-using SkiaSharp;
+using MauiPdfGenerator.Common.Utils;
+using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
+using MauiPdfGenerator.Fluent.Models;
+using Microsoft.Extensions.Logging;
+using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
 
@@ -80,7 +82,9 @@ internal class TextRenderer : IElementRenderer
 
         context.LayoutState[paragraph] = new TextLayoutCache(
             font, paint, horizontalAlignment, verticalTextAlignment, textDecorations,
-            lineBreakMode, textToRender, LineAdvance: lineAdvance,
+            lineBreakMode, textToRender,
+            LinesToDrawOnThisPage: allLines,
+            LineAdvance: lineAdvance,
             VisualTopOffset: visualTopOffset, VisualBottomOffset: visualBottomOffset);
 
         var totalWidth = boxWidth + (float)paragraph.GetMargin.HorizontalThickness;
@@ -96,112 +100,104 @@ internal class TextRenderer : IElementRenderer
 
         if (!context.LayoutState.TryGetValue(paragraph, out var state) || state is not TextLayoutCache baseCache)
         {
-            context.Logger.LogError("Text layout cache not found for element. MeasureAsync was likely not called or failed.");
+            context.Logger.LogError("Text layout cache not found.");
             return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
-        var (font, _, _, _, _, lineBreakMode, textToRender, cachedLineAdvance, cachedVisualTop, cachedVisualBottom) =
-            (baseCache.Font, baseCache.Paint, baseCache.HorizontalAlignment, baseCache.VerticalTextAlignment,
-             baseCache.TextDecorations, baseCache.LineBreakMode, baseCache.TransformedText,
-             baseCache.LineAdvance, baseCache.VisualTopOffset, baseCache.VisualBottomOffset);
-
-        float availableWidthForText = finalRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness;
-
-        var allLines = WrapTextToLines(textToRender, font, availableWidthForText, lineBreakMode);
-
-        SKFontMetrics fontMetrics = font.Metrics;
-        float lineAdvance = cachedLineAdvance > 0 ? cachedLineAdvance : (-fontMetrics.Ascent + fontMetrics.Descent);
-
-        float visualTopOffset = cachedVisualTop;
-        float visualBottomOffset = cachedVisualBottom;
-
-        if (visualTopOffset == 0 && visualBottomOffset == 0 && allLines.Count != 0)
+        // --- LÓGICA CASUÍSTICA ---
+        if (paragraph.GetHeightRequest.HasValue)
         {
-            SKRect firstBounds = new();
-            font.MeasureText(allLines[0], out firstBounds);
-            visualTopOffset = -firstBounds.Top;
-
-            SKRect lastBounds = new();
-            font.MeasureText(allLines[^1], out lastBounds);
-            visualBottomOffset = lastBounds.Bottom;
+            // CASO A: Caja Fija (Atomic Box)
+            return ArrangeAsFixedBox(finalRect, paragraph, baseCache, context);
         }
-
-        float totalTextHeight = 0;
-        if (allLines.Count != 0)
+        else
         {
-            if (allLines.Count == 1)
-            {
-                SKRect bounds = new();
-                font.MeasureText(allLines[0], out bounds);
-                totalTextHeight = bounds.Height;
-            }
-            else
-            {
-                totalTextHeight = visualTopOffset + ((allLines.Count - 1) * lineAdvance) + visualBottomOffset;
-            }
+            // CASO B: Flujo Continuo (Flow Text)
+            return ArrangeAsFlowText(finalRect, paragraph, baseCache, context);
         }
+    }
+
+    private Task<PdfLayoutInfo> ArrangeAsFixedBox(PdfRect finalRect, PdfParagraphData paragraph, TextLayoutCache baseCache, PdfGenerationContext context)
+    {
+        // En modo Caja Fija, usamos todas las líneas calculadas.
+        // El VSL nos ha pasado finalRect.Height = HeightRequest + Margin, así que confiamos en ello.
+        var allLines = WrapTextToLines(baseCache.TransformedText, baseCache.Font,
+            finalRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness,
+            baseCache.LineBreakMode);
+
+        var finalCache = baseCache with
+        {
+            LinesToDrawOnThisPage = allLines,
+            FinalArrangedRect = finalRect
+        };
+        context.LayoutState[paragraph] = finalCache;
+
+        return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
+    }
+
+    private Task<PdfLayoutInfo> ArrangeAsFlowText(PdfRect finalRect, PdfParagraphData paragraph, TextLayoutCache baseCache, PdfGenerationContext context)
+    {
+        var allLines = WrapTextToLines(baseCache.TransformedText, baseCache.Font,
+            finalRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness,
+            baseCache.LineBreakMode);
 
         float availableHeightForText = finalRect.Height - (float)paragraph.GetMargin.VerticalThickness - (float)paragraph.GetPadding.VerticalThickness;
-
-        if (totalTextHeight <= availableHeightForText)
-        {
-            var finalCache = baseCache with
-            {
-                LinesToDrawOnThisPage = allLines,
-                FinalArrangedRect = finalRect,
-                LineAdvance = lineAdvance,
-                VisualTopOffset = visualTopOffset,
-                VisualBottomOffset = visualBottomOffset
-            };
-            context.LayoutState[paragraph] = finalCache;
-
-            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
-        }
+        float lineAdvance = baseCache.LineAdvance > 0 ? baseCache.LineAdvance : 1;
+        float visualTop = baseCache.VisualTopOffset;
+        float visualBottom = baseCache.VisualBottomOffset;
 
         int linesThatFit = 0;
-        if (availableHeightForText >= lineAdvance && lineAdvance > 0)
+        if (availableHeightForText >= visualTop)
         {
-            float remainingHeight = availableHeightForText - visualTopOffset;
-            if (remainingHeight >= visualBottomOffset)
-            {
-                linesThatFit = 1 + (int)Math.Floor((remainingHeight - visualBottomOffset) / lineAdvance);
-            }
+            float remaining = availableHeightForText - visualTop;
+            int additionalLines = (int)Math.Floor(remaining / lineAdvance);
+            linesThatFit = 1 + additionalLines;
         }
 
-        if (linesThatFit <= 0 || linesThatFit >= allLines.Count)
+        if (linesThatFit >= allLines.Count) linesThatFit = allLines.Count;
+        else if (linesThatFit > 0)
         {
-            var remainingParagraph = new PdfParagraphData(paragraph.Text, paragraph);
-            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, 0, PdfRect.Empty, remainingParagraph));
+            float heightWithLastLine = visualTop + ((linesThatFit - 1) * lineAdvance) + visualBottom;
+            if (heightWithLastLine > availableHeightForText) linesThatFit--;
         }
 
-        var linesForThisPage = allLines.Take(linesThatFit).ToList();
-        var remainingLinesText = string.Join("\n", allLines.Skip(linesThatFit));
-        var continuationParagraph = new PdfParagraphData(remainingLinesText, paragraph);
-
-        SKRect lastPageLineBounds = new();
-        font.MeasureText(linesForThisPage[^1], out lastPageLineBounds);
-        float thisPageVisualBottom = lastPageLineBounds.Bottom;
-
-        float heightForThisPageContent = linesForThisPage.Count == 1
-            ? lastPageLineBounds.Height
-            : visualTopOffset + ((linesForThisPage.Count - 1) * lineAdvance) + thisPageVisualBottom;
-
-        float finalHeightForThisPageBox = heightForThisPageContent + (float)paragraph.GetPadding.VerticalThickness;
-        float finalTotalHeightConsumed = finalHeightForThisPageBox + (float)paragraph.GetMargin.VerticalThickness;
-
-        var arrangedRectForThisPage = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, finalTotalHeightConsumed);
-
-        var cacheForThisPage = baseCache with
+        if (linesThatFit <= 0)
         {
-            LinesToDrawOnThisPage = linesForThisPage,
-            FinalArrangedRect = arrangedRectForThisPage,
-            LineAdvance = lineAdvance,
-            VisualTopOffset = visualTopOffset,
-            VisualBottomOffset = thisPageVisualBottom
-        };
-        context.LayoutState[paragraph] = cacheForThisPage;
+            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, 0, PdfRect.Empty, paragraph));
+        }
 
-        return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalTotalHeightConsumed, arrangedRectForThisPage, continuationParagraph));
+        if (linesThatFit >= allLines.Count)
+        {
+            // Cabe todo
+            float totalTextHeight = (allLines.Count == 1)
+                ? (visualTop + visualBottom)
+                : visualTop + ((allLines.Count - 1) * lineAdvance) + visualBottom;
+
+            float consumedHeight = totalTextHeight + (float)paragraph.GetPadding.VerticalThickness + (float)paragraph.GetMargin.VerticalThickness;
+            var finalArrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, consumedHeight);
+
+            var finalCache = baseCache with { LinesToDrawOnThisPage = allLines, FinalArrangedRect = finalArrangedRect };
+            context.LayoutState[paragraph] = finalCache;
+
+            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, consumedHeight, finalArrangedRect));
+        }
+        else
+        {
+            // Split
+            var linesForPage = allLines.Take(linesThatFit).ToList();
+            var remainingLines = allLines.Skip(linesThatFit).ToList();
+            string remainingText = string.Join(PdfStringUtils.NormalizeNewline, remainingLines);
+            var remainingParagraph = new PdfParagraphData(remainingText, paragraph);
+
+            float heightOnPage = visualTop + ((linesForPage.Count - 1) * lineAdvance) + visualBottom;
+            float consumedHeight = heightOnPage + (float)paragraph.GetPadding.VerticalThickness + (float)paragraph.GetMargin.VerticalThickness;
+
+            var finalArrangedRect = new PdfRect(finalRect.X, finalRect.Y, finalRect.Width, consumedHeight);
+            var pageCache = baseCache with { LinesToDrawOnThisPage = linesForPage, FinalArrangedRect = finalArrangedRect };
+            context.LayoutState[paragraph] = pageCache;
+
+            return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, consumedHeight, finalArrangedRect, remainingParagraph));
+        }
     }
 
     public Task RenderAsync(SKCanvas canvas, PdfGenerationContext context)
@@ -274,27 +270,82 @@ internal class TextRenderer : IElementRenderer
 
         float baselineY = contentRect.Top + verticalOffset + visualTopOffset;
 
-        foreach (string line in linesToDraw)
+        canvas.Save();
+        canvas.ClipRect(contentRect);
+
+        for (int i = 0; i < linesToDraw.Count; i++)
         {
+            string line = linesToDraw[i];
             float measuredWidth = font.MeasureText(line);
             float drawX = contentRect.Left;
 
-            if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
-            else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
+            bool isLastLine = (i == linesToDraw.Count - 1);
+            bool shouldJustify = horizontalAlignment is TextAlignment.Justify && !isLastLine && line.Contains(' ');
 
-            canvas.DrawText(line, drawX, baselineY, font, paint);
-
-            if (textDecorations is not TextDecorations.None)
+            if (shouldJustify)
             {
-                DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                DrawJustifiedLine(canvas, line, contentRect.Left, contentRect.Width, baselineY, font, paint);
+                if (textDecorations is not TextDecorations.None)
+                {
+                    DrawTextDecorations(canvas, font, paint, textDecorations, contentRect.Left, baselineY, contentRect.Width);
+                }
+            }
+            else
+            {
+                if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
+                else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
+
+                canvas.DrawText(line, drawX, baselineY, font, paint);
+
+                if (textDecorations is not TextDecorations.None)
+                {
+                    DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                }
             }
 
             baselineY += lineAdvance;
         }
 
+        canvas.Restore();
+
         font.Dispose();
         paint.Dispose();
         return Task.CompletedTask;
+    }
+
+    private void DrawJustifiedLine(SKCanvas canvas, string line, float x, float totalWidth, float y, SKFont font, SKPaint paint)
+    {
+        string[] words = line.Split(' ');
+        if (words.Length <= 1)
+        {
+            canvas.DrawText(line, x, y, font, paint);
+            return;
+        }
+
+        float totalWordWidth = words.Sum(w => font.MeasureText(w));
+        float spaceWidth = font.MeasureText(" ");
+        float totalSpaceWidth = (words.Length - 1) * spaceWidth;
+        float extraSpace = totalWidth - totalWordWidth - totalSpaceWidth;
+
+        if (extraSpace < 0)
+        {
+            canvas.DrawText(line, x, y, font, paint);
+            return;
+        }
+
+        float extraSpacePerGap = extraSpace / (words.Length - 1);
+        float currentX = x;
+
+        for (int i = 0; i < words.Length; i++)
+        {
+            canvas.DrawText(words[i], currentX, y, font, paint);
+            currentX += font.MeasureText(words[i]);
+
+            if (i < words.Length - 1)
+            {
+                currentX += spaceWidth + extraSpacePerGap;
+            }
+        }
     }
 
     public Task RenderOverflowAsync(SKCanvas canvas, PdfRect bounds, PdfGenerationContext context)
@@ -413,7 +464,9 @@ internal class TextRenderer : IElementRenderer
         var lines = new List<string>();
         if (string.IsNullOrEmpty(text)) return lines;
 
-        string[] textSegments = text.Split(['\n']);
+        string normalizedText = PdfStringUtils.NormalizeNewlines(text);
+        string[] textSegments = normalizedText.Split(PdfStringUtils.NormalizeNewline);
+
         foreach (string segment in textSegments)
         {
             if (maxWidth <= 0 || lineBreakMode is LineBreakMode.NoWrap)

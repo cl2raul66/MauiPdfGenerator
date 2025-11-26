@@ -25,7 +25,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Configuración para .NET 10 Preview
+      # Configuración para .NET 10
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:

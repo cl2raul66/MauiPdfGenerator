@@ -6,8 +6,8 @@ on:
     branches: [ master ]
     paths:
       - 'MauiPdfGenerator/**'
-      - '!MauiPdfGenerator.Diagnostics/**'      # Excluir carpetas hermanas
-      - '!MauiPdfGenerator.SourceGenerators/**' # Excluir carpetas hermanas
+      - '!MauiPdfGenerator.Diagnostics/**'
+      - '!MauiPdfGenerator.SourceGenerators/**'
 
 jobs:
   deploy-main:
@@ -25,12 +25,11 @@ jobs:
 
       - name: Build & Pack
         run: |
-          # dotnet pack compila implícitamente. 
-          # Si Main depende de Diagnostics por ProjectReference, esto compilará ambos,
-          # pero solo generará el .nupkg de Main en la carpeta de salida.
-          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --output ./output
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output
 
-      - name: Publish to NuGet (Smart Check)
+      - name: Publish to NuGet
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./output/*.nupkg
@@ -41,12 +40,10 @@ jobs:
 
           foreach ($pkg in $packages) {
               Write-Host "Procesando: $($pkg.Name)"
-              
-              # Usamos Start-Process para mejor control del flujo de salida
               $proc = Start-Process -FilePath "dotnet" -ArgumentList "nuget push $($pkg.FullName) --api-key $apiKey --source $source --skip-duplicate" -NoNewWindow -PassThru -Wait
               
               if ($proc.ExitCode -eq 0) {
-                  Write-Host "::notice title=Éxito::$($pkg.Name) procesado correctamente (o ya existía)."
+                  Write-Host "::notice title=Éxito::$($pkg.Name) procesado correctamente."
               } else {
                   Write-Host "::error title=Error Crítico::Fallo al publicar $($pkg.Name)."
                   exit 1

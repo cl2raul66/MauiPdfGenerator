@@ -1,0 +1,87 @@
+[
+  {
+    "name": "type: breaking-change",
+    "color": "b60205",
+    "description": "Cambio incompatible en la API. Requiere subir versión MAJOR."
+  },
+  {
+    "name": "type: feature",
+    "color": "0e8a16",
+    "description": "Nueva funcionalidad retro-compatible. Requiere subir versión MINOR."
+  },
+  {
+    "name": "type: bug",
+    "color": "d93f0b",
+    "description": "Corrección de errores. Requiere subir versión PATCH."
+  },
+  {
+    "name": "type: maintenance",
+    "color": "fbca04",
+    "description": "Actualización de dependencias, refactorización o CI/CD."
+  },
+  {
+    "name": "type: docs",
+    "color": "5319e7",
+    "description": "Cambios solo en documentación (Wiki, Readme, etc)."
+  },
+  {
+    "name": "scope: core",
+    "color": "c2e0c6",
+    "description": "Afecta a 'MauiPdfGenerator' (Librería Principal)."
+  },
+  {
+    "name": "scope: diagnostics",
+    "color": "bfdadc",
+    "description": "Afecta a 'MauiPdfGenerator.Diagnostics'."
+  },
+  {
+    "name": "scope: sourcegen",
+    "color": "c5def5",
+    "description": "Afecta a 'MauiPdfGenerator.SourceGenerators'."
+  },
+  {
+    "name": "scope: sample",
+    "color": "d4c5f9",
+    "description": "Afecta solo a la aplicación de prueba (Sample)."
+  },
+  {
+    "name": "scope: test",
+    "color": "d4c5f9",
+    "description": "Afecta solo a lMauiPdfGenerator.Tests."
+  },
+  {
+    "name": "priority: critical",
+    "color": "ff0000",
+    "description": "Bloqueante. Debe resolverse inmediatamente (Hotfix)."
+  },
+  {
+    "name": "priority: high",
+    "color": "d93f0b",
+    "description": "Necesario para el próximo release planificado."
+  },
+  {
+    "name": "priority: low",
+    "color": "0075ca",
+    "description": "Deseable, pero puede esperar."
+  },
+  {
+    "name": "status: blocked",
+    "color": "000000",
+    "description": "Detenido por dependencias externas o falta de definición."
+  },
+  {
+    "name": "status: on-hold",
+    "color": "6a737d",
+    "description": "Pausado temporalmente por decisión del equipo."
+  },
+  {
+    "name": "good first issue",
+    "color": "7057ff",
+    "description": "Tarea sencilla ideal para nuevos colaboradores (Open Source)."
+  },
+  {
+    "name": "help wanted",
+    "color": "008672",
+    "description": "Se busca ayuda de la comunidad para resolver esto."
+  }
+]

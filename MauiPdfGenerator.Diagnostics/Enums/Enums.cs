@@ -12,12 +12,6 @@ public enum DiagnosticSeverity
 
 public enum VisualDiagnosticMode
 {
-    /// <summary>
-    /// No visual diagnostics will be rendered on the PDF. This is the default.
-    /// </summary>
     Off,
-    /// <summary>
-    /// Visual diagnostics (e.g., layout bounds, overflow errors) will be rendered on the PDF.
-    /// </summary>
     On
 }

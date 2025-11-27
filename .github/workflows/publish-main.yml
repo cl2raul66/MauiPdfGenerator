@@ -23,6 +23,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # CORRECCIÓN: Agregado paso obligatorio para compilar targets Android/iOS
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui --ignore-failed-sources
+
       - name: Build & Pack
         run: |
           dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj

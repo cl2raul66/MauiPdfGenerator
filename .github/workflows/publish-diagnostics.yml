@@ -1,0 +1,54 @@
+name: Publish Diagnostics
+
+on:
+  workflow_dispatch: # Ejecución Manual
+  push:
+    branches: [ master ]
+    paths:
+      - 'MauiPdfGenerator.Diagnostics/**' # Solo cambios en esta carpeta
+
+jobs:
+  deploy-diagnostics:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build & Pack
+        run: |
+          # Restauramos y empaquetamos en un solo paso optimizado
+          dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --output ./output
+
+      - name: Publish to NuGet (Smart Check)
+        shell: pwsh
+        run: |
+          $packages = Get-ChildItem ./output/*.nupkg
+          if (-not $packages) { Write-Error "No se generó ningún paquete .nupkg"; exit 1 }
+
+          $apiKey = "${{ secrets.NUGET_API_KEY }}"
+          $source = "https://api.nuget.org/v3/index.json"
+
+          foreach ($pkg in $packages) {
+              Write-Host "Procesando: $($pkg.Name)"
+              
+              # Ejecutamos push capturando StdOut y StdErr
+              $proc = Start-Process -FilePath "dotnet" -ArgumentList "nuget push $($pkg.FullName) --api-key $apiKey --source $source --skip-duplicate" -NoNewWindow -PassThru -Wait
+              
+              # Análisis de código de salida
+              if ($proc.ExitCode -eq 0) {
+                  Write-Host "::notice title=Éxito::$($pkg.Name) procesado correctamente."
+              } else {
+                  # Si falla, verificamos si es por duplicado (ExitCode 0 con skip-duplicate a veces varía, pero generalmente dotnet maneja esto internamente. 
+                  # Si skip-duplicate funciona, el exit code es 0. Si falla real, es 1.)
+                  # Para mayor seguridad, asumimos que si falló con skip-duplicate, es un error real.
+                  Write-Host "::error title=Error Crítico::Fallo al publicar $($pkg.Name). Revisa la API Key o la conexión."
+                  exit 1
+              }
+          }

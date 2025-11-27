@@ -23,9 +23,16 @@ jobs:
 
       - name: Build & Pack
         run: |
-          dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --output ./output
+          # 1. Restaurar
+          dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
+          
+          # 2. Compilar (Genera la DLL que faltaba)
+          dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
+          
+          # 3. Empaquetar (Usando lo compilado)
+          dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./output
 
-      - name: Publish to NuGet (Smart Check)
+      - name: Publish to NuGet
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./output/*.nupkg

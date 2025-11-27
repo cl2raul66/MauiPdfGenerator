@@ -1,19 +1,33 @@
 name: Sync Labels
+
 on:
-  workflow_dispatch: # Para ejecutarlo manualmente la primera vez
+  workflow_dispatch: # Para ejecutar manual
   push:
+    branches: [ "development" ]
     paths:
-      - '.github/labels.json' # Se ejecuta si modificas el JSON
+      - '.github/labels.yml' # Se activa solo si cambias el archivo de etiquetas
+
+permissions:
+  issues: write
+  contents: read
 
 jobs:
   labels:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Sync Labels
-        uses: crazy-max/ghaction-github-label-sync@v3
+        # Usamos 'endbug/label-sync', que es la más robusta actualmente
+        uses: endbug/label-sync@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          yaml-file: .github/labels.json
-          clean-labels: true # IMPORTANTE: Esto borra las etiquetas default de GitHub (bug, enhancement, etc.)
+          # Ruta a tu archivo de configuración
+          config-file: .github/labels.yml
+          
+          # true = Borra las etiquetas de GitHub que NO estén en tu archivo YAML
+          # false = Solo crea/actualiza las tuyas, pero deja las viejas (enhancement, etc.)
+          delete-other-labels: true
+          
+          # El token es necesario para hacer los cambios
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -3,51 +3,84 @@ name: Publish Diagnostics
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [ "development", "master" ]
     paths:
       - 'MauiPdfGenerator.Diagnostics/**'
 
 jobs:
   deploy-diagnostics:
     runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    permissions:
+      contents: write # Necesario para crear el Tag automáticamente
 
-      - name: Setup .NET 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Vital para leer el historial de Git
+
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      # CORRECCIÓN: Este paso es OBLIGATORIO porque tu .csproj pide Android/iOS
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
+      # 1. CALCULAR VERSIÓN
+      - name: Calculate Version
+        id: versioning
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "diag-v" # Prefijo único para este proyecto
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator.Diagnostics" # Solo mira cambios aquí
+          user_format_type: "json"
+
+      # 2. DETERMINAR SUFIJO (Preview vs Release)
+      - name: Determine Version String
+        id: final_version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -eq "refs/heads/master") {
+            # En Master: Versión limpia (ej: 1.0.2)
+            echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+            # En Development: Con sufijo (ej: 1.0.2-preview-5)
+            echo "VAL=${{ steps.versioning.outputs.version }}-preview-${{ steps.versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
+          }
+
+      # 3. COMPILAR Y EMPAQUETAR (Inyectando versión)
       - name: Build & Pack
         run: |
+          $ver = "${{ steps.final_version.outputs.VAL }}"
+          Write-Host "Construyendo versión: $ver"
+
           dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj
           dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore
-          dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output
+          
+          # AQUÍ OCURRE LA MAGIA: /p:Version=$ver sobreescribe el 0.0.0-local
+          dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
+      # 4. PUBLICAR
       - name: Publish to NuGet
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./output/*.nupkg
-          if (-not $packages) { Write-Error "No se generó ningún paquete .nupkg"; exit 1 }
-
-          $apiKey = "${{ secrets.NUGET_API_KEY }}"
-          $source = "https://api.nuget.org/v3/index.json"
-
           foreach ($pkg in $packages) {
-              Write-Host "Procesando: $($pkg.Name)"
-              $proc = Start-Process -FilePath "dotnet" -ArgumentList "nuget push $($pkg.FullName) --api-key $apiKey --source $source --skip-duplicate" -NoNewWindow -PassThru -Wait
-              
-              if ($proc.ExitCode -eq 0) {
-                  Write-Host "::notice title=Éxito::$($pkg.Name) procesado correctamente."
-              } else {
-                  Write-Host "::error title=Error Crítico::Fallo al publicar $($pkg.Name)."
-                  exit 1
-              }
+              dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
+
+      # 5. CREAR TAG (Solo si estamos en Master y todo salió bien)
+      - name: Create Git Tag
+        if: github.ref == 'refs/heads/master'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/diag-v${{ steps.versioning.outputs.version }}',
+              sha: context.sha
+            })

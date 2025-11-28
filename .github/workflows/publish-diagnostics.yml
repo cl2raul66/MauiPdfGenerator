@@ -56,7 +56,6 @@ jobs:
           dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore
           dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
-      # SUBIR ARTEFACTO (Vital para Main)
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -71,6 +70,12 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
+      # --- CORRECCIÓN: INSTALAR .NET TAMBIÉN AQUÍ ---
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
       - name: Download Artifact
         uses: actions/download-artifact@v4

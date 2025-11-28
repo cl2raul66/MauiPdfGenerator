@@ -14,7 +14,6 @@ on:
 
 jobs:
   build-and-pack:
-    # Corre si es push manual O si el workflow anterior fue exitoso
     if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: windows-latest
     outputs:
@@ -33,8 +32,6 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      # --- ESTRATEGIA DE ARTEFACTOS PARA DEPENDENCIAS ---
-      
       # Descargamos el último paquete exitoso de Diagnostics
       - name: Download Diagnostics Artifact
         uses: dawidd6/action-download-artifact@v3
@@ -42,7 +39,7 @@ jobs:
           workflow: publish-diagnostics.yml
           name: diagnostics-package
           path: ./local-feed
-          search_artifacts: true # Busca en runs recientes si no es directo
+          search_artifacts: true
 
       # Configurar Fuente Local
       - name: Setup Local NuGet Feed
@@ -57,7 +54,6 @@ jobs:
           }
 
       # --- CÁLCULO DE VERSIONES ---
-      
       - name: Calculate Diagnostics Version
         id: diag_versioning
         uses: PaulHatch/semantic-version@v5.4.0
@@ -104,11 +100,8 @@ jobs:
           
           Write-Host "Main: $mainVer | Dep Diagnostics: $diagVer"
 
-          # Restauramos usando la fuente local
           dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
-          
           dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
-          
           dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
 
       - name: Upload Artifact
@@ -125,6 +118,12 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
+      # --- CORRECCIÓN: INSTALAR .NET TAMBIÉN AQUÍ ---
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
       - name: Download Artifact
         uses: actions/download-artifact@v4

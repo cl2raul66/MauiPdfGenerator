@@ -8,11 +8,10 @@ on:
       - 'MauiPdfGenerator.Diagnostics/**'
 
 jobs:
-  deploy-diagnostics:
+  build-and-pack:
     runs-on: windows-latest
-    permissions:
-      contents: write # Necesario para crear Tags
-
+    outputs:
+      version: ${{ steps.final_version.outputs.VAL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,7 +26,6 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      # --- CÁLCULO DE VERSIÓN ---
       - name: Calculate Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.4.0
@@ -49,34 +47,54 @@ jobs:
             echo "VAL=${{ steps.versioning.outputs.version }}-preview-${{ steps.versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
           }
 
-      # --- BUILD & PUBLISH ---
       - name: Build & Pack
         run: |
           $ver = "${{ steps.final_version.outputs.VAL }}"
-          Write-Host "Construyendo Diagnostics versión: $ver"
+          Write-Host "Empaquetando Diagnostics versión: $ver"
 
           dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj
           dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore
           dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
+      # SUBIR ARTEFACTO (Vital para Main)
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-package
+          path: ./output/*.nupkg
+          retention-days: 1
+
+  publish-nuget:
+    needs: build-and-pack
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: diagnostics-package
+          path: ./packages
+
       - name: Publish to NuGet
         shell: pwsh
         run: |
-          $packages = Get-ChildItem ./output/*.nupkg
-          if (-not $packages) { Write-Error "No packages found"; exit 1 }
+          $packages = Get-ChildItem ./packages/*.nupkg
           foreach ($pkg in $packages) {
               dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 
-      # --- TAGGING (Solo Master) ---
       - name: Create Git Tag
         if: github.ref == 'refs/heads/master'
         uses: actions/github-script@v7
         with:
           script: |
+            const version = "${{ needs.build-and-pack.outputs.version }}";
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/diag-v${{ steps.versioning.outputs.version }}',
+              ref: `refs/tags/diag-v${version}`,
               sha: context.sha
             })

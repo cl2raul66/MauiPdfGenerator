@@ -35,7 +35,7 @@ jobs:
 
       # --- ESTRATEGIA DE ARTEFACTOS PARA DEPENDENCIAS ---
       
-      # Descargamos el último paquete exitoso de Diagnostics (sea del workflow actual o del anterior)
+      # Descargamos el último paquete exitoso de Diagnostics
       - name: Download Diagnostics Artifact
         uses: dawidd6/action-download-artifact@v3
         with:

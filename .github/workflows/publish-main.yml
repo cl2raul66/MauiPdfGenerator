@@ -14,7 +14,7 @@ on:
 
 jobs:
   build-and-pack:
-    # Solo corre si es push manual O si el workflow anterior fue exitoso
+    # Corre si es push manual O si el workflow anterior fue exitoso
     if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: windows-latest
     outputs:
@@ -35,21 +35,16 @@ jobs:
 
       # --- ESTRATEGIA DE ARTEFACTOS PARA DEPENDENCIAS ---
       
-      # 1. Si viene de Diagnostics, descargamos SU artefacto
-      - name: Download Diagnostics Artifact (From Workflow)
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@v4
+      # Descargamos el último paquete exitoso de Diagnostics (sea del workflow actual o del anterior)
+      - name: Download Diagnostics Artifact
+        uses: dawidd6/action-download-artifact@v3
         with:
+          workflow: publish-diagnostics.yml
           name: diagnostics-package
           path: ./local-feed
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          search_artifacts: true # Busca en runs recientes si no es directo
 
-      # 2. Si es manual, intentamos descargar el último artefacto exitoso de Diagnostics (Fallback)
-      # Esto es avanzado, pero necesario para que compile si tocas solo Main.
-      # Nota: Si falla, intentará usar NuGet.org, lo cual podría fallar si la versión es muy nueva.
-      
-      # 3. Configurar Fuente Local
+      # Configurar Fuente Local
       - name: Setup Local NuGet Feed
         shell: pwsh
         run: |
@@ -57,12 +52,12 @@ jobs:
             Write-Host "Configurando feed local desde artefactos..."
             dotnet nuget add source "${{ github.workspace }}/local-feed" --name LocalArtifacts
           } else {
-            Write-Host "No hay artefactos locales. Se usará NuGet.org estándar."
+            Write-Error "CRÍTICO: No se encontró el paquete de Diagnostics. No se puede compilar."
+            exit 1
           }
 
       # --- CÁLCULO DE VERSIONES ---
       
-      # Necesitamos saber la versión de Diagnostics para inyectarla
       - name: Calculate Diagnostics Version
         id: diag_versioning
         uses: PaulHatch/semantic-version@v5.4.0
@@ -76,8 +71,6 @@ jobs:
         id: diag_final
         shell: pwsh
         run: |
-          # Lógica para determinar si Diagnostics es preview o release
-          # IMPORTANTE: Esto asume sincronía de ramas.
           if ("${{ github.ref }}" -eq "refs/heads/master") {
              echo "VER=${{ steps.diag_versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
           } else {
@@ -111,7 +104,7 @@ jobs:
           
           Write-Host "Main: $mainVer | Dep Diagnostics: $diagVer"
 
-          # Restauramos usando la fuente local si existe
+          # Restauramos usando la fuente local
           dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
           
           dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer

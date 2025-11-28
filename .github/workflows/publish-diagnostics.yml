@@ -11,12 +11,13 @@ jobs:
   deploy-diagnostics:
     runs-on: windows-latest
     permissions:
-      contents: write # Necesario para crear el Tag automáticamente
+      contents: write # Necesario para crear Tags
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Vital para leer el historial de Git
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -26,53 +27,48 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      # 1. CALCULAR VERSIÓN
+      # --- CÁLCULO DE VERSIÓN ---
       - name: Calculate Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.4.0
         with:
-          tag_prefix: "diag-v" # Prefijo único para este proyecto
+          tag_prefix: "diag-v"
           major_pattern: "(MAJOR)"
           minor_pattern: "(MINOR)|feat|feature"
           version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator.Diagnostics" # Solo mira cambios aquí
+          change_path: "MauiPdfGenerator.Diagnostics"
           user_format_type: "json"
 
-      # 2. DETERMINAR SUFIJO (Preview vs Release)
       - name: Determine Version String
         id: final_version
         shell: pwsh
         run: |
           if ("${{ github.ref }}" -eq "refs/heads/master") {
-            # En Master: Versión limpia (ej: 1.0.2)
             echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
           } else {
-            # En Development: Con sufijo (ej: 1.0.2-preview-5)
             echo "VAL=${{ steps.versioning.outputs.version }}-preview-${{ steps.versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
           }
 
-      # 3. COMPILAR Y EMPAQUETAR (Inyectando versión)
+      # --- BUILD & PUBLISH ---
       - name: Build & Pack
         run: |
           $ver = "${{ steps.final_version.outputs.VAL }}"
-          Write-Host "Construyendo versión: $ver"
+          Write-Host "Construyendo Diagnostics versión: $ver"
 
           dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj
           dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore
-          
-          # AQUÍ OCURRE LA MAGIA: /p:Version=$ver sobreescribe el 0.0.0-local
           dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
-      # 4. PUBLICAR
       - name: Publish to NuGet
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./output/*.nupkg
+          if (-not $packages) { Write-Error "No packages found"; exit 1 }
           foreach ($pkg in $packages) {
               dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 
-      # 5. CREAR TAG (Solo si estamos en Master y todo salió bien)
+      # --- TAGGING (Solo Master) ---
       - name: Create Git Tag
         if: github.ref == 'refs/heads/master'
         uses: actions/github-script@v7

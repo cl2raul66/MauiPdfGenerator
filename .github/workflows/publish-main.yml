@@ -2,6 +2,11 @@ name: Publish Main Library
 
 on:
   workflow_dispatch:
+  # Se activa cuando Diagnostics termina exitosamente
+  workflow_run:
+    workflows: ["Publish Diagnostics"]
+    types: [completed]
+  # O se activa si tocas código de Main directamente
   push:
     branches: [ "development", "master" ]
     paths:
@@ -11,6 +16,8 @@ on:
 
 jobs:
   deploy-main:
+    # Condición: Si es push normal O si viene de un workflow exitoso
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: windows-latest
     permissions:
       contents: write
@@ -19,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -28,58 +36,96 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      # 1. CALCULAR VERSIÓN
-      - name: Calculate Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "main-v" # Prefijo único
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)|feat|feature"
-          version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator"
-          user_format_type: "json"
-
-      # 2. DETERMINAR SUFIJO
-      - name: Determine Version String
-        id: final_version
+      # --- DETERMINAR RAMA ACTUAL (Normalización) ---
+      # Esto es necesario porque 'workflow_run' corre en contexto default, necesitamos saber la rama real del evento
+      - name: Determine Target Branch
+        id: branch_info
         shell: pwsh
         run: |
-          if ("${{ github.ref }}" -eq "refs/heads/master") {
-            echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+          if ("${{ github.event_name }}" -eq "workflow_run") {
+            $branch = "${{ github.event.workflow_run.head_branch }}"
+            Write-Host "Triggered by Workflow Run from branch: $branch"
+            echo "TARGET_BRANCH=$branch" >> $env:GITHUB_OUTPUT
           } else {
-            echo "VAL=${{ steps.versioning.outputs.version }}-preview-${{ steps.versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
+            # Es un push normal, extraemos la rama de la ref (ej: refs/heads/development -> development)
+            $branch = "${{ github.ref }}".Replace("refs/heads/", "")
+            Write-Host "Triggered by Push to branch: $branch"
+            echo "TARGET_BRANCH=$branch" >> $env:GITHUB_OUTPUT
           }
 
-      # 3. COMPILAR Y EMPAQUETAR
+      # --- CÁLCULO DE VERSIÓN: DIAGNOSTICS (Dependencia) ---
+      - name: Calculate Diagnostics Version
+        id: diag_versioning
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "diag-v"
+          change_path: "MauiPdfGenerator.Diagnostics"
+          version_format: "${major}.${minor}.${patch}"
+          user_format_type: "json"
+
+      - name: Set Diagnostics Dependency String
+        id: diag_final
+        shell: pwsh
+        run: |
+          $branch = "${{ steps.branch_info.outputs.TARGET_BRANCH }}"
+          if ($branch -eq "master") {
+             echo "VER=${{ steps.diag_versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+             echo "VER=${{ steps.diag_versioning.outputs.version }}-preview-${{ steps.diag_versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
+          }
+
+      # --- CÁLCULO DE VERSIÓN: MAIN (Este paquete) ---
+      - name: Calculate Main Version
+        id: main_versioning
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "main-v"
+          change_path: "MauiPdfGenerator"
+          version_format: "${major}.${minor}.${patch}"
+          user_format_type: "json"
+
+      - name: Set Main Version String
+        id: main_final
+        shell: pwsh
+        run: |
+          $branch = "${{ steps.branch_info.outputs.TARGET_BRANCH }}"
+          if ($branch -eq "master") {
+             echo "VER=${{ steps.main_versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+             echo "VER=${{ steps.main_versioning.outputs.version }}-preview-${{ steps.main_versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
+          }
+
+      # --- BUILD & PUBLISH (Inyección Doble) ---
       - name: Build & Pack
         run: |
-          $ver = "${{ steps.final_version.outputs.VAL }}"
-          Write-Host "Construyendo versión: $ver"
+          $mainVer = "${{ steps.main_final.outputs.VER }}"
+          $diagVer = "${{ steps.diag_final.outputs.VER }}"
+          
+          Write-Host "Construyendo Main: $mainVer"
+          Write-Host "Usando Dependencia Diagnostics: $diagVer"
 
           dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj
-          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
-          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$ver
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer          
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
 
-      # 4. PUBLICAR
       - name: Publish to NuGet
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./output/*.nupkg
+          if (-not $packages) { Write-Error "No packages found"; exit 1 }
           foreach ($pkg in $packages) {
               dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 
-      # 5. CREAR TAG
+      # --- TAGGING (Solo si la rama objetivo es Master) ---
       - name: Create Git Tag
-        if: github.ref == 'refs/heads/master'
+        if: steps.branch_info.outputs.TARGET_BRANCH == 'master'
         uses: actions/github-script@v7
         with:
           script: |
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/main-v${{ steps.versioning.outputs.version }}',
+              ref: 'refs/tags/main-v${{ steps.main_versioning.outputs.version }}',
               sha: context.sha
             })
-          

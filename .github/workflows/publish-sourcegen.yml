@@ -53,7 +53,6 @@ jobs:
           dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
           dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
-      # SUBIR ARTEFACTO (Se borra en 1 día)
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -67,7 +66,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4 # Necesario para crear el tag
+      - uses: actions/checkout@v4
+
+      # --- CORRECCIÓN: INSTALAR .NET TAMBIÉN AQUÍ ---
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
       - name: Download Artifact
         uses: actions/download-artifact@v4
@@ -88,6 +93,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // Usamos la versión calculada en el job anterior
             const version = "${{ needs.build-and-pack.outputs.version }}";
             github.rest.git.createRef({
               owner: context.repo.owner,

@@ -1,0 +1,56 @@
+name: 🐞 Reporte de Error
+description: Crea un reporte para ayudarnos a mejorar
+title: "[Bug]: "
+labels: ["type: bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por tomarte el tiempo de reportar esto.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: ¿Qué componente está fallando?
+      description: Selecciona la librería afectada.
+      options:
+        - "MauiPdfGenerator (Core)"
+        - "MauiPdfGenerator.Diagnostics"
+        - "MauiPdfGenerator.SourceGenerators"
+        - "Sample App"
+        - "CI/CD (Pipelines)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción del Error
+      description: Explica qué pasó de forma clara y concisa.
+      placeholder: Al intentar generar un PDF con imágenes grandes, la app se cierra...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Pasos para reproducir
+      description: ¿Cómo podemos ver el error nosotros mismos?
+      placeholder: |
+        1. Iniciar la app Sample
+        2. Ir a la pestaña 'Imágenes'
+        3. Clic en 'Generar'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Severidad
+      options:
+        - "Baja (Cosmético o menor)"
+        - "Media (Funcionalidad rota pero con workaround)"
+        - "Alta (Bloqueante / Crash)"
+        - "Crítica (Hotfix necesario)"
+    validations:
+      required: false

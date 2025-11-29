@@ -10,7 +10,7 @@ on:
 
 jobs:
   # -----------------------------------------------------------------
-  # JOB 1: DIAGNOSTICS
+  # JOB 1: DIAGNOSTICS (Productor)
   # -----------------------------------------------------------------
   build-diagnostics:
     runs-on: windows-latest
@@ -56,9 +56,11 @@ jobs:
           $ver = "${{ steps.final_version.outputs.VAL }}"
           Write-Host "Empaquetando Diagnostics: $ver"
           
-          # Restore y Build en Release
-          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj
+          # Usamos /p:Configuration=Release para asegurar consistencia
+          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj /p:Configuration=Release
+          
           dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore
+          
           dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
       - name: Upload Diagnostics Artifact
@@ -69,7 +71,7 @@ jobs:
           retention-days: 1
 
   # -----------------------------------------------------------------
-  # JOB 2: MAIN LIBRARY
+  # JOB 2: MAIN LIBRARY (Consumidor)
   # -----------------------------------------------------------------
   build-main:
     needs: build-diagnostics
@@ -90,18 +92,18 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      # Descargar el artefacto de Diagnostics
+      # Descargar el artefacto generado en el Job 1
       - name: Download Diagnostics Artifact
         uses: actions/download-artifact@v4
         with:
           name: diagnostics-package
           path: ./local-feed
 
-      # Configurar Fuente Local
+      # Crear fuente local
       - name: Setup Local NuGet Feed
         run: dotnet nuget add source "${{ github.workspace }}/local-feed" --name LocalArtifacts
 
-      # Cálculo de Versión Main (Con Cascada)
+      # Cálculo de Versión Main (Con Cascada: vigila ambas carpetas)
       - name: Calculate Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.4.0
@@ -110,7 +112,6 @@ jobs:
           major_pattern: "(MAJOR)"
           minor_pattern: "(MINOR)|feat|feature"
           version_format: "${major}.${minor}.${patch}"
-          # Vigilamos ambas carpetas para el efecto cascada
           change_path: "MauiPdfGenerator MauiPdfGenerator.Diagnostics"
           user_format_type: "json"
 
@@ -127,15 +128,16 @@ jobs:
       - name: Build & Pack Main
         run: |
           $mainVer = "${{ steps.final_version.outputs.VAL }}"
-          # Usamos la versión que nos pasó el Job 1 (Garantía de coincidencia)
           $diagVer = "${{ needs.build-diagnostics.outputs.version }}"
           
           Write-Host "Empaquetando Main: $mainVer (Dependencia Diagnostics: $diagVer)"
 
-          # CORRECCIÓN CRÍTICA: Agregado '-c Release' al restore
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
+          # CORRECCIÓN CRÍTICA: Usamos /p:Configuration=Release en el restore.
+          # Esto activa la condición en tu .csproj para usar PackageReference en lugar de ProjectReference.
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
           
           dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
+          
           dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
 
       - name: Upload Main Artifact
@@ -156,7 +158,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Instalar .NET para tener el comando nuget
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -174,6 +175,7 @@ jobs:
           $packages = Get-ChildItem ./packages/*.nupkg
           foreach ($pkg in $packages) {
               Write-Host "Publicando: $($pkg.Name)"
+              # --skip-duplicate evita errores si una de las librerías no cambió de versión
               dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 

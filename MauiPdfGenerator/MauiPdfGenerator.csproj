@@ -13,7 +13,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-
+		
 		<PackageIcon>logo.png</PackageIcon>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MauiPdfGenerator</Title>
@@ -23,7 +23,7 @@
 		<PackageTags>.NET MAUI; PDF; SkiaSharp;</PackageTags>
 		<PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<Version>0.0.0-local</Version>
+		<Version>1.5.7</Version>
 		<Authors>cl2raul66</Authors>
 		<Company>RandAMediaLabGroup</Company>
 		<PackageId>RandAMediaLabGroup.MauiPdfGenerator</PackageId>
@@ -39,23 +39,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="..\Media\Img\logo.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="Fluent\Interfaces\Pages\IPdfPageChildHorizontalLine.cs" />
+	  <None Include="..\Media\Img\logo.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="Fluent\Interfaces\Pages\IPdfPageChildHorizontalLine.cs" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(Configuration)' == 'Release'">
-		<PackageReference Include="RandAMediaLabGroup.MauiPdfGenerator.Diagnostics" Version="$(DiagnosticsVersion)" />
+	<ItemGroup>
+	  <ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
 	</ItemGroup>
 
 </Project>

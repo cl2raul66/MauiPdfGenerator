@@ -14,26 +14,12 @@ internal class PdfResourceDictionary
     /// </summary>
     /// <param name="key">The unique key for the style.</param>
     /// <param name="style">The style definition.</param>
-    /// <exception cref="ArgumentException">Thrown if a style with the same key already exists.</exception>
     public void Add(string key, PdfStyle style)
     {
         if (!_styles.TryAdd(key, style))
         {
-            // In a real-world scenario, you might want to log this as a warning
-            // or allow overriding based on a specific configuration. For now, we enforce uniqueness.
             Debug.WriteLine($"[PdfResourceDictionary] WARNING: A style with the key '{key}' has already been added. The previous definition will be kept.");
         }
-    }
-
-    /// <summary>
-    /// Retrieves a style definition by its key.
-    /// </summary>
-    /// <param name="key">The key of the style to retrieve.</param>
-    /// <returns>The <see cref="PdfStyle"/> if found; otherwise, null.</returns>
-    public PdfStyle? Get(string key)
-    {
-        _styles.TryGetValue(key, out var style);
-        return style;
     }
 
     /// <summary>

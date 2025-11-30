@@ -2,8 +2,8 @@
 
 internal abstract class PdfElementData : IPdfGridCellInfo
 {
-    private bool _horizontalOptionsSet = false;
-    private bool _verticalOptionsSet = false;
+    internal bool _horizontalOptionsSet = false;
+    internal bool _verticalOptionsSet = false;
 
     internal PdfElementData? Parent { get; set; }
 

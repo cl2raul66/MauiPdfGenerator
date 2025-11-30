@@ -5,10 +5,11 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
+using MauiPdfGenerator.Fluent.Interfaces.Styles;
 
 namespace MauiPdfGenerator.Fluent.Builders.Elements;
 
-internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHorizontalLine, IPdfLayoutChildHorizontalLine, IPdfGridChildHorizontalLine
+internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHorizontalLine, IPdfLayoutChildHorizontalLine, IPdfGridChildHorizontalLine, IPdfHorizontalLineStyle
 {
     private readonly PdfHorizontalLineData _model;
 
@@ -37,6 +38,7 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     public IPdfGridChildHorizontalLine Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildHorizontalLine RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildHorizontalLine ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+    public IPdfGridChildHorizontalLine Style(string key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
@@ -49,6 +51,8 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     IPdfGridChildHorizontalLine Interfaces.Elements.IPdfHorizontalLine<IPdfGridChildHorizontalLine>.Color(Color color) { Color(color); return this; }
 
     // IPdfElement<TSelf>
+    IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Style(string key) { Style(key); return this; }
+    IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Style(string key) { Style(key); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Margin(double h, double v) { Margin(h, v); return this; }

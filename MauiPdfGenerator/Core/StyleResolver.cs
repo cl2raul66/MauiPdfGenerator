@@ -1,16 +1,22 @@
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Elements;
 using MauiPdfGenerator.Common.Models.Styling;
+using MauiPdfGenerator.Diagnostics;
+using MauiPdfGenerator.Diagnostics.Enums;
+using MauiPdfGenerator.Diagnostics.Interfaces;
+using MauiPdfGenerator.Diagnostics.Models;
 
 namespace MauiPdfGenerator.Core;
 
 internal class StyleResolver
 {
     private readonly PdfResourceDictionary _resourceDictionary;
+    private readonly IDiagnosticSink _diagnosticSink;
 
-    public StyleResolver(PdfResourceDictionary resourceDictionary)
+    public StyleResolver(PdfResourceDictionary resourceDictionary, IDiagnosticSink diagnosticSink)
     {
         _resourceDictionary = resourceDictionary;
+        _diagnosticSink = diagnosticSink;
     }
 
     public void ApplyStyles(List<PdfElementData> elements)
@@ -22,31 +28,40 @@ internal class StyleResolver
             var setter = _resourceDictionary.GetCombinedSetter(element.StyleKey);
             if (setter is null)
             {
-                // In a real library, this should probably log to the DiagnosticsSink
-                Console.WriteLine($"WARNING: Style with key '{element.StyleKey}' not found.");
+                var message = new DiagnosticMessage(
+                    DiagnosticSeverity.Warning,
+                    DiagnosticCodes.StyleKeyNotFound,
+                    $"Style with key '{element.StyleKey}' not found in ResourceDictionary.",
+                    []
+                );
+                _diagnosticSink.Post(message);
                 continue;
             }
 
-            // Create a temporary instance to hold the styled properties
             var styledInstance = (PdfElementData)Activator.CreateInstance(element.GetType());
             setter(styledInstance);
 
-            // Merge properties, respecting precedence (Local > Style)
             MergeProperties(element, styledInstance);
         }
     }
 
     private void MergeProperties(PdfElementData target, PdfElementData styledSource)
     {
-        // --- Merge properties from the base PdfElementData ---
         if (target.GetBackgroundColor is null && styledSource.GetBackgroundColor is not null)
         {
             target.BackgroundColor(styledSource.GetBackgroundColor);
         }
-        // Margin, Padding, WidthRequest, HeightRequest, etc. could be added here if needed.
-        // For now, we focus on the most common style properties.
 
-        // --- Merge properties for specific element types ---
+        if (!target._horizontalOptionsSet && styledSource._horizontalOptionsSet)
+        {
+            target.HorizontalOptions(styledSource.GetHorizontalOptions);
+        }
+
+        if (!target._verticalOptionsSet && styledSource._verticalOptionsSet)
+        {
+            target.VerticalOptions(styledSource.GetVerticalOptions);
+        }
+
         if (target is PdfParagraphData targetParagraph && styledSource is PdfParagraphData styledParagraph)
         {
             MergeParagraphProperties(targetParagraph, styledParagraph);
@@ -59,7 +74,18 @@ internal class StyleResolver
         {
             MergeHorizontalLineProperties(targetLine, styledLine);
         }
-        // Add other element types here (Grid, StackLayouts, etc.)
+        else if (target is PdfVerticalStackLayoutData targetVSL && styledSource is PdfVerticalStackLayoutData styledVSL)
+        {
+            MergeVerticalStackLayoutProperties(targetVSL, styledVSL);
+        }
+        else if (target is PdfHorizontalStackLayoutData targetHSL && styledSource is PdfHorizontalStackLayoutData styledHSL)
+        {
+            MergeHorizontalStackLayoutProperties(targetHSL, styledHSL);
+        }
+        else if (target is PdfGridData targetGrid && styledSource is PdfGridData styledGrid)
+        {
+            MergeGridProperties(targetGrid, styledGrid);
+        }
     }
 
     private void MergeParagraphProperties(PdfParagraphData target, PdfParagraphData styledSource)
@@ -120,6 +146,34 @@ internal class StyleResolver
         if (target.Thickness == 1.0 && styledSource.Thickness != 1.0)
         {
             target.Thickness = styledSource.Thickness;
+        }
+    }
+
+    private void MergeVerticalStackLayoutProperties(PdfVerticalStackLayoutData target, PdfVerticalStackLayoutData styledSource)
+    {
+        if (target.Spacing == 0 && styledSource.Spacing != 0)
+        {
+            target.Spacing = styledSource.Spacing;
+        }
+    }
+
+    private void MergeHorizontalStackLayoutProperties(PdfHorizontalStackLayoutData target, PdfHorizontalStackLayoutData styledSource)
+    {
+        if (target.Spacing == 0 && styledSource.Spacing != 0)
+        {
+            target.Spacing = styledSource.Spacing;
+        }
+    }
+
+    private void MergeGridProperties(PdfGridData target, PdfGridData styledSource)
+    {
+        if (target.GetRowSpacing == 0 && styledSource.GetRowSpacing != 0)
+        {
+            target.RowSpacing(styledSource.GetRowSpacing);
+        }
+        if (target.GetColumnSpacing == 0 && styledSource.GetColumnSpacing != 0)
+        {
+            target.ColumnSpacing(styledSource.GetColumnSpacing);
         }
     }
 }

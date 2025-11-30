@@ -6,12 +6,13 @@ using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
+using MauiPdfGenerator.Fluent.Interfaces.Styles;
 using MauiPdfGenerator.Fluent.Models;
 using System.Diagnostics;
 
 namespace MauiPdfGenerator.Fluent.Builders.Elements;
 
-internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagraph, IPdfLayoutChildParagraph, IPdfGridChildParagraph
+internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagraph, IPdfLayoutChildParagraph, IPdfGridChildParagraph, IPdfParagraphStyle
 {
     private readonly PdfParagraphData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;

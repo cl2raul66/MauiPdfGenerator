@@ -2,30 +2,53 @@ using Xunit;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Common.Models.Elements;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
-using MauiPdfGenerator.Fluent.Interfaces.Configuration;
+using MauiPdfGenerator.Fluent.Interfaces.Styles;
+using MauiPdfGenerator.Core;
+using MauiPdfGenerator.Fluent.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
+using MauiPdfGenerator.Diagnostics;
+using Moq;
+using Microsoft.Extensions.Logging;
+using MauiPdfGenerator.Diagnostics.Interfaces;
 
 namespace MauiPdfGenerator.Tests;
 
 public class StyleSystemTests
 {
+    private readonly PdfDocumentBuilder _docBuilder;
+    private readonly PdfResourceBuilder _resourceBuilder;
+    private readonly PdfResourceDictionary _resourceDictionary;
+    private readonly IDiagnosticSink _diagnosticSink;
+
+    public StyleSystemTests()
+    {
+        var fontRegistry = new PdfFontRegistryBuilder();
+        _resourceDictionary = new PdfResourceDictionary();
+        var loggerFactory = new NullLoggerFactory();
+        _diagnosticSink = new DiagnosticSink();
+        var mockGenerator = new Mock<IPdfCoreGenerator>();
+
+        _docBuilder = new PdfDocumentBuilder(fontRegistry, loggerFactory, _diagnosticSink, mockGenerator.Object);
+        _resourceBuilder = new PdfResourceBuilder(_resourceDictionary);
+    }
+
+
     [Fact]
     public void SimpleStyleApplication_ShouldApplyDefinedProperties()
     {
         // Arrange
-        var resourceDictionary = new PdfResourceDictionary();
-        var resourceBuilder = new PdfResourceBuilder(resourceDictionary);
-        resourceBuilder.Style<IPdfParagraph>("TestStyle", p =>
+        _resourceBuilder.Style<IPdfParagraphStyle>("TestStyle", p =>
         {
             p.TextColor(Colors.Red);
             p.FontSize(20);
         });
 
-        var paragraphData = new PdfParagraphData("Test");
-        paragraphData.Style("TestStyle");
+        var paragraphBuilder = new PdfParagraphBuilder("Test", new PdfFontRegistryBuilder());
+        paragraphBuilder.Style("TestStyle");
 
+        var paragraphData = (PdfParagraphData)paragraphBuilder.GetModel();
         var elements = new List<PdfElementData> { paragraphData };
-        var styleResolver = new Core.StyleResolver(resourceDictionary);
+        var styleResolver = new StyleResolver(_resourceDictionary, _diagnosticSink);
 
         // Act
         styleResolver.ApplyStyles(elements);
@@ -39,23 +62,22 @@ public class StyleSystemTests
     public void InheritedStyleApplication_ShouldApplyBaseAndDerivedProperties()
     {
         // Arrange
-        var resourceDictionary = new PdfResourceDictionary();
-        var resourceBuilder = new PdfResourceBuilder(resourceDictionary);
-        resourceBuilder.Style<IPdfParagraph>("BaseStyle", p =>
+        _resourceBuilder.Style<IPdfParagraphStyle>("BaseStyle", p =>
         {
             p.TextColor(Colors.Gray);
             p.FontSize(12);
         });
-        resourceBuilder.Style<IPdfParagraph>("DerivedStyle", "BaseStyle", p =>
+        _resourceBuilder.Style<IPdfParagraphStyle>("DerivedStyle", "BaseStyle", p =>
         {
             p.FontSize(24); // Override base
         });
 
-        var paragraphData = new PdfParagraphData("Test");
-        paragraphData.Style("DerivedStyle");
+        var paragraphBuilder = new PdfParagraphBuilder("Test", new PdfFontRegistryBuilder());
+        paragraphBuilder.Style("DerivedStyle");
 
+        var paragraphData = (PdfParagraphData)paragraphBuilder.GetModel();
         var elements = new List<PdfElementData> { paragraphData };
-        var styleResolver = new Core.StyleResolver(resourceDictionary);
+        var styleResolver = new StyleResolver(_resourceDictionary, _diagnosticSink);
 
         // Act
         styleResolver.ApplyStyles(elements);
@@ -69,22 +91,18 @@ public class StyleSystemTests
     public void LocalValuePrecedence_ShouldPrioritizeLocalValueOverStyle()
     {
         // Arrange
-        var resourceDictionary = new PdfResourceDictionary();
-        var resourceBuilder = new PdfResourceBuilder(resourceDictionary);
-        resourceBuilder.Style<IPdfParagraph>("TestStyle", p =>
+        _resourceBuilder.Style<IPdfParagraphStyle>("TestStyle", p =>
         {
             p.TextColor(Colors.Red);
         });
 
-        // Use the builder to set the local value
-        var fontRegistry = new PdfFontRegistryBuilder();
-        var paragraphBuilder = new PdfParagraphBuilder("Test", fontRegistry);
-        paragraphBuilder.Style("TestStyle");
-        paragraphBuilder.TextColor(Colors.Blue); // Local value set via fluent API
+        var paragraphBuilder = new PdfParagraphBuilder("Test", new PdfFontRegistryBuilder());
+        paragraphBuilder.Style("TestStyle")
+                        .TextColor(Colors.Blue); // Local value set via fluent API
 
         var paragraphData = (PdfParagraphData)paragraphBuilder.GetModel();
         var elements = new List<PdfElementData> { paragraphData };
-        var styleResolver = new Core.StyleResolver(resourceDictionary);
+        var styleResolver = new StyleResolver(_resourceDictionary, _diagnosticSink);
 
         // Act
         styleResolver.ApplyStyles(elements);
@@ -97,16 +115,15 @@ public class StyleSystemTests
     public void CircularDependency_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        var resourceDictionary = new PdfResourceDictionary();
-        var resourceBuilder = new PdfResourceBuilder(resourceDictionary);
-        resourceBuilder.Style<IPdfParagraph>("StyleA", "StyleB", p => {});
-        resourceBuilder.Style<IPdfParagraph>("StyleB", "StyleA", p => {});
+        _resourceBuilder.Style<IPdfParagraphStyle>("StyleA", "StyleB", p => {});
+        _resourceBuilder.Style<IPdfParagraphStyle>("StyleB", "StyleA", p => {});
 
-        var paragraphData = new PdfParagraphData("Test");
-        paragraphData.Style("StyleA");
+        var paragraphBuilder = new PdfParagraphBuilder("Test", new PdfFontRegistryBuilder());
+        paragraphBuilder.Style("StyleA");
 
+        var paragraphData = (PdfParagraphData)paragraphBuilder.GetModel();
         var elements = new List<PdfElementData> { paragraphData };
-        var styleResolver = new Core.StyleResolver(resourceDictionary);
+        var styleResolver = new StyleResolver(_resourceDictionary, _diagnosticSink);
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => styleResolver.ApplyStyles(elements));
@@ -116,17 +133,39 @@ public class StyleSystemTests
     public void MissingBasedOnStyle_ShouldThrowKeyNotFoundException()
     {
         // Arrange
-        var resourceDictionary = new PdfResourceDictionary();
-        var resourceBuilder = new PdfResourceBuilder(resourceDictionary);
-        resourceBuilder.Style<IPdfParagraph>("MyStyle", "NonExistentBase", p => {});
+        _resourceBuilder.Style<IPdfParagraphStyle>("MyStyle", "NonExistentBase", p => {});
 
-        var paragraphData = new PdfParagraphData("Test");
-        paragraphData.Style("MyStyle");
+        var paragraphBuilder = new PdfParagraphBuilder("Test", new PdfFontRegistryBuilder());
+        paragraphBuilder.Style("MyStyle");
 
+        var paragraphData = (PdfParagraphData)paragraphBuilder.GetModel();
         var elements = new List<PdfElementData> { paragraphData };
-        var styleResolver = new Core.StyleResolver(resourceDictionary);
+        var styleResolver = new StyleResolver(_resourceDictionary, _diagnosticSink);
 
         // Act & Assert
         Assert.Throws<KeyNotFoundException>(() => styleResolver.ApplyStyles(elements));
+    }
+
+    [Fact]
+    public void ResourcesApi_OnDocumentRoot_ShouldDefineStyleCorrectly()
+    {
+        // Arrange
+        _docBuilder.Resources(rd =>
+        {
+            rd.Style<IPdfParagraphStyle>("FromDoc", p => p.TextColor(Colors.Green));
+        });
+
+        var styleResolver = new StyleResolver(_docBuilder._configurationBuilder.ResourceDictionary, _diagnosticSink);
+        var paragraphBuilder = new PdfParagraphBuilder("Test", new PdfFontRegistryBuilder());
+        paragraphBuilder.Style("FromDoc");
+
+        var paragraphData = (PdfParagraphData)paragraphBuilder.GetModel();
+        var elements = new List<PdfElementData> { paragraphData };
+
+        // Act
+        styleResolver.ApplyStyles(elements);
+
+        // Assert
+        Assert.Equal(Colors.Green, paragraphData.CurrentTextColor);
     }
 }

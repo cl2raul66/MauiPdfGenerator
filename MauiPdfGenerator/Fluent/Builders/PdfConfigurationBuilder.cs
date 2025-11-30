@@ -78,12 +78,4 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     {
         return $"PageSize: {GetPageSize}, Orientation: {GetPageOrientation}, Padding: {GetPadding}, Fonts: {FontRegistry}, Meta: {MetaDataBuilder}";
     }
-
-    public IPdfDocumentConfigurator Resources(Action<IPdfResourceBuilder> resourceBuilderAction)
-    {
-        ArgumentNullException.ThrowIfNull(resourceBuilderAction);
-        var resourceBuilder = new PdfResourceBuilder(this.ResourceDictionary);
-        resourceBuilderAction(resourceBuilder);
-        return this;
-    }
 }

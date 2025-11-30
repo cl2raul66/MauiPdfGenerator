@@ -1,4 +1,5 @@
 using MauiPdfGenerator.Common.Models.Styling;
+using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
 namespace MauiPdfGenerator.Fluent.Builders;
@@ -12,12 +13,12 @@ internal class PdfResourceBuilder : IPdfResourceBuilder
         _resourceDictionary = resourceDictionary;
     }
 
-    public IPdfResourceBuilder Style<TElement>(string key, Action<TElement> setup) where TElement : class
+    public IPdfResourceBuilder Style<TElement>(string key, Action<TElement> setup) where TElement : class, IPdfElement<TElement>
     {
         return Style(key, null, setup);
     }
 
-    public IPdfResourceBuilder Style<TElement>(string key, string? basedOn, Action<TElement> setup) where TElement : class
+    public IPdfResourceBuilder Style<TElement>(string key, string? basedOn, Action<TElement> setup) where TElement : class, IPdfElement<TElement>
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(setup);

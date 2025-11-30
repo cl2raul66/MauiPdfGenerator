@@ -1,5 +1,6 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core;
+using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces;
@@ -37,6 +38,14 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
+    public IPdfDocument Resources(Action<IPdfResourceBuilder> resourceBuilderAction)
+    {
+        ArgumentNullException.ThrowIfNull(resourceBuilderAction);
+        var resourceBuilder = new PdfResourceBuilder(_configurationBuilder.ResourceDictionary);
+        resourceBuilderAction(resourceBuilder);
+        return this;
+    }
+
     // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<TLayout> para coincidir con la interfaz.
     public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
@@ -62,16 +71,14 @@ internal class PdfDocumentBuilder : IPdfDocument
 
     public async Task SaveAsync(string path)
     {
-        var allElements = GetAllElements();
-
-        // Apply styles
-        var styleResolver = new StyleResolver(_configurationBuilder.ResourceDictionary);
-        styleResolver.ApplyStyles(allElements);
-
         if (string.IsNullOrEmpty(path))
         {
             throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
         }
+
+        var allElements = GetAllElements();
+        var styleResolver = new StyleResolver(_configurationBuilder.ResourceDictionary, _diagnosticSink);
+        styleResolver.ApplyStyles(allElements);
 
         var pageDataList = new List<PdfPageData>();
         foreach (var pageBuilder in _pages)

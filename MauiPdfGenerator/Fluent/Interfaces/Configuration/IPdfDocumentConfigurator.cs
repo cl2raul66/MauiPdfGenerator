@@ -12,4 +12,5 @@ public interface IPdfDocumentConfigurator
     IPdfDocumentConfigurator Padding(DefaultPagePaddingType defaultPaddingType);
     IPdfDocumentConfigurator MetaData(Action<IPdfMetaData> metaData);
     IPdfDocumentConfigurator ConfigureFontRegistry(Action<IPdfFontRegistry> fontRegistryConfiguration);
+    IPdfDocumentConfigurator Resources(Action<IPdfResourceBuilder> resourceBuilder);
 }

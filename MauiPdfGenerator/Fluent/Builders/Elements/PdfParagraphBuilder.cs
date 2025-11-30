@@ -67,6 +67,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     public IPdfGridChildParagraph Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildParagraph RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildParagraph ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+    public IPdfGridChildParagraph Style(string key) { _model.Style(key); return this; }
 
     #endregion
 
@@ -95,6 +96,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.TextTransform(TextTransform transform) { TextTransform(transform); return this; }
 
     // IPdfElement<IPdfPageChildParagraph>
+    IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Style(string key) { Style(key); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -106,6 +108,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
     // IPdfElement<IPdfLayoutChildParagraph>
+    IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Style(string key) { Style(key); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }

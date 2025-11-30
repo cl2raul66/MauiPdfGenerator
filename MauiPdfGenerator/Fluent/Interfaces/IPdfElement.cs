@@ -11,4 +11,5 @@ public interface IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
     TSelf WidthRequest(double width);
     TSelf HeightRequest(double height);
     TSelf BackgroundColor(Color? color);
+    TSelf Style(string key);
 }

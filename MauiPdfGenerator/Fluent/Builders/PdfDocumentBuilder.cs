@@ -62,6 +62,12 @@ internal class PdfDocumentBuilder : IPdfDocument
 
     public async Task SaveAsync(string path)
     {
+        var allElements = GetAllElements();
+
+        // Apply styles
+        var styleResolver = new StyleResolver(_configurationBuilder.ResourceDictionary);
+        styleResolver.ApplyStyles(allElements);
+
         if (string.IsNullOrEmpty(path))
         {
             throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
@@ -119,6 +125,35 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             _logger.LogError(ex, "An unexpected error occurred while saving the PDF.");
             throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
+        }
+    }
+
+    private List<PdfElementData> GetAllElements()
+    {
+        var allElements = new List<PdfElementData>();
+        foreach (var page in _pages)
+        {
+            if (page is PdfContentPageBuilder contentPageBuilder)
+            {
+                var content = contentPageBuilder.GetContent();
+                foreach (var element in content)
+                {
+                    Traverse(element, allElements);
+                }
+            }
+        }
+        return allElements;
+    }
+
+    private void Traverse(PdfElementData element, List<PdfElementData> list)
+    {
+        list.Add(element);
+        if (element is PdfLayoutElementData layout)
+        {
+            foreach (var child in layout.Children)
+            {
+                Traverse(child, list);
+            }
         }
     }
 }

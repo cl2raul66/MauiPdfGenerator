@@ -10,6 +10,8 @@ using MauiPdfGenerator.Diagnostics;
 using Moq;
 using Microsoft.Extensions.Logging;
 using MauiPdfGenerator.Diagnostics.Interfaces;
+using MauiPdfGenerator.Fluent.Builders.Elements;
+using MauiPdfGenerator.Common.Models;
 
 namespace MauiPdfGenerator.Tests;
 
@@ -155,7 +157,7 @@ public class StyleSystemTests
             rd.Style<IPdfParagraphStyle>("FromDoc", p => p.TextColor(Colors.Green));
         });
 
-        var styleResolver = new StyleResolver(_docBuilder._configurationBuilder.ResourceDictionary, _diagnosticSink);
+        var styleResolver = new StyleResolver(_docBuilder._resourceDictionary, _diagnosticSink);
         var paragraphBuilder = new PdfParagraphBuilder("Test", new PdfFontRegistryBuilder());
         paragraphBuilder.Style("FromDoc");
 

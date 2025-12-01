@@ -2,8 +2,6 @@
 
 internal class PdfVerticalStackLayoutData : PdfLayoutElementData, IPdfLayoutElement
 {
-    internal double Spacing { get; set; } = 0;
-
     internal PdfVerticalStackLayoutData() : base()
     {
     }

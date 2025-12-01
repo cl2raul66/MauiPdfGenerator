@@ -1,5 +1,7 @@
 ﻿﻿using MauiPdfGenerator.Fluent.Builders.Elements;
+using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
 using MauiPdfGenerator.Fluent.Models;
@@ -30,6 +32,11 @@ internal class PdfGridChildParagraphBuilder : PdfGridChildBuilder<PdfParagraphBu
     public IPdfGridChildParagraph BackgroundColor(Color? color) { _internalBuilder.BackgroundColor(color); return this; }
     public IPdfGridChildParagraph HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildParagraph VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
+
+    public IPdfGridChildParagraph Style(string key)
+    {
+        _internalBuilder.Style(key); return this;
+    }
 }
 
 internal class PdfGridChildImageBuilder : PdfGridChildBuilder<PdfImageBuilder, IPdfGridChildImage>, IPdfGridChildImage
@@ -48,6 +55,91 @@ internal class PdfGridChildImageBuilder : PdfGridChildBuilder<PdfImageBuilder, I
     public IPdfGridChildImage BackgroundColor(Color? color) { _internalBuilder.BackgroundColor(color); return this; }
     public IPdfGridChildImage HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildImage VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
+
+    IPdfGridChildImage IPdfImage<IPdfGridChildImage>.Aspect(Aspect aspect)
+    {
+        _internalBuilder.Aspect(aspect); return this;
+    }
+
+    IPdfGridChildImage IPdfGridChild<IPdfGridChildImage>.Row(int row)
+    {
+        _internalBuilder.Row(row); return this;
+    }
+
+    IPdfGridChildImage IPdfGridChild<IPdfGridChildImage>.Column(int column)
+    {
+        _internalBuilder.Column(column); return this;
+    }
+
+    IPdfGridChildImage IPdfGridChild<IPdfGridChildImage>.RowSpan(int span)
+    {
+        _internalBuilder.RowSpan(span); return this;
+    }
+
+    IPdfGridChildImage IPdfGridChild<IPdfGridChildImage>.ColumnSpan(int span)
+    {
+        _internalBuilder.ColumnSpan(span); return this; 
+    }
+
+    IPdfGridChildImage IPdfLayoutChild<IPdfGridChildImage>.HorizontalOptions(LayoutAlignment layoutAlignment)
+    {
+           _internalBuilder.HorizontalOptions(layoutAlignment); return this;
+    }
+
+    IPdfGridChildImage IPdfLayoutChild<IPdfGridChildImage>.VerticalOptions(LayoutAlignment layoutAlignment)
+    {
+        _internalBuilder.VerticalOptions(layoutAlignment); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double uniformMargin)
+    {
+        _internalBuilder.Margin(uniformMargin); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double horizontalMargin, double verticalMargin)
+    {
+        _internalBuilder.Margin(horizontalMargin, verticalMargin); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin)
+    {
+        _internalBuilder.Margin(leftMargin, topMargin, rightMargin, bottomMargin); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Padding(double uniformPadding)
+    {
+        _internalBuilder.Padding(uniformPadding); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Padding(double horizontalPadding, double verticalPadding)
+    {
+        _internalBuilder.Padding(horizontalPadding, verticalPadding); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin)
+    {
+        _internalBuilder.Padding(leftPadding, topPadding, rightPadding, bottomMargin); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.WidthRequest(double width)
+    {
+        _internalBuilder.WidthRequest(width); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.HeightRequest(double height)
+    {
+        _internalBuilder.HeightRequest(height); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.BackgroundColor(Color? color)
+    {
+        _internalBuilder.BackgroundColor(color); return this;
+    }
+
+    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Style(string key)
+    {
+        _internalBuilder.Style(key); return this;
+    }
 }
 
 internal class PdfGridChildHorizontalLineBuilder : PdfGridChildBuilder<PdfHorizontalLineBuilder, IPdfGridChildHorizontalLine>, IPdfGridChildHorizontalLine
@@ -67,6 +159,11 @@ internal class PdfGridChildHorizontalLineBuilder : PdfGridChildBuilder<PdfHorizo
     public IPdfGridChildHorizontalLine BackgroundColor(Color? color) { _internalBuilder.BackgroundColor(color); return this; }
     public IPdfGridChildHorizontalLine HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildHorizontalLine VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
+
+    public IPdfGridChildHorizontalLine Style(string key)
+    {
+       _internalBuilder.Style(key); return this;
+    }
 }
 
 internal class PdfGridChildVerticalStackLayoutBuilder : PdfGridChildBuilder<PdfVerticalStackLayoutBuilder, IPdfGridChildVerticalStackLayout>, IPdfGridChildVerticalStackLayout
@@ -86,6 +183,11 @@ internal class PdfGridChildVerticalStackLayoutBuilder : PdfGridChildBuilder<PdfV
     public IPdfGridChildVerticalStackLayout HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildVerticalStackLayout VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
     public void Children(Action<IPdfStackLayoutBuilder> childrenSetup){ _internalBuilder.Children(childrenSetup); }
+
+    public IPdfGridChildVerticalStackLayout Style(string key)
+    {
+       _internalBuilder.Style(key); return this;
+    }
 }
 
 internal class PdfGridChildHorizontalStackLayoutBuilder : PdfGridChildBuilder<PdfHorizontalStackLayoutBuilder, IPdfGridChildHorizontalStackLayout>, IPdfGridChildHorizontalStackLayout
@@ -105,6 +207,11 @@ internal class PdfGridChildHorizontalStackLayoutBuilder : PdfGridChildBuilder<Pd
     public IPdfGridChildHorizontalStackLayout HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildHorizontalStackLayout VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
     public void Children(Action<IPdfStackLayoutBuilder> childrenSetup){ _internalBuilder.Children(childrenSetup); }
+
+    public IPdfGridChildHorizontalStackLayout Style(string key)
+    {
+        _internalBuilder.Style(key); return this;
+    }
 }
 
 internal class PdfGridChildGridBuilder : PdfGridChildBuilder<PdfGridBuilder, IPdfGridChildGrid>, IPdfGridChildGrid
@@ -127,4 +234,9 @@ internal class PdfGridChildGridBuilder : PdfGridChildBuilder<PdfGridBuilder, IPd
     public IPdfGridChildGrid BackgroundColor(Color? color) { ((IPdfGrid)_internalBuilder).BackgroundColor(color); return this; }
     public IPdfGridChildGrid HorizontalOptions(LayoutAlignment layoutAlignment) { ((IPdfGrid)_internalBuilder).HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildGrid VerticalOptions(LayoutAlignment layoutAlignment) { ((IPdfGrid)_internalBuilder).VerticalOptions(layoutAlignment); return this; }
+
+    public IPdfGridChildGrid Style(string key)
+    {
+        _internalBuilder.Style(key); return this;
+    }
 }

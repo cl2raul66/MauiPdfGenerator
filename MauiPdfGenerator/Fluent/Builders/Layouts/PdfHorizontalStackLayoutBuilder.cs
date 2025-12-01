@@ -1,5 +1,6 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
@@ -79,5 +80,20 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     IPdfLayoutChildHorizontalStackLayout Interfaces.IPdfElement<IPdfLayoutChildHorizontalStackLayout>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
+
+    public IPdfHorizontalStackLayout Style(string key)
+    {
+        Style(key); return this;
+    }
+
+    IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Style(string key)
+    {
+        Style(key); return this;
+    }
+
+    IPdfGridChildHorizontalStackLayout IPdfElement<IPdfGridChildHorizontalStackLayout>.Style(string key)
+    {
+        Style(key); return this;
+    }
     #endregion
 }

@@ -1,5 +1,6 @@
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
@@ -28,17 +29,30 @@ internal class StyleResolver
             var setter = _resourceDictionary.GetCombinedSetter(element.StyleKey);
             if (setter is null)
             {
+                // Reemplaza la llamada a _diagnosticSink.Post(message) por _diagnosticSink.Submit(message)
                 var message = new DiagnosticMessage(
                     DiagnosticSeverity.Warning,
                     DiagnosticCodes.StyleKeyNotFound,
                     $"Style with key '{element.StyleKey}' not found in ResourceDictionary.",
-                    []
+                    null
                 );
-                _diagnosticSink.Post(message);
+                _diagnosticSink.Submit(message);
                 continue;
             }
 
-            var styledInstance = (PdfElementData)Activator.CreateInstance(element.GetType());
+            var instance = Activator.CreateInstance(element.GetType());
+            if (instance is not PdfElementData styledInstance)
+            {
+                // Opcional: puedes registrar un diagnóstico si la instancia no es válida.
+                var message = new DiagnosticMessage(
+                    DiagnosticSeverity.Error,
+                    DiagnosticCodes.StyleKeyNotFound,
+                    $"No se pudo crear una instancia de tipo '{element.GetType().Name}' para aplicar el estilo.",
+                    null
+                );
+                _diagnosticSink.Submit(message);
+                continue;
+            }
             setter(styledInstance);
 
             MergeProperties(element, styledInstance);
@@ -107,11 +121,11 @@ internal class StyleResolver
         {
             target.CurrentFontAttributes = styledSource.CurrentFontAttributes;
         }
-        if (target.CurrentHorizontalTextAlignment == PdfParagraphData.DefaultHorizontalTextAlignment && styledSource.CurrentHorizontalTextAlignment != PdfParagraphData.DefaultHorizontalTextAlignment)
+        if (target.CurrentHorizontalTextAlignment is PdfParagraphData.DefaultHorizontalTextAlignment && styledSource.CurrentHorizontalTextAlignment is not PdfParagraphData.DefaultHorizontalTextAlignment)
         {
             target.CurrentHorizontalTextAlignment = styledSource.CurrentHorizontalTextAlignment;
         }
-        if (target.CurrentVerticalTextAlignment == PdfParagraphData.DefaultVerticalTextAlignment && styledSource.CurrentVerticalTextAlignment != PdfParagraphData.DefaultVerticalTextAlignment)
+        if (target.CurrentVerticalTextAlignment is PdfParagraphData.DefaultVerticalTextAlignment && styledSource.CurrentVerticalTextAlignment is not PdfParagraphData.DefaultVerticalTextAlignment)
         {
             target.CurrentVerticalTextAlignment = styledSource.CurrentVerticalTextAlignment;
         }
@@ -131,7 +145,7 @@ internal class StyleResolver
 
     private void MergeImageProperties(PdfImageData target, PdfImageData styledSource)
     {
-        if (target.CurrentAspect == Aspect.AspectFit && styledSource.CurrentAspect != Aspect.AspectFit)
+        if (target.CurrentAspect is Aspect.AspectFit && styledSource.CurrentAspect is not Aspect.AspectFit)
         {
             target.CurrentAspect = styledSource.CurrentAspect;
         }
@@ -139,13 +153,13 @@ internal class StyleResolver
 
     private void MergeHorizontalLineProperties(PdfHorizontalLineData target, PdfHorizontalLineData styledSource)
     {
-        if (target.LineColor is null && styledSource.LineColor is not null)
+        if (target.CurrentColor is null && styledSource.CurrentColor is not null)
         {
-            target.LineColor = styledSource.LineColor;
+            target.CurrentColor = styledSource.CurrentColor;
         }
-        if (target.Thickness == 1.0 && styledSource.Thickness != 1.0)
+        if (target.CurrentThickness == PdfHorizontalLineData.DefaultThickness && styledSource.CurrentThickness != PdfHorizontalLineData.DefaultThickness)
         {
-            target.Thickness = styledSource.Thickness;
+            target.CurrentThickness = styledSource.CurrentThickness;
         }
     }
 

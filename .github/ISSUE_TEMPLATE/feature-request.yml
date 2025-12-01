@@ -1,0 +1,41 @@
+name: ✨ Nueva Funcionalidad
+description: Sugiere una idea para este proyecto
+title: "[Feat]: "
+labels: ["type: feature"]
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Componente Objetivo
+      options:
+        - "MauiPdfGenerator (Core)"
+        - "MauiPdfGenerator.Diagnostics"
+        - "MauiPdfGenerator.SourceGenerators"
+        - "Sample App"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: ¿Está relacionado con un problema?
+      description: Describe el problema que quieres resolver.
+      placeholder: Siempre me frustra cuando tengo que calcular manualmente el padding...
+    validations:
+      required: false
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solución Propuesta
+      description: Describe lo que te gustaría que sucediera.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: breaking
+    attributes:
+      label: Impacto
+      description: ¿Este cambio rompería el código existente de los usuarios?
+      options:
+        - label: "Sí, es un Breaking Change (Requiere versión Major)"

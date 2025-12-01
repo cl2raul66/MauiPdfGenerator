@@ -8,7 +8,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 namespace MauiPdfGenerator.Fluent.Builders.Elements;
 
-internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfLayoutChildImage, IPdfGridChildImage
+internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfLayoutChildImage, IPdfGridChildImage, IPdfImageStyle
 {
     private readonly PdfImageData _model;
 
@@ -19,7 +19,7 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
 
     public PdfElementData GetModel() => _model;
 
-    #region Public API (Implements IPdfGridChildImage)
+    #region Public API
     public IPdfGridChildImage Aspect(Aspect aspect) { _model.CurrentAspect = aspect; return this; }
     public IPdfGridChildImage Margin(double uniformMargin) { _model.Margin(uniformMargin); return this; }
     public IPdfGridChildImage Margin(double horizontalMargin, double verticalMargin) { _model.Margin(horizontalMargin, verticalMargin); return this; }
@@ -40,6 +40,20 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     #endregion
 
     #region Explicit Interface Implementations
+
+    // IPdfImageStyle (NUEVO)
+    IPdfImageStyle IPdfImage<IPdfImageStyle>.Aspect(Aspect aspect) { Aspect(aspect); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.Style(string key) { Style(key); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.Margin(double u) { Margin(u); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.Margin(double h, double v) { Margin(h, v); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.Padding(double u) { Padding(u); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.Padding(double h, double v) { Padding(h, v); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.Padding(double l, double t, double r, double b) { Padding(l, t, r, b); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.WidthRequest(double w) { WidthRequest(w); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.HeightRequest(double h) { HeightRequest(h); return this; }
+    IPdfImageStyle IPdfElement<IPdfImageStyle>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
+
     // IPdfImage<TSelf>
     IPdfPageChildImage Interfaces.Elements.IPdfImage<IPdfPageChildImage>.Aspect(Aspect aspect) { Aspect(aspect); return this; }
     IPdfLayoutChildImage Interfaces.Elements.IPdfImage<IPdfLayoutChildImage>.Aspect(Aspect aspect) { Aspect(aspect); return this; }

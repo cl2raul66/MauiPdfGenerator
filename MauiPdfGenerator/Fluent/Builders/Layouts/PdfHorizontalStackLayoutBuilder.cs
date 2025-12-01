@@ -7,7 +7,9 @@ using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts;
 
-internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHorizontalStackLayout, IPdfLayoutChildHorizontalStackLayout, IPdfGridChildHorizontalStackLayout
+using global::MauiPdfGenerator.Fluent.Interfaces.Styles;
+
+internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHorizontalStackLayout, IPdfLayoutChildHorizontalStackLayout, IPdfGridChildHorizontalStackLayout, IPdfHorizontalStackLayoutStyle
 {
     private readonly PdfHorizontalStackLayoutData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
@@ -33,7 +35,7 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
         _model.Add(elementModel);
     }
 
-    #region Public API (Implements the most specific interface: IPdfGridChildHorizontalStackLayout)
+    #region Public API
     public IPdfGridChildHorizontalStackLayout Spacing(float value) { _model.Spacing(value); return this; }
     public IPdfGridChildHorizontalStackLayout Margin(double uniformMargin) { _model.Margin(uniformMargin); return this; }
     public IPdfGridChildHorizontalStackLayout Margin(double horizontalMargin, double verticalMargin) { _model.Margin(horizontalMargin, verticalMargin); return this; }
@@ -50,9 +52,27 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     public IPdfGridChildHorizontalStackLayout Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildHorizontalStackLayout RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildHorizontalStackLayout ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+
+    // CORRECCIÓN: Implementación real de Style
+    public IPdfGridChildHorizontalStackLayout Style(string key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
+
+    // IPdfHorizontalStackLayoutStyle (NUEVO)
+    IPdfHorizontalStackLayoutStyle IPdfHorizontalStackLayout<IPdfHorizontalStackLayoutStyle>.Spacing(float value) { Spacing(value); return this; }
+    void IPdfHorizontalStackLayout<IPdfHorizontalStackLayoutStyle>.Children(Action<IPdfStackLayoutBuilder> childrenSetup) { Children(childrenSetup); }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.Style(string key) { Style(key); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.Margin(double u) { Margin(u); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.Margin(double h, double v) { Margin(h, v); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.Padding(double u) { Padding(u); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.Padding(double h, double v) { Padding(h, v); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.Padding(double l, double t, double r, double b) { Padding(l, t, r, b); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.WidthRequest(double w) { WidthRequest(w); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.HeightRequest(double h) { HeightRequest(h); return this; }
+    IPdfHorizontalStackLayoutStyle IPdfElement<IPdfHorizontalStackLayoutStyle>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
+
     // IPdfHorizontalStackLayout
     IPdfHorizontalStackLayout IPdfHorizontalStackLayout<IPdfHorizontalStackLayout>.Spacing(float value) { Spacing(value); return this; }
     IPdfHorizontalStackLayout Interfaces.IPdfElement<IPdfHorizontalStackLayout>.Margin(double u) { Margin(u); return this; }
@@ -66,6 +86,9 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     IPdfHorizontalStackLayout Interfaces.IPdfElement<IPdfHorizontalStackLayout>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
     IPdfHorizontalStackLayout IPdfLayoutChild<IPdfHorizontalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfHorizontalStackLayout IPdfLayoutChild<IPdfHorizontalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
+
+    // CORRECCIÓN: Implementación explícita de Style
+    IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Style(string key) { Style(key); return this; }
 
     // IPdfLayoutChildHorizontalStackLayout
     IPdfLayoutChildHorizontalStackLayout IPdfHorizontalStackLayout<IPdfLayoutChildHorizontalStackLayout>.Spacing(float value) { Spacing(value); return this; }
@@ -81,19 +104,10 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     IPdfLayoutChildHorizontalStackLayout IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    public IPdfHorizontalStackLayout Style(string key)
-    {
-        Style(key); return this;
-    }
+    // CORRECCIÓN: Implementación explícita de Style
+    IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Style(string key) { Style(key); return this; }
 
-    IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Style(string key)
-    {
-        Style(key); return this;
-    }
-
-    IPdfGridChildHorizontalStackLayout IPdfElement<IPdfGridChildHorizontalStackLayout>.Style(string key)
-    {
-        Style(key); return this;
-    }
+    // IPdfGridChildHorizontalStackLayout
+    IPdfGridChildHorizontalStackLayout IPdfElement<IPdfGridChildHorizontalStackLayout>.Style(string key) { Style(key); return this; }
     #endregion
 }

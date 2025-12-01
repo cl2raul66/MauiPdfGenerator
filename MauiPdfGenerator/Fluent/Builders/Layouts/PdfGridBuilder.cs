@@ -7,7 +7,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts;
 
-internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
+internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement, IPdfGridStyle
 {
     private readonly PdfGridData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
@@ -116,5 +116,30 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
     {
         _model.Style(key); return this;
     }
+    #endregion
+
+    #region Explicit Interface Implementations (IPdfGridStyle)
+
+    // IPdfGridStyle (NUEVO)
+    IPdfGridStyle IPdfGridStyle.RowSpacing(double value) { RowSpacing(value); return this; }
+    IPdfGridStyle IPdfGridStyle.ColumnSpacing(double value) { ColumnSpacing(value); return this; }
+    IPdfElement<IPdfGridStyle> IPdfElement<IPdfGridStyle>.Style(string key) { Style(key); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.Margin(double u) { Margin(u); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.Margin(double h, double v) { Margin(h, v); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.Padding(double u) { Padding(u); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.Padding(double h, double v) { Padding(h, v); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.Padding(double l, double t, double r, double b) { Padding(l, t, r, b); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.WidthRequest(double w) { WidthRequest(w); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.HeightRequest(double h) { HeightRequest(h); return this; }
+    IPdfGridStyle IPdfElement<IPdfGridStyle>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
+
+    // IPdfGrid<IPdfGridStyle>
+    void IPdfGrid<IPdfGridStyle>.Children(Action<IPdfGridChildrenBuilder> builder) { Children(builder); }
+    IPdfGridLayout IPdfGrid<IPdfGridStyle>.RowDefinitions(Action<IPdfRowDefinitionBuilder> builder) { return RowDefinitions(builder); }
+    IPdfGridLayout IPdfGrid<IPdfGridStyle>.ColumnDefinitions(Action<IPdfColumnDefinitionBuilder> builder) { return ColumnDefinitions(builder); }
+    IPdfGridStyle IPdfLayoutChild<IPdfGridStyle>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
+    IPdfGridStyle IPdfLayoutChild<IPdfGridStyle>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
+
     #endregion
 }

@@ -1,6 +1,5 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core;
-using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces;
@@ -46,7 +45,6 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
-    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<TLayout> para coincidir con la interfaz.
     public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
         var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry);
@@ -54,7 +52,6 @@ internal class PdfDocumentBuilder : IPdfDocument
         return pageBuilder;
     }
 
-    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<IPdfVerticalStackLayout>.
     public IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage()
     {
         return ContentPage<IPdfVerticalStackLayout>();
@@ -77,6 +74,7 @@ internal class PdfDocumentBuilder : IPdfDocument
         }
 
         var allElements = GetAllElements();
+
         var styleResolver = new StyleResolver(_configurationBuilder.ResourceDictionary, _diagnosticSink);
         styleResolver.ApplyStyles(allElements);
 

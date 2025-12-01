@@ -13,26 +13,27 @@ internal class PdfResourceBuilder : IPdfResourceBuilder
         _resourceDictionary = resourceDictionary;
     }
 
-    public IPdfResourceBuilder Style<TElement>(string key, Action<TElement> setup) where TElement : class, IPdfElement<TElement>
+    public IPdfResourceBuilder Style<TElementStyle>(string key, Action<TElementStyle> setup)
+        where TElementStyle : class, IPdfElement<TElementStyle>
     {
         return Style(key, null, setup);
     }
 
-    public IPdfResourceBuilder Style<TElement>(string key, string? basedOn, Action<TElement> setup) where TElement : class, IPdfElement<TElement>
+    public IPdfResourceBuilder Style<TElementStyle>(string key, string? basedOn, Action<TElementStyle> setup)
+        where TElementStyle : class, IPdfElement<TElementStyle>
     {
-        ArgumentException.ThrowIfNullOrEmpty(key);
+        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Style key cannot be null or empty.", nameof(key));
         ArgumentNullException.ThrowIfNull(setup);
 
-        // Type-safe wrapper for the setter action
-        var setter = (object target) =>
+        Action<object> safeSetter = (target) =>
         {
-            if (target is TElement element)
+            if (target is TElementStyle typedTarget)
             {
-                setup(element);
+                setup(typedTarget);
             }
         };
 
-        var style = new PdfStyle(typeof(TElement), basedOn, setter);
+        var style = new PdfStyle(typeof(TElementStyle), basedOn, safeSetter);
         _resourceDictionary.Add(key, style);
 
         return this;

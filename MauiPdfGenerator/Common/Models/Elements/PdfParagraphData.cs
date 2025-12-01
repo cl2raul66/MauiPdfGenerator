@@ -27,18 +27,16 @@ internal class PdfParagraphData : PdfElementData
 
     internal PdfFontRegistration? ResolvedFontRegistration { get; set; }
 
-    internal PdfParagraphData(string text)
+    internal PdfParagraphData() : base()
+    {
+        Text = string.Empty;
+        InitializeDefaults();
+    }
+
+    internal PdfParagraphData(string text) : base()
     {
         Text = text ?? string.Empty;
-        CurrentFontFamily = null;
-        CurrentFontSize = 0;
-        CurrentTextColor = null;
-        CurrentHorizontalTextAlignment = DefaultHorizontalTextAlignment;
-        CurrentVerticalTextAlignment = DefaultVerticalTextAlignment;
-        CurrentFontAttributes = null;
-        CurrentLineBreakMode = null;
-        CurrentTextDecorations = null;
-        CurrentTextTransform = null;
+        InitializeDefaults();
     }
 
     internal PdfParagraphData(string text, PdfParagraphData originalStyleSource)
@@ -61,5 +59,18 @@ internal class PdfParagraphData : PdfElementData
         this.HorizontalOptions(originalStyleSource.GetHorizontalOptions);
         this.VerticalOptions(originalStyleSource.GetVerticalOptions);
         this.IsContinuation = true;
+    }
+
+    private void InitializeDefaults()
+    {
+        CurrentFontFamily = null;
+        CurrentFontSize = 0;
+        CurrentTextColor = null;
+        CurrentHorizontalTextAlignment = DefaultHorizontalTextAlignment;
+        CurrentVerticalTextAlignment = DefaultVerticalTextAlignment;
+        CurrentFontAttributes = null;
+        CurrentLineBreakMode = null;
+        CurrentTextDecorations = null;
+        CurrentTextTransform = null;
     }
 }

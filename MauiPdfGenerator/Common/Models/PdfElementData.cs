@@ -7,12 +7,13 @@ internal abstract class PdfElementData : IPdfGridCellInfo
 
     internal PdfElementData? Parent { get; set; }
 
+    internal string? StyleKey { get; private set; }
+
     internal Thickness GetMargin { get; private set; }
     internal Thickness GetPadding { get; private set; }
     internal double? GetWidthRequest { get; private set; }
     internal double? GetHeightRequest { get; private set; }
     internal Color? GetBackgroundColor { get; private set; }
-    public string? StyleKey { get; private set; }
 
     internal LayoutAlignment GetHorizontalOptions { get; private set; } = LayoutAlignment.Fill;
     internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Start;
@@ -21,6 +22,10 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     internal int GridColumn { get; private set; } = 0;
     internal int GridRowSpan { get; private set; } = 1;
     internal int GridColumnSpan { get; private set; } = 1;
+
+    protected PdfElementData()
+    {
+    }
 
     public PdfElementData Margin(double uniformMargin)
     {
@@ -90,6 +95,16 @@ internal abstract class PdfElementData : IPdfGridCellInfo
         return this;
     }
 
+    public PdfElementData Style(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            throw new ArgumentException("Style key cannot be null or whitespace.", nameof(key));
+        }
+        this.StyleKey = key;
+        return this;
+    }
+
     internal void ApplyContextualDefaults(LayoutAlignment horizontal, LayoutAlignment vertical)
     {
         if (!_horizontalOptionsSet)
@@ -130,14 +145,4 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     int IPdfGridCellInfo.Column => GridColumn;
     int IPdfGridCellInfo.RowSpan => GridRowSpan;
     int IPdfGridCellInfo.ColumnSpan => GridColumnSpan;
-
-    public PdfElementData Style(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            throw new ArgumentException("Style key cannot be null or whitespace.", nameof(key));
-        }
-        this.StyleKey = key;
-        return this;
-    }
 }

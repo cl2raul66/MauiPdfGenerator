@@ -6,7 +6,12 @@ internal class PdfImageData : PdfElementData
 
     internal Stream ImageStream { get; }
 
-    internal PdfImageData(Stream stream)
+    internal PdfImageData() : base()
+    {
+        ImageStream = Stream.Null;
+    }
+
+    internal PdfImageData(Stream stream) : base()
     {
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
         if (!stream.CanRead)

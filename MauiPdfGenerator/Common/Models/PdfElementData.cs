@@ -2,8 +2,8 @@
 
 internal abstract class PdfElementData : IPdfGridCellInfo
 {
-    private bool _horizontalOptionsSet = false;
-    private bool _verticalOptionsSet = false;
+    internal bool _horizontalOptionsSet = false;
+    internal bool _verticalOptionsSet = false;
 
     internal PdfElementData? Parent { get; set; }
 
@@ -12,6 +12,7 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     internal double? GetWidthRequest { get; private set; }
     internal double? GetHeightRequest { get; private set; }
     internal Color? GetBackgroundColor { get; private set; }
+    public string? StyleKey { get; private set; }
 
     internal LayoutAlignment GetHorizontalOptions { get; private set; } = LayoutAlignment.Fill;
     internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Start;
@@ -129,4 +130,14 @@ internal abstract class PdfElementData : IPdfGridCellInfo
     int IPdfGridCellInfo.Column => GridColumn;
     int IPdfGridCellInfo.RowSpan => GridRowSpan;
     int IPdfGridCellInfo.ColumnSpan => GridColumnSpan;
+
+    public PdfElementData Style(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            throw new ArgumentException("Style key cannot be null or whitespace.", nameof(key));
+        }
+        this.StyleKey = key;
+        return this;
+    }
 }

@@ -11,4 +11,5 @@ public static class DiagnosticCodes
     // Errores de Recursos
     public const string ImageDecodeError = "RESOURCE-001";
     public const string FontNotFound = "RESOURCE-002";
+    public const string StyleKeyNotFound = "RESOURCE-003";
 }

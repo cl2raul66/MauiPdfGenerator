@@ -1,3 +1,4 @@
+using MauiPdfGenerator.Common.Models.Styling;
 ﻿using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
@@ -11,11 +12,13 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     public PageOrientationType GetPageOrientation { get; private set; }
     public PdfFontRegistryBuilder FontRegistry { get; }
     public PdfMetaDataBuilder MetaDataBuilder { get; }
+    public PdfResourceDictionary ResourceDictionary { get; }
 
     public PdfConfigurationBuilder(PdfFontRegistryBuilder fontRegistry)
     {
         this.FontRegistry = fontRegistry ?? throw new ArgumentNullException(nameof(fontRegistry));
         this.MetaDataBuilder = new PdfMetaDataBuilder();
+        this.ResourceDictionary = new PdfResourceDictionary();
         GetPadding = PdfPagePaddingTypeCalculator.GetThickness(DefaultPagePaddingType.Normal);
         GetPageSize = PageSizeType.A4;
         GetPageOrientation = PageOrientationType.Portrait;

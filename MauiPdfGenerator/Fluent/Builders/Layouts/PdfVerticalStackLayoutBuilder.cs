@@ -1,5 +1,6 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
@@ -54,30 +55,45 @@ internal class PdfVerticalStackLayoutBuilder : IBuildablePdfElement, IPdfVertica
     #region Explicit Interface Implementations
     // IPdfVerticalStackLayout
     IPdfVerticalStackLayout IPdfVerticalStackLayout<IPdfVerticalStackLayout>.Spacing(float value) { Spacing(value); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.Margin(double u) { Margin(u); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.Padding(double u) { Padding(u); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.Padding(double h, double v) { Padding(h, v); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.Padding(double l, double t, double r, double b) { Padding(l, t, r, b); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.WidthRequest(double w) { WidthRequest(w); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.HeightRequest(double h) { HeightRequest(h); return this; }
-    IPdfVerticalStackLayout Interfaces.IPdfElement<IPdfVerticalStackLayout>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Margin(double u) { Margin(u); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Padding(double u) { Padding(u); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Padding(double h, double v) { Padding(h, v); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Padding(double l, double t, double r, double b) { Padding(l, t, r, b); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.WidthRequest(double w) { WidthRequest(w); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.HeightRequest(double h) { HeightRequest(h); return this; }
+    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
     IPdfVerticalStackLayout IPdfLayoutChild<IPdfVerticalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfVerticalStackLayout IPdfLayoutChild<IPdfVerticalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
     // IPdfLayoutChildVerticalStackLayout
     IPdfLayoutChildVerticalStackLayout IPdfVerticalStackLayout<IPdfLayoutChildVerticalStackLayout>.Spacing(float value) { Spacing(value); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double u) { Margin(u); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.Padding(double u) { Padding(u); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.Padding(double h, double v) { Padding(h, v); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.Padding(double l, double t, double r, double b) { Padding(l, t, r, b); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.WidthRequest(double w) { WidthRequest(w); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.HeightRequest(double h) { HeightRequest(h); return this; }
-    IPdfLayoutChildVerticalStackLayout Interfaces.IPdfElement<IPdfLayoutChildVerticalStackLayout>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double u) { Margin(u); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Padding(double u) { Padding(u); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Padding(double h, double v) { Padding(h, v); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Padding(double l, double t, double r, double b) { Padding(l, t, r, b); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.WidthRequest(double w) { WidthRequest(w); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.HeightRequest(double h) { HeightRequest(h); return this; }
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
     IPdfLayoutChildVerticalStackLayout IPdfLayoutChild<IPdfLayoutChildVerticalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildVerticalStackLayout IPdfLayoutChild<IPdfLayoutChildVerticalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
+
+    public IPdfVerticalStackLayout Style(string key)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Style(string key)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfGridChildVerticalStackLayout IPdfElement<IPdfGridChildVerticalStackLayout>.Style(string key)
+    {
+        throw new NotImplementedException();
+    }
     #endregion
 }

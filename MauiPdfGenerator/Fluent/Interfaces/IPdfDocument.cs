@@ -9,6 +9,7 @@ public interface IPdfDocument
     Task SaveAsync();
     Task SaveAsync(string path);
     IPdfDocument Configuration(Action<IPdfDocumentConfigurator> documentConfigurator);
+    IPdfDocument Resources(Action<IPdfResourceBuilder> resourceBuilder);
 
     IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class;
     IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage();

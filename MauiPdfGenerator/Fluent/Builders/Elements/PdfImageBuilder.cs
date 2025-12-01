@@ -36,6 +36,7 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     public IPdfGridChildImage Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildImage RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildImage ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+    public IPdfGridChildImage Style(string key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
@@ -45,6 +46,8 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfGridChildImage Interfaces.Elements.IPdfImage<IPdfGridChildImage>.Aspect(Aspect aspect) { Aspect(aspect); return this; }
 
     // IPdfElement<TSelf>
+    IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Style(string key) { Style(key); return this; }
+    IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Style(string key) { Style(key); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Margin(double h, double v) { Margin(h, v); return this; }

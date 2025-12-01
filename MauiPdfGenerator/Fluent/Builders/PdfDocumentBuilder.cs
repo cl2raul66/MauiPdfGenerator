@@ -1,5 +1,6 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core;
+using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces;
@@ -37,6 +38,14 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
+    public IPdfDocument Resources(Action<IPdfResourceBuilder> resourceBuilderAction)
+    {
+        ArgumentNullException.ThrowIfNull(resourceBuilderAction);
+        var resourceBuilder = new PdfResourceBuilder(_configurationBuilder.ResourceDictionary);
+        resourceBuilderAction(resourceBuilder);
+        return this;
+    }
+
     // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<TLayout> para coincidir con la interfaz.
     public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
@@ -66,6 +75,10 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
         }
+
+        var allElements = GetAllElements();
+        var styleResolver = new StyleResolver(_configurationBuilder.ResourceDictionary, _diagnosticSink);
+        styleResolver.ApplyStyles(allElements);
 
         var pageDataList = new List<PdfPageData>();
         foreach (var pageBuilder in _pages)
@@ -119,6 +132,35 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             _logger.LogError(ex, "An unexpected error occurred while saving the PDF.");
             throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
+        }
+    }
+
+    private List<PdfElementData> GetAllElements()
+    {
+        var allElements = new List<PdfElementData>();
+        foreach (var page in _pages)
+        {
+            if (page is PdfContentPageBuilder contentPageBuilder)
+            {
+                var content = contentPageBuilder.GetContent();
+                foreach (var element in content)
+                {
+                    Traverse(element, allElements);
+                }
+            }
+        }
+        return allElements;
+    }
+
+    private void Traverse(PdfElementData element, List<PdfElementData> list)
+    {
+        list.Add(element);
+        if (element is PdfLayoutElementData layout)
+        {
+            foreach (var child in layout.Children)
+            {
+                Traverse(child, list);
+            }
         }
     }
 }

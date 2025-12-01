@@ -111,5 +111,10 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
     #region IPdfLayoutElement<IPdfGrid> implementation
     public IPdfGrid HorizontalOptions(LayoutAlignment layoutAlignment) { _model.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGrid VerticalOptions(LayoutAlignment layoutAlignment) { _model.VerticalOptions(layoutAlignment); return this; }
+
+    public IPdfGrid Style(string key)
+    {
+        _model.Style(key); return this;
+    }
     #endregion
 }

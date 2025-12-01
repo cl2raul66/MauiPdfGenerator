@@ -5,10 +5,12 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
+using MauiPdfGenerator.Fluent.Interfaces.Styles;
+using MauiPdfGenerator.Fluent.Interfaces.Elements;
 
 namespace MauiPdfGenerator.Fluent.Builders.Elements;
 
-internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHorizontalLine, IPdfLayoutChildHorizontalLine, IPdfGridChildHorizontalLine
+internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHorizontalLine, IPdfLayoutChildHorizontalLine, IPdfGridChildHorizontalLine, IPdfHorizontalLineStyle
 {
     private readonly PdfHorizontalLineData _model;
 
@@ -37,18 +39,21 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     public IPdfGridChildHorizontalLine Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildHorizontalLine RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildHorizontalLine ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+    public IPdfGridChildHorizontalLine Style(string key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
     // IPdfHorizontalLine<TSelf>
-    IPdfPageChildHorizontalLine Interfaces.Elements.IPdfHorizontalLine<IPdfPageChildHorizontalLine>.Thickness(float value) { Thickness(value); return this; }
-    IPdfLayoutChildHorizontalLine Interfaces.Elements.IPdfHorizontalLine<IPdfLayoutChildHorizontalLine>.Thickness(float value) { Thickness(value); return this; }
-    IPdfGridChildHorizontalLine Interfaces.Elements.IPdfHorizontalLine<IPdfGridChildHorizontalLine>.Thickness(float value) { Thickness(value); return this; }
-    IPdfPageChildHorizontalLine Interfaces.Elements.IPdfHorizontalLine<IPdfPageChildHorizontalLine>.Color(Color color) { Color(color); return this; }
-    IPdfLayoutChildHorizontalLine Interfaces.Elements.IPdfHorizontalLine<IPdfLayoutChildHorizontalLine>.Color(Color color) { Color(color); return this; }
-    IPdfGridChildHorizontalLine Interfaces.Elements.IPdfHorizontalLine<IPdfGridChildHorizontalLine>.Color(Color color) { Color(color); return this; }
+    IPdfPageChildHorizontalLine IPdfHorizontalLine<IPdfPageChildHorizontalLine>.Thickness(float value) { Thickness(value); return this; }
+    IPdfLayoutChildHorizontalLine IPdfHorizontalLine<IPdfLayoutChildHorizontalLine>.Thickness(float value) { Thickness(value); return this; }
+    IPdfGridChildHorizontalLine IPdfHorizontalLine<IPdfGridChildHorizontalLine>.Thickness(float value) { Thickness(value); return this; }
+    IPdfPageChildHorizontalLine IPdfHorizontalLine<IPdfPageChildHorizontalLine>.Color(Color color) { Color(color); return this; }
+    IPdfLayoutChildHorizontalLine IPdfHorizontalLine<IPdfLayoutChildHorizontalLine>.Color(Color color) { Color(color); return this; }
+    IPdfGridChildHorizontalLine IPdfHorizontalLine<IPdfGridChildHorizontalLine>.Color(Color color) { Color(color); return this; }
 
     // IPdfElement<TSelf>
+    IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Style(string key) { Style(key); return this; }
+    IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Style(string key) { Style(key); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Margin(double h, double v) { Margin(h, v); return this; }
@@ -71,5 +76,65 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     // IPdfLayoutChild<TSelf>
     IPdfLayoutChildHorizontalLine IPdfLayoutChild<IPdfLayoutChildHorizontalLine>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildHorizontalLine IPdfLayoutChild<IPdfLayoutChildHorizontalLine>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
+
+    IPdfHorizontalLineStyle IPdfHorizontalLine<IPdfHorizontalLineStyle>.Thickness(float value)
+    {
+        Thickness(value); return this;
+    }
+
+    IPdfHorizontalLineStyle IPdfHorizontalLine<IPdfHorizontalLineStyle> .Color(Color color)
+    {
+        Color(color); return this;
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.Margin(double uniformMargin)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.Margin(double horizontalMargin, double verticalMargin)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.Padding(double uniformPadding)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.Padding(double horizontalPadding, double verticalPadding)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.WidthRequest(double width)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.HeightRequest(double height)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.BackgroundColor(Color? color)
+    {
+        throw new NotImplementedException();
+    }
+
+    IPdfHorizontalLineStyle IPdfElement<IPdfHorizontalLineStyle>.Style(string key)
+    {
+        throw new NotImplementedException();
+    }
     #endregion
 }

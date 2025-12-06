@@ -5,3 +5,7 @@ public interface IPdfHorizontalLine<TSelf> : IPdfElement<TSelf> where TSelf : IP
     TSelf Thickness(float value);
     TSelf Color(Color color);
 }
+
+public interface IPdfHorizontalLine : IPdfHorizontalLine<IPdfHorizontalLine>
+{
+}

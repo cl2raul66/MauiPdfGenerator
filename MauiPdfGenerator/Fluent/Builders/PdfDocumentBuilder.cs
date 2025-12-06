@@ -7,6 +7,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
+using MauiPdfGenerator.Fluent.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace MauiPdfGenerator.Fluent.Builders;
@@ -37,7 +38,14 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
-    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<TLayout> para coincidir con la interfaz.
+    public IPdfDocument Resources(Action<IPdfResourceBuilder> resourceBuilderAction)
+    {
+        ArgumentNullException.ThrowIfNull(resourceBuilderAction);
+        var resourceBuilder = new PdfResourceBuilder(_configurationBuilder.ResourceDictionary);
+        resourceBuilderAction(resourceBuilder);
+        return this;
+    }
+
     public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
         var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry);
@@ -45,7 +53,6 @@ internal class PdfDocumentBuilder : IPdfDocument
         return pageBuilder;
     }
 
-    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<IPdfVerticalStackLayout>.
     public IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage()
     {
         return ContentPage<IPdfVerticalStackLayout>();
@@ -66,6 +73,16 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
         }
+
+        var allElements = GetAllElements();
+
+        // CORRECCIÓN: Se añade el tercer argumento (FontRegistry)
+        var styleResolver = new StyleResolver(
+            _configurationBuilder.ResourceDictionary,
+            _diagnosticSink,
+            _configurationBuilder.FontRegistry);
+
+        styleResolver.ApplyStyles(allElements);
 
         var pageDataList = new List<PdfPageData>();
         foreach (var pageBuilder in _pages)
@@ -119,6 +136,35 @@ internal class PdfDocumentBuilder : IPdfDocument
         {
             _logger.LogError(ex, "An unexpected error occurred while saving the PDF.");
             throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
+        }
+    }
+
+    private List<PdfElementData> GetAllElements()
+    {
+        var allElements = new List<PdfElementData>();
+        foreach (var page in _pages)
+        {
+            if (page is IPdfContentPageBuilder contentPageBuilder)
+            {
+                var content = contentPageBuilder.GetContent();
+                if (content is not null)
+                {
+                    Traverse(content, allElements);
+                }
+            }
+        }
+        return allElements;
+    }
+
+    private void Traverse(PdfElementData element, List<PdfElementData> list)
+    {
+        list.Add(element);
+        if (element is PdfLayoutElementData layout)
+        {
+            foreach (var child in layout.GetChildren)
+            {
+                Traverse(child, list);
+            }
         }
     }
 }

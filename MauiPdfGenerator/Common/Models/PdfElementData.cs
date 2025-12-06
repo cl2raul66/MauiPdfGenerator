@@ -1,129 +1,83 @@
-﻿namespace MauiPdfGenerator.Common.Models;
+﻿using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Models.Styling;
+
+namespace MauiPdfGenerator.Common.Models;
 
 internal abstract class PdfElementData : IPdfGridCellInfo
 {
-    private bool _horizontalOptionsSet = false;
-    private bool _verticalOptionsSet = false;
-
     internal PdfElementData? Parent { get; set; }
+    internal string? StyleKey { get; private set; }
 
-    internal Thickness GetMargin { get; private set; }
-    internal Thickness GetPadding { get; private set; }
-    internal double? GetWidthRequest { get; private set; }
-    internal double? GetHeightRequest { get; private set; }
-    internal Color? GetBackgroundColor { get; private set; }
+    // --- Backing Properties ---
+    internal PdfStyledProperty<Thickness> MarginProp { get; } = new(Thickness.Zero);
+    internal PdfStyledProperty<Thickness> PaddingProp { get; } = new(Thickness.Zero);
+    internal PdfStyledProperty<double?> WidthRequestProp { get; } = new(null);
+    internal PdfStyledProperty<double?> HeightRequestProp { get; } = new(null);
+    internal PdfStyledProperty<Color?> BackgroundColorProp { get; } = new(null);
+    internal PdfStyledProperty<LayoutAlignment> HorizontalOptionsProp { get; } = new(LayoutAlignment.Fill);
+    internal PdfStyledProperty<LayoutAlignment> VerticalOptionsProp { get; } = new(LayoutAlignment.Start);
 
-    internal LayoutAlignment GetHorizontalOptions { get; private set; } = LayoutAlignment.Fill;
-    internal LayoutAlignment GetVerticalOptions { get; private set; } = LayoutAlignment.Start;
+    // --- Public/Core API ---
+    internal Thickness GetMargin => MarginProp.Value;
+    internal Thickness GetPadding => PaddingProp.Value;
+    internal double? GetWidthRequest => WidthRequestProp.Value;
+    internal double? GetHeightRequest => HeightRequestProp.Value;
+    internal Color? GetBackgroundColor => BackgroundColorProp.Value;
+    internal LayoutAlignment GetHorizontalOptions => HorizontalOptionsProp.Value;
+    internal LayoutAlignment GetVerticalOptions => VerticalOptionsProp.Value;
+
+    internal bool _horizontalOptionsSet => HorizontalOptionsProp.Priority > PdfPropertyPriority.Default;
+    internal bool _verticalOptionsSet => VerticalOptionsProp.Priority > PdfPropertyPriority.Default;
 
     internal int GridRow { get; private set; } = 0;
     internal int GridColumn { get; private set; } = 0;
     internal int GridRowSpan { get; private set; } = 1;
     internal int GridColumnSpan { get; private set; } = 1;
 
-    public PdfElementData Margin(double uniformMargin)
+    protected PdfElementData() { }
+
+    public PdfElementData Style(string key)
     {
-        this.GetMargin = new Thickness(uniformMargin);
+        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Style key cannot be null or whitespace.", nameof(key));
+        this.StyleKey = key;
         return this;
     }
 
-    public PdfElementData Margin(double horizontalMargin, double verticalMargin)
-    {
-        this.GetMargin = new Thickness(horizontalMargin, verticalMargin);
-        return this;
-    }
-
-    public PdfElementData Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin)
-    {
-        this.GetMargin = new Thickness(leftMargin, topMargin, rightMargin, bottomMargin);
-        return this;
-    }
-
-    public PdfElementData Padding(double uniformPadding)
-    {
-        this.GetPadding = new Thickness(uniformPadding);
-        return this;
-    }
-
-    public PdfElementData Padding(double horizontalPadding, double verticalPadding)
-    {
-        this.GetPadding = new Thickness(horizontalPadding, verticalPadding);
-        return this;
-    }
-
-    public PdfElementData Padding(double leftPadding, double topPadding, double rightPadding, double bottomMargin)
-    {
-        this.GetPadding = new Thickness(leftPadding, topPadding, rightPadding, bottomMargin);
-        return this;
-    }
-
-    public PdfElementData WidthRequest(double width)
-    {
-        this.GetWidthRequest = width;
-        return this;
-    }
-
-    public PdfElementData HeightRequest(double height)
-    {
-        this.GetHeightRequest = height;
-        return this;
-    }
-
-    public PdfElementData BackgroundColor(Color? color)
-    {
-        this.GetBackgroundColor = color;
-        return this;
-    }
-
-    public PdfElementData HorizontalOptions(LayoutAlignment layoutAlignment)
-    {
-        this.GetHorizontalOptions = layoutAlignment;
-        _horizontalOptionsSet = true;
-        return this;
-    }
-
-    public PdfElementData VerticalOptions(LayoutAlignment layoutAlignment)
-    {
-        this.GetVerticalOptions = layoutAlignment;
-        _verticalOptionsSet = true;
-        return this;
-    }
-
+    // --- CORRECCIÓN: Método reintroducido y adaptado al motor de estilos ---
     internal void ApplyContextualDefaults(LayoutAlignment horizontal, LayoutAlignment vertical)
     {
-        if (!_horizontalOptionsSet)
+        // Solo aplicamos el default contextual si la propiedad está en estado Default (0).
+        // Esto asegura que no sobrescribimos Estilos (1, 2) ni Valores Locales (3).
+        if (HorizontalOptionsProp.Priority == PdfPropertyPriority.Default)
         {
-            this.GetHorizontalOptions = horizontal;
+            HorizontalOptionsProp.Set(horizontal, PdfPropertyPriority.Default);
         }
-        if (!_verticalOptionsSet)
+        if (VerticalOptionsProp.Priority == PdfPropertyPriority.Default)
         {
-            this.GetVerticalOptions = vertical;
+            VerticalOptionsProp.Set(vertical, PdfPropertyPriority.Default);
         }
     }
+    // -----------------------------------------------------------------------
 
-    internal void SetRow(int row)
-    {
-        if (row < 0) throw new ArgumentOutOfRangeException(nameof(row), "Row must be a non-negative integer.");
-        this.GridRow = row;
-    }
+    // Setters Fluent
+    public PdfElementData SetMargin(double u) { MarginProp.Set(new Thickness(u), PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetMargin(double h, double v) { MarginProp.Set(new Thickness(h, v), PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetMargin(double l, double t, double r, double b) { MarginProp.Set(new Thickness(l, t, r, b), PdfPropertyPriority.Local); return this; }
 
-    internal void SetColumn(int column)
-    {
-        if (column < 0) throw new ArgumentOutOfRangeException(nameof(column), "Column must be a non-negative integer.");
-        this.GridColumn = column;
-    }
+    public PdfElementData SetPadding(double u) { PaddingProp.Set(new Thickness(u), PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetPadding(double h, double v) { PaddingProp.Set(new Thickness(h, v), PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetPadding(double l, double t, double r, double b) { PaddingProp.Set(new Thickness(l, t, r, b), PdfPropertyPriority.Local); return this; }
 
-    internal void SetRowSpan(int span)
-    {
-        if (span < 1) throw new ArgumentOutOfRangeException(nameof(span), "RowSpan must be a positive integer.");
-        this.GridRowSpan = span;
-    }
+    public PdfElementData SetWidthRequest(double w) { WidthRequestProp.Set(w, PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetHeightRequest(double h) { HeightRequestProp.Set(h, PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetBackgroundColor(Color? c) { BackgroundColorProp.Set(c, PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetHorizontalOptions(LayoutAlignment a) { HorizontalOptionsProp.Set(a, PdfPropertyPriority.Local); return this; }
+    public PdfElementData SetVerticalOptions(LayoutAlignment a) { VerticalOptionsProp.Set(a, PdfPropertyPriority.Local); return this; }
 
-    internal void SetColumnSpan(int span)
-    {
-        if (span < 1) throw new ArgumentOutOfRangeException(nameof(span), "ColumnSpan must be a positive integer.");
-        this.GridColumnSpan = span;
-    }
+    internal void SetRow(int row) { if (row < 0) throw new ArgumentOutOfRangeException(nameof(row)); this.GridRow = row; }
+    internal void SetColumn(int column) { if (column < 0) throw new ArgumentOutOfRangeException(nameof(column)); this.GridColumn = column; }
+    internal void SetRowSpan(int span) { if (span < 1) throw new ArgumentOutOfRangeException(nameof(span)); this.GridRowSpan = span; }
+    internal void SetColumnSpan(int span) { if (span < 1) throw new ArgumentOutOfRangeException(nameof(span)); this.GridColumnSpan = span; }
 
     int IPdfGridCellInfo.Row => GridRow;
     int IPdfGridCellInfo.Column => GridColumn;

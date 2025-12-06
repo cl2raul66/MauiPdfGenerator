@@ -1,5 +1,6 @@
 ﻿using MauiPdfGenerator;
 using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fonts;
 
@@ -636,6 +637,58 @@ public partial class MainPage : ContentPage
                         // Línea final
                         table.Children(c => c.HorizontalLine().Color(Colors.Black).Thickness(1).Row(4).Column(0).ColumnSpan(3));
                     });
+                });
+            })
+            .Build()
+            .SaveAsync(targetFilePath);
+
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
+        }
+        catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }
+    }
+
+    private async void GenerateStylesShowcase_Clicked(object sender, EventArgs e)
+    {
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Styles.pdf");
+        try
+        {
+            var doc = pdfDocFactory.CreateDocument();
+            await doc.Configuration(cfg => cfg.MetaData(data => data.Title("MauiPdfGenerator - Styles Showcase")))
+            .Resources(rd =>
+            {
+                rd.Style<IPdfParagraph>(s =>
+                {
+                    s.FontSize(14);
+                    s.TextColor(Colors.Teal);
+                });
+
+                rd.Style<IPdfParagraph>("Nota", s =>
+                {
+                    s.FontSize(10);
+                    s.TextColor(Colors.Red);
+                });
+
+                rd.Style<IPdfParagraph>("Título", s =>
+                {
+                    s.FontSize(22);
+                    s.TextColor(Colors.Blue);
+                });
+            })
+            .ContentPage()
+            .Content(c =>
+            {
+                c.Spacing(15);
+                c.Children(ch =>
+                {
+                    ch.Paragraph("Hola mundo 1");
+                    ch.Paragraph("Hola mundo 2");
+                    ch.Paragraph("Hola mundo 3");
+
+                    ch.HorizontalLine();
+
+                    ch.Paragraph("Hola mundo 1").Style("Nota");
+                    ch.Paragraph("Hola mundo 2").FontSize(16).TextColor(Colors.Green);
+                    ch.Paragraph("Hola mundo 3").Style("Título");
                 });
             })
             .Build()

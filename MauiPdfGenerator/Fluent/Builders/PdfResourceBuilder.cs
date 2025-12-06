@@ -1,6 +1,6 @@
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Interfaces;
-using MauiPdfGenerator.Fluent.Interfaces.Configuration;
+using MauiPdfGenerator.Fluent.Interfaces.Builders;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -13,27 +13,34 @@ internal class PdfResourceBuilder : IPdfResourceBuilder
         _resourceDictionary = resourceDictionary;
     }
 
-    public IPdfResourceBuilder Style<TElementStyle>(string key, Action<TElementStyle> setup)
-        where TElementStyle : class, IPdfElement<TElementStyle>
+    public IPdfResourceBuilder Style<TElement>(Action<TElement> setup)
+        where TElement : class, IPdfElement<TElement>
+    {
+        string implicitKey = typeof(TElement).FullName ?? typeof(TElement).Name;
+        return Style(implicitKey, null, setup);
+    }
+
+    public IPdfResourceBuilder Style<TElement>(string key, Action<TElement> setup)
+        where TElement : class, IPdfElement<TElement>
     {
         return Style(key, null, setup);
     }
 
-    public IPdfResourceBuilder Style<TElementStyle>(string key, string? basedOn, Action<TElementStyle> setup)
-        where TElementStyle : class, IPdfElement<TElementStyle>
+    public IPdfResourceBuilder Style<TElement>(string key, string? basedOn, Action<TElement> setup)
+        where TElement : class, IPdfElement<TElement>
     {
         if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Style key cannot be null or empty.", nameof(key));
         ArgumentNullException.ThrowIfNull(setup);
 
         Action<object> safeSetter = (target) =>
         {
-            if (target is TElementStyle typedTarget)
+            if (target is TElement typedTarget)
             {
                 setup(typedTarget);
             }
         };
 
-        var style = new PdfStyle(typeof(TElementStyle), basedOn, safeSetter);
+        var style = new PdfStyle(typeof(TElement), basedOn, safeSetter);
         _resourceDictionary.Add(key, style);
 
         return this;

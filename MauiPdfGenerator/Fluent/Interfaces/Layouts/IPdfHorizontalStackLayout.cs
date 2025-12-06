@@ -10,5 +10,5 @@ public interface IPdfHorizontalStackLayout<TSelf> : IPdfElement<TSelf> where TSe
 
 public interface IPdfHorizontalStackLayout : IPdfHorizontalStackLayout<IPdfHorizontalStackLayout>, IPdfLayoutChild<IPdfHorizontalStackLayout>
 {
-    
+
 }

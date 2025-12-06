@@ -1,23 +1,20 @@
-﻿namespace MauiPdfGenerator.Common.Models.Elements;
+﻿using MauiPdfGenerator.Common.Models.Styling;
+
+namespace MauiPdfGenerator.Common.Models.Elements;
 
 internal class PdfImageData : PdfElementData
 {
-    internal Aspect CurrentAspect { get; set; } = Aspect.AspectFit;
+    internal PdfStyledProperty<Aspect> AspectProp { get; } = new(Microsoft.Maui.Aspect.AspectFit);
+    internal Aspect CurrentAspect => AspectProp.Value;
 
     internal Stream ImageStream { get; }
 
-    internal PdfImageData() : base()
-    {
-        ImageStream = Stream.Null;
-    }
+    internal PdfImageData() : base() { ImageStream = Stream.Null; }
 
     internal PdfImageData(Stream stream) : base()
     {
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
-        if (!stream.CanRead)
-        {
-            throw new ArgumentException("El Stream proporcionado para la imagen debe ser legible (CanRead debe ser true).", nameof(stream));
-        }
+        if (!stream.CanRead) throw new ArgumentException("Stream must be readable.", nameof(stream));
         ImageStream = stream;
     }
 }

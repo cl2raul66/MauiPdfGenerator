@@ -1,9 +1,12 @@
-﻿using MauiPdfGenerator.Fluent.Models;
+﻿using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Models.Styling;
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Common.Models.Elements;
 
 internal class PdfParagraphData : PdfElementData
 {
+    // --- CORRECCIÓN: Constantes reintroducidas para uso en TextRenderer ---
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
     public const TextAlignment DefaultHorizontalTextAlignment = TextAlignment.Start;
@@ -12,65 +15,59 @@ internal class PdfParagraphData : PdfElementData
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
     public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
     public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None;
+    // ---------------------------------------------------------------------
 
     internal string Text { get; }
-    internal PdfFontIdentifier? CurrentFontFamily { get; set; }
-    internal float CurrentFontSize { get; set; }
-    internal Color? CurrentTextColor { get; set; }
-    internal TextAlignment CurrentHorizontalTextAlignment { get; set; }
-    internal TextAlignment CurrentVerticalTextAlignment { get; set; }
-    internal FontAttributes? CurrentFontAttributes { get; set; }
-    internal LineBreakMode? CurrentLineBreakMode { get; set; }
-    internal TextDecorations? CurrentTextDecorations { get; set; }
-    internal TextTransform? CurrentTextTransform { get; set; }
     internal bool IsContinuation { get; private set; } = false;
+
+    // --- Backing Properties ---
+    internal PdfStyledProperty<PdfFontIdentifier?> FontFamilyProp { get; } = new(null);
+    internal PdfStyledProperty<float> FontSizeProp { get; } = new(DefaultFontSize);
+    internal PdfStyledProperty<Color?> TextColorProp { get; } = new(null);
+    internal PdfStyledProperty<TextAlignment> HorizontalTextAlignmentProp { get; } = new(DefaultHorizontalTextAlignment);
+    internal PdfStyledProperty<TextAlignment> VerticalTextAlignmentProp { get; } = new(DefaultVerticalTextAlignment);
+    internal PdfStyledProperty<FontAttributes> FontAttributesProp { get; } = new(DefaultFontAttributes);
+    internal PdfStyledProperty<LineBreakMode> LineBreakModeProp { get; } = new(DefaultLineBreakMode);
+    internal PdfStyledProperty<TextDecorations> TextDecorationsProp { get; } = new(DefaultTextDecorations);
+    internal PdfStyledProperty<TextTransform> TextTransformProp { get; } = new(DefaultTextTransform);
+
+    // --- Core API ---
+    internal PdfFontIdentifier? CurrentFontFamily => FontFamilyProp.Value;
+    internal float CurrentFontSize => FontSizeProp.Value;
+    internal Color? CurrentTextColor => TextColorProp.Value;
+    internal TextAlignment CurrentHorizontalTextAlignment => HorizontalTextAlignmentProp.Value;
+    internal TextAlignment CurrentVerticalTextAlignment => VerticalTextAlignmentProp.Value;
+    internal FontAttributes? CurrentFontAttributes => FontAttributesProp.Value;
+    internal LineBreakMode? CurrentLineBreakMode => LineBreakModeProp.Value;
+    internal TextDecorations? CurrentTextDecorations => TextDecorationsProp.Value;
+    internal TextTransform? CurrentTextTransform => TextTransformProp.Value;
 
     internal PdfFontRegistration? ResolvedFontRegistration { get; set; }
 
-    internal PdfParagraphData() : base()
-    {
-        Text = string.Empty;
-        InitializeDefaults();
-    }
+    internal PdfParagraphData() : base() { Text = string.Empty; }
+    internal PdfParagraphData(string text) : base() { Text = text ?? string.Empty; }
 
-    internal PdfParagraphData(string text) : base()
+    internal PdfParagraphData(string text, PdfParagraphData original) : base()
     {
         Text = text ?? string.Empty;
-        InitializeDefaults();
-    }
+        IsContinuation = true;
 
-    internal PdfParagraphData(string text, PdfParagraphData originalStyleSource)
-    {
-        Text = text ?? string.Empty;
+        FontFamilyProp.Set(original.FontFamilyProp.Value, PdfPropertyPriority.Local);
+        FontSizeProp.Set(original.FontSizeProp.Value, PdfPropertyPriority.Local);
+        TextColorProp.Set(original.TextColorProp.Value, PdfPropertyPriority.Local);
+        HorizontalTextAlignmentProp.Set(original.HorizontalTextAlignmentProp.Value, PdfPropertyPriority.Local);
+        VerticalTextAlignmentProp.Set(original.VerticalTextAlignmentProp.Value, PdfPropertyPriority.Local);
+        FontAttributesProp.Set(original.FontAttributesProp.Value, PdfPropertyPriority.Local);
+        LineBreakModeProp.Set(original.LineBreakModeProp.Value, PdfPropertyPriority.Local);
+        TextDecorationsProp.Set(original.TextDecorationsProp.Value, PdfPropertyPriority.Local);
+        TextTransformProp.Set(original.TextTransformProp.Value, PdfPropertyPriority.Local);
 
-        this.CurrentFontFamily = originalStyleSource.CurrentFontFamily;
-        this.ResolvedFontRegistration = originalStyleSource.ResolvedFontRegistration;
-        this.CurrentFontSize = originalStyleSource.CurrentFontSize;
-        this.CurrentTextColor = originalStyleSource.CurrentTextColor;
-        this.CurrentHorizontalTextAlignment = originalStyleSource.CurrentHorizontalTextAlignment;
-        this.CurrentVerticalTextAlignment = originalStyleSource.CurrentVerticalTextAlignment;
-        this.CurrentFontAttributes = originalStyleSource.CurrentFontAttributes;
-        this.CurrentLineBreakMode = originalStyleSource.CurrentLineBreakMode;
-        this.CurrentTextDecorations = originalStyleSource.CurrentTextDecorations;
-        this.CurrentTextTransform = originalStyleSource.CurrentTextTransform;
-        this.Margin(originalStyleSource.GetMargin.Left, originalStyleSource.GetMargin.Top, originalStyleSource.GetMargin.Right, originalStyleSource.GetMargin.Bottom);
-        this.Padding(originalStyleSource.GetPadding.Left, originalStyleSource.GetPadding.Top, originalStyleSource.GetPadding.Right, originalStyleSource.GetPadding.Bottom);
-        this.BackgroundColor(originalStyleSource.GetBackgroundColor);
-        this.HorizontalOptions(originalStyleSource.GetHorizontalOptions);
-        this.VerticalOptions(originalStyleSource.GetVerticalOptions);
-        this.IsContinuation = true;
-    }
+        ResolvedFontRegistration = original.ResolvedFontRegistration;
 
-    private void InitializeDefaults()
-    {
-        CurrentFontFamily = null;
-        CurrentFontSize = 0;
-        CurrentTextColor = null;
-        CurrentHorizontalTextAlignment = DefaultHorizontalTextAlignment;
-        CurrentVerticalTextAlignment = DefaultVerticalTextAlignment;
-        CurrentFontAttributes = null;
-        CurrentLineBreakMode = null;
-        CurrentTextDecorations = null;
-        CurrentTextTransform = null;
+        MarginProp.Set(original.MarginProp.Value, PdfPropertyPriority.Local);
+        PaddingProp.Set(original.PaddingProp.Value, PdfPropertyPriority.Local);
+        BackgroundColorProp.Set(original.BackgroundColorProp.Value, PdfPropertyPriority.Local);
+        HorizontalOptionsProp.Set(original.HorizontalOptionsProp.Value, PdfPropertyPriority.Local);
+        VerticalOptionsProp.Set(original.VerticalOptionsProp.Value, PdfPropertyPriority.Local);
     }
 }

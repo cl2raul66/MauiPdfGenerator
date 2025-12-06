@@ -1,14 +1,17 @@
-﻿namespace MauiPdfGenerator.Common.Models.Elements;
+﻿using MauiPdfGenerator.Common.Models.Styling;
+
+namespace MauiPdfGenerator.Common.Models.Elements;
 
 internal class PdfHorizontalLineData : PdfElementData
 {
     public const float DefaultThickness = 1f;
     public static readonly Color DefaultColor = Colors.Black;
 
-    internal float CurrentThickness { get; set; } = DefaultThickness;
-    internal Color CurrentColor { get; set; } = DefaultColor;
+    internal PdfStyledProperty<float> ThicknessProp { get; } = new(DefaultThickness);
+    internal PdfStyledProperty<Color> ColorProp { get; } = new(DefaultColor);
 
-    internal PdfHorizontalLineData()
-    {
-    }
+    internal float CurrentThickness => ThicknessProp.Value;
+    internal Color CurrentColor => ColorProp.Value;
+
+    internal PdfHorizontalLineData() : base() { }
 }

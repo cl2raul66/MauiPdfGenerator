@@ -1,0 +1,103 @@
+name: Publish SourceGenerators
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "development", "master" ]
+    paths:
+      - 'MauiPdfGenerator.SourceGenerators/**'
+
+jobs:
+  build-and-pack:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.final_version.outputs.VAL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Calculate Version
+        id: versioning
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "gen-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator.SourceGenerators"
+          user_format_type: "json"
+
+      - name: Determine Version String
+        id: final_version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -eq "refs/heads/master") {
+            echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "VAL=${{ steps.versioning.outputs.version }}-preview-${{ steps.versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Build & Pack
+        run: |
+          $ver = "${{ steps.final_version.outputs.VAL }}"
+          Write-Host "Empaquetando SourceGen versión: $ver"
+
+          dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
+          dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
+          dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./output /p:Version=$ver
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sourcegen-package
+          path: ./output/*.nupkg
+          retention-days: 1
+
+  publish-nuget:
+    needs: build-and-pack
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- CORRECCIÓN: INSTALAR .NET TAMBIÉN AQUÍ ---
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sourcegen-package
+          path: ./packages
+
+      - name: Publish to NuGet
+        shell: pwsh
+        run: |
+          $packages = Get-ChildItem ./packages/*.nupkg
+          foreach ($pkg in $packages) {
+              dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
+      - name: Create Git Tag
+        if: github.ref == 'refs/heads/master'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Usamos la versión calculada en el job anterior
+            const version = "${{ needs.build-and-pack.outputs.version }}";
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/gen-v${version}`,
+              sha: context.sha
+            })

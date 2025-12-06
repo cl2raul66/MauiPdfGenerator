@@ -14,3 +14,7 @@ public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfEle
     TSelf TextDecorations(TextDecorations decorations);
     TSelf TextTransform(TextTransform transform);
 }
+
+public interface IPdfParagraph : IPdfParagraph<IPdfParagraph>
+{
+}

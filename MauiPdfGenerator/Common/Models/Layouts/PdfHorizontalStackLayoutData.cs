@@ -1,18 +1,16 @@
-﻿namespace MauiPdfGenerator.Common.Models.Layouts;
+﻿using MauiPdfGenerator.Common.Enums;
+
+namespace MauiPdfGenerator.Common.Models.Layouts;
 
 internal class PdfHorizontalStackLayoutData : PdfLayoutElementData, IPdfLayoutElement
 {
-    internal double Spacing { get; set; } = 0;
-
     internal PdfHorizontalStackLayoutData() : base()
     {
-        base.HorizontalOptions(LayoutAlignment.Start);
+        base.HorizontalOptionsProp.Set(LayoutAlignment.Start, PdfPropertyPriority.Default);
     }
 
-    internal PdfHorizontalStackLayoutData(IEnumerable<PdfElementData> remainingChildren, PdfHorizontalStackLayoutData originalStyleSource)
-        : base(remainingChildren, originalStyleSource)
-    {
-    }
+    internal PdfHorizontalStackLayoutData(IEnumerable<PdfElementData> remainingChildren, PdfHorizontalStackLayoutData original)
+        : base(remainingChildren, original) { }
 
     IReadOnlyList<object> IPdfLayoutElement.Children => [.. _children.Cast<object>()];
     LayoutType IPdfLayoutElement.LayoutType => LayoutType.HorizontalStack;

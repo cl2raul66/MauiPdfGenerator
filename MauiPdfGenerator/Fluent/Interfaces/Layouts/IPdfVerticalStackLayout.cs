@@ -10,5 +10,4 @@ public interface IPdfVerticalStackLayout<TSelf> : IPdfElement<TSelf> where TSelf
 
 public interface IPdfVerticalStackLayout : IPdfVerticalStackLayout<IPdfVerticalStackLayout>, IPdfLayoutChild<IPdfVerticalStackLayout>
 {
-    
 }

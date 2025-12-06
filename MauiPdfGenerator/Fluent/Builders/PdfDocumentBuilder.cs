@@ -1,6 +1,5 @@
 ﻿using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core;
-using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces;
@@ -8,6 +7,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
+using MauiPdfGenerator.Fluent.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace MauiPdfGenerator.Fluent.Builders;
@@ -46,7 +46,6 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
-    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<TLayout> para coincidir con la interfaz.
     public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
         var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry);
@@ -54,7 +53,6 @@ internal class PdfDocumentBuilder : IPdfDocument
         return pageBuilder;
     }
 
-    // CORRECCIÓN: El tipo de retorno ahora es IPdfConfigurablePage<IPdfVerticalStackLayout>.
     public IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage()
     {
         return ContentPage<IPdfVerticalStackLayout>();
@@ -77,7 +75,13 @@ internal class PdfDocumentBuilder : IPdfDocument
         }
 
         var allElements = GetAllElements();
-        var styleResolver = new StyleResolver(_configurationBuilder.ResourceDictionary, _diagnosticSink);
+
+        // CORRECCIÓN: Se añade el tercer argumento (FontRegistry)
+        var styleResolver = new StyleResolver(
+            _configurationBuilder.ResourceDictionary,
+            _diagnosticSink,
+            _configurationBuilder.FontRegistry);
+
         styleResolver.ApplyStyles(allElements);
 
         var pageDataList = new List<PdfPageData>();
@@ -140,12 +144,12 @@ internal class PdfDocumentBuilder : IPdfDocument
         var allElements = new List<PdfElementData>();
         foreach (var page in _pages)
         {
-            if (page is PdfContentPageBuilder contentPageBuilder)
+            if (page is IPdfContentPageBuilder contentPageBuilder)
             {
                 var content = contentPageBuilder.GetContent();
-                foreach (var element in content)
+                if (content is not null)
                 {
-                    Traverse(element, allElements);
+                    Traverse(content, allElements);
                 }
             }
         }
@@ -157,7 +161,7 @@ internal class PdfDocumentBuilder : IPdfDocument
         list.Add(element);
         if (element is PdfLayoutElementData layout)
         {
-            foreach (var child in layout.Children)
+            foreach (var child in layout.GetChildren)
             {
                 Traverse(child, list);
             }

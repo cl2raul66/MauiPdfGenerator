@@ -4,3 +4,7 @@ public interface IPdfImage<TSelf> : IPdfElement<TSelf> where TSelf : IPdfElement
 {
     TSelf Aspect(Aspect aspect);
 }
+
+public interface IPdfImage : IPdfImage<IPdfImage>
+{
+}

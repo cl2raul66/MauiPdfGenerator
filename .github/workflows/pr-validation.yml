@@ -1,15 +1,16 @@
-name: 🛡️ PR Validation
+name: PR Validation
 
 on:
   pull_request:
     branches: [ "development", "master" ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - 'MauiPdfGenerator/**'
+      - 'MauiPdfGenerator.Diagnostics/**'
+      - 'MauiPdfGenerator.SourceGenerators/**'
 
 jobs:
   validate-solution:
-    name: 🧪 Build & Test All
+    name: Build & Test All
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,21 +18,30 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x' # Ajusta a tu versión real (ej. 8.0.x o 9.0.x)
+          dotnet-version: '10.0.x' 
       
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      # 1. Compilar SourceGenerators (Independiente, Standard 2.0)
+      - name: Build Diagnostics
+        run: |
+          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj /p:Configuration=Release
+          dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore          
+
       - name: Build SourceGenerators
-        run: dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj -c Debug
+        run: |
+          dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj /p:Configuration=Release
+          dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore   
 
-      # 2. Compilar Solución Principal (Core + Diagnostics)
-      # Al compilar la solución, validamos la integración entre proyectos
-      - name: Build Solution
-        run: dotnet build MauiPdfGenerator.sln -c Debug
+      - name: Build MauiPdfGenerator
+        run:  |
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore  
 
-      # 3. Ejecutar Tests
-      # Asumimos que el proyecto de Tests cubre la lógica de Core y Diagnostics
+      - name: Build Tests
+        run: |
+          dotnet restore MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj /p:Configuration=Release
+          dotnet build MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-restore
+
       - name: Run Tests
-        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --no-build --verbosity normal
+        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-build --verbosity normal

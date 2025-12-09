@@ -1,0 +1,134 @@
+name: 📦 Production Release (Stable)
+
+on:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  # ====================================================
+  # JOB 1: DIAGNOSTICS
+  # ====================================================
+  diagnostics:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      changed: ${{ steps.ver.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Calculate Version
+        id: ver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "diag-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}" # Sin sufijo preview
+          change_path: "MauiPdfGenerator.Diagnostics"
+
+      - name: Pack & Push
+        if: steps.ver.outputs.changed == 'true'
+        run: |
+          dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj -c Release -o ./out /p:Version=${{ steps.ver.outputs.version }}
+          dotnet nuget push ./out/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create Tag
+        if: steps.ver.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/diag-v${{ steps.ver.outputs.version }}`,
+              sha: context.sha
+            })
+
+  # ====================================================
+  # JOB 2: SOURCE GENERATORS
+  # ====================================================
+  sourcegen:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+
+      - name: Calculate Version
+        id: ver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "gen-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator.SourceGenerators"
+
+      - name: Pack & Push
+        if: steps.ver.outputs.changed == 'true'
+        run: |
+          dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj -c Release -o ./out /p:Version=${{ steps.ver.outputs.version }}
+          dotnet nuget push ./out/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create Tag
+        if: steps.ver.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/gen-v${{ steps.ver.outputs.version }}`,
+              sha: context.sha
+            })
+
+  # ====================================================
+  # JOB 3: CORE
+  # ====================================================
+  core:
+    needs: diagnostics
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Calculate Version
+        id: ver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "core-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator"
+
+      - name: Pack & Push
+        if: steps.ver.outputs.changed == 'true' || needs.diagnostics.outputs.changed == 'true'
+        run: |
+          $coreVer = "${{ steps.ver.outputs.version }}"
+          $diagVer = "${{ needs.diagnostics.outputs.version }}"
+          
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj -c Release -o ./out /p:Version=$coreVer /p:DiagnosticsVersion=$diagVer
+          dotnet nuget push ./out/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create Tag
+        if: steps.ver.outputs.changed == 'true' || needs.diagnostics.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/core-v${{ steps.ver.outputs.version }}`,
+              sha: context.sha
+            })

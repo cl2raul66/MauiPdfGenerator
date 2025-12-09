@@ -1,0 +1,37 @@
+name: 🛡️ PR Validation
+
+on:
+  pull_request:
+    branches: [ "development", "master" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  validate-solution:
+    name: 🧪 Build & Test All
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x' # Ajusta a tu versión real (ej. 8.0.x o 9.0.x)
+      
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui --ignore-failed-sources
+
+      # 1. Compilar SourceGenerators (Independiente, Standard 2.0)
+      - name: Build SourceGenerators
+        run: dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj -c Debug
+
+      # 2. Compilar Solución Principal (Core + Diagnostics)
+      # Al compilar la solución, validamos la integración entre proyectos
+      - name: Build Solution
+        run: dotnet build MauiPdfGenerator.sln -c Debug
+
+      # 3. Ejecutar Tests
+      # Asumimos que el proyecto de Tests cubre la lógica de Core y Diagnostics
+      - name: Run Tests
+        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --no-build --verbosity normal

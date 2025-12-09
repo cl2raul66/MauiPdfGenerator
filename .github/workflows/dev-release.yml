@@ -1,0 +1,104 @@
+name: 🚀 Dev Release (Preview)
+
+on:
+  push:
+    branches: [ "development" ]
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  # ====================================================
+  # JOB 1: DIAGNOSTICS (Base)
+  # ====================================================
+  diagnostics:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      changed: ${{ steps.ver.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Calculate Version
+        id: ver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "diag-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}-pre${increment}"
+          change_path: "MauiPdfGenerator.Diagnostics"
+
+      - name: Pack & Push
+        if: steps.ver.outputs.changed == 'true'
+        run: |
+          dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj -c Release -o ./out /p:Version=${{ steps.ver.outputs.version }}
+          dotnet nuget push ./out/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+
+  # ====================================================
+  # JOB 2: SOURCE GENERATORS (Independiente)
+  # ====================================================
+  sourcegen:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+
+      - name: Calculate Version
+        id: ver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "gen-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}-pre${increment}"
+          change_path: "MauiPdfGenerator.SourceGenerators"
+
+      - name: Pack & Push
+        if: steps.ver.outputs.changed == 'true'
+        run: |
+          dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj -c Release -o ./out /p:Version=${{ steps.ver.outputs.version }}
+          dotnet nuget push ./out/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+
+  # ====================================================
+  # JOB 3: CORE (Depende de Diagnostics)
+  # ====================================================
+  core:
+    needs: diagnostics
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Calculate Version
+        id: ver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "core-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}-pre${increment}"
+          change_path: "MauiPdfGenerator"
+
+      # Lógica de Publicación:
+      # Publicamos si Core cambió O si Diagnostics cambió (para actualizar la dependencia)
+      - name: Pack & Push
+        if: steps.ver.outputs.changed == 'true' || needs.diagnostics.outputs.changed == 'true'
+        run: |
+          $coreVer = "${{ steps.ver.outputs.version }}"
+          $diagVer = "${{ needs.diagnostics.outputs.version }}"
+          
+          Write-Host "Empaquetando Core $coreVer usando Diagnostics $diagVer"
+          
+          # Aquí inyectamos la versión de Diagnostics calculada en el Job 1
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj -c Release -o ./out /p:Version=$coreVer /p:DiagnosticsVersion=$diagVer
+          
+          dotnet nuget push ./out/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate

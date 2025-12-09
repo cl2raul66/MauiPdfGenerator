@@ -224,7 +224,4 @@ jobs:
 
             await tryCreateTag(`diag-v${diagVer}`);
             await tryCreateTag(`main-v${mainVer}`);
-<<<<<<< HEAD:.github/workflows/prod-release.yml
             await tryCreateTag(`gen-v${genVer}`);
-=======
->>>>>>> master:.github/workflows/publish-core.yml

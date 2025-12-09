@@ -1,0 +1,230 @@
+name: Production Release (Stable)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'MauiPdfGenerator/**'
+      - 'MauiPdfGenerator.Diagnostics/**'
+      - 'MauiPdfGenerator.SourceGenerators/**'
+
+jobs:
+  build-diagnostics:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.final_version.outputs.VAL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Calculate Version
+        id: versioning
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "diag-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator.Diagnostics"
+          user_format_type: "json"
+
+      - name: Determine Version String
+        id: final_version
+        shell: pwsh
+        run: |
+          echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+
+      - name: Build & Pack Diagnostics
+        run: |
+          $ver = "${{ steps.final_version.outputs.VAL }}"
+          Write-Host "Empaquetando Diagnostics: $ver"
+          
+          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj /p:Configuration=Release          
+          dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore          
+          dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output /p:Version=$ver
+
+      - name: Upload Diagnostics Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-package
+          path: ./output/*.nupkg
+          retention-days: 1
+
+  build-main:
+    needs: build-diagnostics
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.final_version.outputs.VAL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Download Diagnostics Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: diagnostics-package
+          path: ./local-feed
+
+      - name: Setup Local NuGet Feed
+        run: dotnet nuget add source "${{ github.workspace }}/local-feed" --name LocalArtifacts
+
+      - name: Calculate Version
+        id: versioning
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "main-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator MauiPdfGenerator.Diagnostics"
+          user_format_type: "json"
+
+      - name: Determine Version String
+        id: final_version
+        shell: pwsh
+        run: |
+          echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+
+      - name: Build & Pack Main
+        run: |
+          $mainVer = "${{ steps.final_version.outputs.VAL }}"
+          $diagVer = "${{ needs.build-diagnostics.outputs.version }}"
+          
+          Write-Host "Empaquetando Main: $mainVer (Dependencia Diagnostics: $diagVer)"
+
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer          
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer          
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
+
+      - name: Upload Main Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-package
+          path: ./output/*.nupkg
+          retention-days: 1
+
+  build-sourcegen:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.final_version.outputs.VAL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Calculate Version
+        id: versioning
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "gen-v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)|feat|feature"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator.SourceGenerators"
+          user_format_type: "json"
+
+      - name: Determine Version String
+        id: final_version
+        shell: pwsh
+        run: |
+          echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+
+      - name: Build & Pack
+        run: |
+          $ver = "${{ steps.final_version.outputs.VAL }}"
+          Write-Host "Empaquetando SourceGen versión: $ver"
+
+          dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
+          dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
+          dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./output /p:Version=$ver
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sourcegen-package
+          path: ./output/*.nupkg
+          retention-days: 1
+
+  publish-nuget:
+    needs: [build-diagnostics, build-main, build-sourcegen]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./packages
+          merge-multiple: true
+
+      - name: Publish to NuGet
+        shell: pwsh
+        run: |
+          $packages = Get-ChildItem ./packages/*.nupkg
+          foreach ($pkg in $packages) {
+              Write-Host "Publicando Stable: $($pkg.Name)"
+              dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
+      - name: Create Git Tags
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const diagVer = "${{ needs.build-diagnostics.outputs.version }}";
+            const mainVer = "${{ needs.build-main.outputs.version }}";
+            const genVer = "${{ needs.build-sourcegen.outputs.version }}";
+            
+            async function tryCreateTag(tagName) {
+              try {
+                await github.rest.git.createRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `refs/tags/${tagName}`,
+                  sha: context.sha
+                });
+                console.log(`Tag creado: ${tagName}`);
+              } catch (e) {
+                console.log(`Tag ${tagName} no creado (ya existe o sin cambios).`);
+              }
+            }
+
+            await tryCreateTag(`diag-v${diagVer}`);
+            await tryCreateTag(`main-v${mainVer}`);
+<<<<<<< HEAD:.github/workflows/prod-release.yml
+            await tryCreateTag(`gen-v${genVer}`);
+=======
+>>>>>>> master:.github/workflows/publish-core.yml

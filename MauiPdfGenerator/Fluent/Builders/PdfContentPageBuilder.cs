@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Enums;
@@ -27,6 +28,8 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
     private FontAttributes _pageDefaultFontAttributes = Common.Models.Elements.PdfParagraphData.DefaultFontAttributes;
     private TextDecorations _pageDefaultTextDecorations = Common.Models.Elements.PdfParagraphData.DefaultTextDecorations;
     private TextTransform _pageDefaultTextTransform = Common.Models.Elements.PdfParagraphData.DefaultTextTransform;
+
+    public PdfResourceDictionary PageResources { get; } = new(); 
 
     public PdfContentPageBuilder(PdfDocumentBuilder documentBuilder, PdfConfigurationBuilder documentConfiguration, PdfFontRegistryBuilder fontRegistry)
     {
@@ -97,5 +100,13 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
     public FontAttributes GetPageDefaultFontAttributes() => _pageDefaultFontAttributes;
     public TextDecorations GetPageDefaultTextDecorations() => _pageDefaultTextDecorations;
     public TextTransform GetPageDefaultTextTransform() => _pageDefaultTextTransform;
+
+    public IPdfConfigurablePage<TContent> Resources(Action<IPdfResourceBuilder> resourceBuilderAction)
+    {
+        ArgumentNullException.ThrowIfNull(resourceBuilderAction);
+        var resourceBuilder = new PdfResourceBuilder(PageResources);
+        resourceBuilderAction(resourceBuilder);
+        return this;
+    }
     #endregion
 }

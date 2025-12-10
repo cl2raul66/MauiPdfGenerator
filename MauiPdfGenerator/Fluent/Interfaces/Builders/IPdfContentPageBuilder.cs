@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Models;
 
@@ -17,4 +18,5 @@ internal interface IPdfContentPageBuilder : IPdfPageBuilder
     FontAttributes GetPageDefaultFontAttributes();
     TextDecorations GetPageDefaultTextDecorations();
     TextTransform GetPageDefaultTextTransform();
+    PdfResourceDictionary PageResources { get; }
 }

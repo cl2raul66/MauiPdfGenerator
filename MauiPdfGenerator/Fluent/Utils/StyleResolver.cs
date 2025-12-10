@@ -19,18 +19,18 @@ namespace MauiPdfGenerator.Fluent.Utils;
 
 internal class StyleResolver
 {
-    private readonly PdfResourceDictionary _resourceDictionary;
+    private readonly PdfResourceDictionary _documentResources;
     private readonly IDiagnosticSink _diagnosticSink;
     private readonly PdfFontRegistryBuilder _fontRegistry;
 
-    public StyleResolver(PdfResourceDictionary resourceDictionary, IDiagnosticSink diagnosticSink, PdfFontRegistryBuilder fontRegistry)
+    public StyleResolver(PdfResourceDictionary documentResources, IDiagnosticSink diagnosticSink, PdfFontRegistryBuilder fontRegistry)
     {
-        _resourceDictionary = resourceDictionary;
+        _documentResources = documentResources;
         _diagnosticSink = diagnosticSink;
         _fontRegistry = fontRegistry;
     }
 
-    public void ApplyStyles(List<PdfElementData> elements)
+    public void ApplyStyles(List<PdfElementData> elements, PdfResourceDictionary? pageResources)
     {
         foreach (var element in elements)
         {
@@ -38,30 +38,44 @@ internal class StyleResolver
             var implicitKey = GetImplicitStyleKey(element);
             if (implicitKey.HasValue)
             {
-                ApplyStyle(element, implicitKey.Value, PdfPropertyPriority.ImplicitStyle, reportMissing: false);
+                ApplyStyle(element, implicitKey.Value, pageResources, PdfPropertyPriority.ImplicitStyle, reportMissing: false);
             }
 
             // 2. Aplicar Estilo Explícito (Prioridad 2)
-            // CAMBIO: Verificamos si StyleKey tiene valor (struct nullable)
             if (element.StyleKey.HasValue)
             {
-                ApplyStyle(element, element.StyleKey.Value, PdfPropertyPriority.ExplicitStyle, reportMissing: true);
+                ApplyStyle(element, element.StyleKey.Value, pageResources, PdfPropertyPriority.ExplicitStyle, reportMissing: true);
             }
         }
     }
 
-    // CAMBIO: string key -> PdfStyleIdentifier key
-    private void ApplyStyle(PdfElementData element, PdfStyleIdentifier key, PdfPropertyPriority priority, bool reportMissing)
+    private void ApplyStyle(PdfElementData element, PdfStyleIdentifier key, PdfResourceDictionary? pageResources, PdfPropertyPriority priority, bool reportMissing)
     {
-        var setter = _resourceDictionary.GetCombinedSetter(key);
+        // LÓGICA DE CASCADA:
+        // 1. Buscar en recursos de la página (si existen).
+        // 2. Si no, buscar en recursos del documento.
+
+        Action<object>? setter = null;
+
+        if (pageResources is not null)
+        {
+            setter = pageResources.GetCombinedSetter(key);
+        }
+
+        if (setter is null)
+        {
+            setter = _documentResources.GetCombinedSetter(key);
+        }
+
         if (setter is null)
         {
             if (reportMissing)
             {
+                // DIAGNÓSTICO: Clave no encontrada
                 _diagnosticSink.Submit(new DiagnosticMessage(
                     DiagnosticSeverity.Warning,
                     DiagnosticCodes.StyleKeyNotFound,
-                    $"Style with key '{key}' not found in ResourceDictionary.",
+                    $"Style with key '{key.Key}' not found in Page or Document resources.",
                     null
                 ));
             }
@@ -84,7 +98,7 @@ internal class StyleResolver
             _diagnosticSink.Submit(new DiagnosticMessage(
                 DiagnosticSeverity.Error,
                 "STYLE-ERROR",
-                $"Failed to apply style '{key}' to element '{element.GetType().Name}'. Error: {ex.Message}",
+                $"Failed to apply style '{key.Key}' to element '{element.GetType().Name}'. Error: {ex.Message}",
                 null
             ));
         }
@@ -104,7 +118,6 @@ internal class StyleResolver
         };
     }
 
-    // CAMBIO: Retorna PdfStyleIdentifier?
     private PdfStyleIdentifier? GetImplicitStyleKey(PdfElementData element)
     {
         string? typeName = element switch

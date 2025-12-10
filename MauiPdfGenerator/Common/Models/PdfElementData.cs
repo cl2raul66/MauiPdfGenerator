@@ -1,12 +1,15 @@
 ﻿using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models.Styling;
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Common.Models;
 
 internal abstract class PdfElementData : IPdfGridCellInfo
 {
     internal PdfElementData? Parent { get; set; }
-    internal string? StyleKey { get; private set; }
+
+    // CAMBIO: string -> PdfStyleIdentifier?
+    internal PdfStyleIdentifier? StyleKey { get; private set; }
 
     // --- Backing Properties ---
     internal PdfStyledProperty<Thickness> MarginProp { get; } = new(Thickness.Zero);
@@ -36,18 +39,18 @@ internal abstract class PdfElementData : IPdfGridCellInfo
 
     protected PdfElementData() { }
 
-    public PdfElementData Style(string key)
+    // CAMBIO: string -> PdfStyleIdentifier
+    public PdfElementData Style(PdfStyleIdentifier key)
     {
-        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Style key cannot be null or whitespace.", nameof(key));
+        // El struct PdfStyleIdentifier ya valida que no sea null/empty en su constructor,
+        // pero verificamos el valor por defecto del struct.
+        if (string.IsNullOrWhiteSpace(key.Key)) throw new ArgumentException("Style key cannot be empty.", nameof(key));
         this.StyleKey = key;
         return this;
     }
 
-    // --- CORRECCIÓN: Método reintroducido y adaptado al motor de estilos ---
     internal void ApplyContextualDefaults(LayoutAlignment horizontal, LayoutAlignment vertical)
     {
-        // Solo aplicamos el default contextual si la propiedad está en estado Default (0).
-        // Esto asegura que no sobrescribimos Estilos (1, 2) ni Valores Locales (3).
         if (HorizontalOptionsProp.Priority == PdfPropertyPriority.Default)
         {
             HorizontalOptionsProp.Set(horizontal, PdfPropertyPriority.Default);
@@ -57,7 +60,6 @@ internal abstract class PdfElementData : IPdfGridCellInfo
             VerticalOptionsProp.Set(vertical, PdfPropertyPriority.Default);
         }
     }
-    // -----------------------------------------------------------------------
 
     // Setters Fluent
     public PdfElementData SetMargin(double u) { MarginProp.Set(new Thickness(u), PdfPropertyPriority.Local); return this; }

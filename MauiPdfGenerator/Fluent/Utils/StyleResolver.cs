@@ -13,6 +13,7 @@ using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Utils;
 
@@ -34,21 +35,23 @@ internal class StyleResolver
         foreach (var element in elements)
         {
             // 1. Aplicar Estilo Implícito (Prioridad 1)
-            string? implicitKey = GetImplicitStyleKey(element);
-            if (!string.IsNullOrEmpty(implicitKey))
+            var implicitKey = GetImplicitStyleKey(element);
+            if (implicitKey.HasValue)
             {
-                ApplyStyle(element, implicitKey, PdfPropertyPriority.ImplicitStyle, reportMissing: false);
+                ApplyStyle(element, implicitKey.Value, PdfPropertyPriority.ImplicitStyle, reportMissing: false);
             }
 
             // 2. Aplicar Estilo Explícito (Prioridad 2)
-            if (!string.IsNullOrEmpty(element.StyleKey))
+            // CAMBIO: Verificamos si StyleKey tiene valor (struct nullable)
+            if (element.StyleKey.HasValue)
             {
-                ApplyStyle(element, element.StyleKey, PdfPropertyPriority.ExplicitStyle, reportMissing: true);
+                ApplyStyle(element, element.StyleKey.Value, PdfPropertyPriority.ExplicitStyle, reportMissing: true);
             }
         }
     }
 
-    private void ApplyStyle(PdfElementData element, string key, PdfPropertyPriority priority, bool reportMissing)
+    // CAMBIO: string key -> PdfStyleIdentifier key
+    private void ApplyStyle(PdfElementData element, PdfStyleIdentifier key, PdfPropertyPriority priority, bool reportMissing)
     {
         var setter = _resourceDictionary.GetCombinedSetter(key);
         if (setter is null)
@@ -70,14 +73,10 @@ internal class StyleResolver
             var tempBuilder = CreateTemporaryBuilderFor(element);
             if (tempBuilder is null) return;
 
-            // Aplicamos el estilo al builder temporal.
-            // El builder temporal guardará los valores con prioridad Local (3) en SU modelo interno.
             setter(tempBuilder);
 
             var styledSourceModel = tempBuilder.GetModel();
 
-            // Fusionamos: Tomamos los valores del temporal (que tienen prioridad > Default)
-            // y los aplicamos al destino con la prioridad solicitada (Implicit/Explicit).
             MergeProperties(element, styledSourceModel, priority);
         }
         catch (Exception ex)
@@ -105,9 +104,10 @@ internal class StyleResolver
         };
     }
 
-    private string? GetImplicitStyleKey(PdfElementData element)
+    // CAMBIO: Retorna PdfStyleIdentifier?
+    private PdfStyleIdentifier? GetImplicitStyleKey(PdfElementData element)
     {
-        return element switch
+        string? typeName = element switch
         {
             PdfParagraphData => typeof(IPdfParagraph).FullName,
             PdfImageData => typeof(IPdfImage).FullName,
@@ -117,21 +117,24 @@ internal class StyleResolver
             PdfGridData => typeof(IPdfGrid).FullName,
             _ => null
         };
+
+        if (typeName != null)
+        {
+            return new PdfStyleIdentifier(typeName);
+        }
+        return null;
     }
 
     private void MergeProperties(PdfElementData target, PdfElementData source, PdfPropertyPriority priority)
     {
-        // Helper para fusionar una propiedad individual
         void Merge<T>(PdfStyledProperty<T> targetProp, PdfStyledProperty<T> sourceProp)
         {
-            // Solo si el estilo definió un valor (es decir, no es Default)
             if (sourceProp.Priority > PdfPropertyPriority.Default)
             {
                 targetProp.Set(sourceProp.Value, priority);
             }
         }
 
-        // --- Propiedades Base ---
         Merge(target.BackgroundColorProp, source.BackgroundColorProp);
         Merge(target.WidthRequestProp, source.WidthRequestProp);
         Merge(target.HeightRequestProp, source.HeightRequestProp);
@@ -140,7 +143,6 @@ internal class StyleResolver
         Merge(target.HorizontalOptionsProp, source.HorizontalOptionsProp);
         Merge(target.VerticalOptionsProp, source.VerticalOptionsProp);
 
-        // --- Propiedades Específicas ---
         if (target is PdfParagraphData targetP && source is PdfParagraphData sourceP)
         {
             Merge(targetP.FontFamilyProp, sourceP.FontFamilyProp);

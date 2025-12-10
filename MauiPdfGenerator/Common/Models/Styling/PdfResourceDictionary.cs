@@ -1,12 +1,15 @@
 using System.Diagnostics;
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Common.Models.Styling;
 
 internal class PdfResourceDictionary
 {
-    private readonly Dictionary<string, PdfStyle> _styles = [];
+    // CAMBIO: Dictionary<string, ...> -> Dictionary<PdfStyleIdentifier, ...>
+    private readonly Dictionary<PdfStyleIdentifier, PdfStyle> _styles = [];
 
-    public void Add(string key, PdfStyle style)
+    // CAMBIO: string key -> PdfStyleIdentifier key
+    public void Add(PdfStyleIdentifier key, PdfStyle style)
     {
         if (!_styles.TryAdd(key, style))
         {
@@ -14,14 +17,15 @@ internal class PdfResourceDictionary
         }
     }
 
-    public Action<object>? GetCombinedSetter(string key)
+    // CAMBIO: string key -> PdfStyleIdentifier key
+    public Action<object>? GetCombinedSetter(PdfStyleIdentifier key)
     {
         if (!_styles.TryGetValue(key, out var initialStyle))
         {
             return null;
         }
 
-        if (string.IsNullOrEmpty(initialStyle.BasedOnKey))
+        if (!initialStyle.BasedOnKey.HasValue)
         {
             return initialStyle.Setter;
         }
@@ -29,7 +33,7 @@ internal class PdfResourceDictionary
         var setters = new List<Action<object>>();
         var currentStyle = initialStyle;
         var currentKey = key;
-        var visitedKeys = new HashSet<string>();
+        var visitedKeys = new HashSet<PdfStyleIdentifier>();
 
         while (currentStyle != null)
         {
@@ -40,12 +44,12 @@ internal class PdfResourceDictionary
 
             setters.Insert(0, currentStyle.Setter);
 
-            if (string.IsNullOrEmpty(currentStyle.BasedOnKey))
+            if (!currentStyle.BasedOnKey.HasValue)
             {
-                break; 
+                break;
             }
 
-            currentKey = currentStyle.BasedOnKey;
+            currentKey = currentStyle.BasedOnKey.Value;
             if (!_styles.TryGetValue(currentKey, out currentStyle))
             {
                 throw new KeyNotFoundException($"The specified `BasedOn` style with key '{currentKey}' was not found in the resource dictionary.");

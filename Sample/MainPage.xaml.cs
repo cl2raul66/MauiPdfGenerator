@@ -2,6 +2,7 @@
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fonts;
 
 namespace Sample;
@@ -650,6 +651,10 @@ public partial class MainPage : ContentPage
     private async void GenerateStylesShowcase_Clicked(object sender, EventArgs e)
     {
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Styles.pdf");
+
+        var nota = new PdfStyleIdentifier("Nota");
+        var titulo = new PdfStyleIdentifier("Título");
+
         try
         {
             var doc = pdfDocFactory.CreateDocument();
@@ -686,9 +691,9 @@ public partial class MainPage : ContentPage
 
                     ch.HorizontalLine();
 
-                    ch.Paragraph("Hola mundo 1").Style("Nota");
+                    ch.Paragraph("Hola mundo 1").Style(nota);
                     ch.Paragraph("Hola mundo 2").FontSize(16).TextColor(Colors.Green);
-                    ch.Paragraph("Hola mundo 3").Style("Título");
+                    ch.Paragraph("Hola mundo 3").Style(titulo);
                 });
             })
             .Build()

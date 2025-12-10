@@ -36,6 +36,8 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
         _documentBuilder = documentBuilder ?? throw new ArgumentNullException(nameof(documentBuilder));
         _documentConfiguration = documentConfiguration ?? throw new ArgumentNullException(nameof(documentConfiguration));
 
+        PageResources.Parent = _documentConfiguration.ResourceDictionary;
+
         if (typeof(TContent) == typeof(IPdfVerticalStackLayout))
             _contentBuilder = new PdfVerticalStackLayoutBuilder(fontRegistry);
         else if (typeof(TContent) == typeof(IPdfHorizontalStackLayout))
@@ -47,7 +49,6 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
 
         _contentApi = (TContent)_contentBuilder;
 
-        // CORRECCIÓN: Usar SetVerticalOptions en lugar de VerticalOptions
         ((PdfLayoutElementData)_contentBuilder.GetModel()).SetVerticalOptions(LayoutAlignment.Fill);
 
         _pageDefaultFontFamily = _documentConfiguration.FontRegistry.GetUserConfiguredDefaultFontIdentifier()

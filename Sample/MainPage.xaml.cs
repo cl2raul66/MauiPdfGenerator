@@ -653,6 +653,7 @@ public partial class MainPage : ContentPage
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Styles.pdf");
 
         var nota = new PdfStyleIdentifier("Nota");
+        var nota1 = new PdfStyleIdentifier("Nota1");
         var titulo = new PdfStyleIdentifier("Título");
 
         try
@@ -680,20 +681,26 @@ public partial class MainPage : ContentPage
                 });
             })
             .ContentPage()
+            .Resources(rd =>
+            {
+                rd.Style<IPdfParagraph>("Nota1", nota, s =>
+                {
+                    s.FontAttributes(FontAttributes.Italic);
+                });
+            })
             .Content(c =>
             {
                 c.Spacing(15);
                 c.Children(ch =>
                 {
                     ch.Paragraph("Hola mundo 1");
-                    ch.Paragraph("Hola mundo 2");
-                    ch.Paragraph("Hola mundo 3");
 
                     ch.HorizontalLine();
 
                     ch.Paragraph("Hola mundo 1").Style(nota);
                     ch.Paragraph("Hola mundo 2").FontSize(16).TextColor(Colors.Green);
                     ch.Paragraph("Hola mundo 3").Style(titulo);
+                    ch.Paragraph("Hola mundo 4").Style(nota1);
                 });
             })
             .Build()

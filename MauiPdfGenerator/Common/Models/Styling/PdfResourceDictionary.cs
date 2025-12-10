@@ -5,10 +5,10 @@ namespace MauiPdfGenerator.Common.Models.Styling;
 
 internal class PdfResourceDictionary
 {
-    // CAMBIO: Dictionary<string, ...> -> Dictionary<PdfStyleIdentifier, ...>
     private readonly Dictionary<PdfStyleIdentifier, PdfStyle> _styles = [];
 
-    // CAMBIO: string key -> PdfStyleIdentifier key
+    public PdfResourceDictionary? Parent { get; set; }
+
     public void Add(PdfStyleIdentifier key, PdfStyle style)
     {
         if (!_styles.TryAdd(key, style))
@@ -17,12 +17,11 @@ internal class PdfResourceDictionary
         }
     }
 
-    // CAMBIO: string key -> PdfStyleIdentifier key
     public Action<object>? GetCombinedSetter(PdfStyleIdentifier key)
     {
         if (!_styles.TryGetValue(key, out var initialStyle))
         {
-            return null;
+            return Parent?.GetCombinedSetter(key);
         }
 
         if (!initialStyle.BasedOnKey.HasValue)
@@ -32,27 +31,36 @@ internal class PdfResourceDictionary
 
         var setters = new List<Action<object>>();
         var currentStyle = initialStyle;
-        var currentKey = key;
-        var visitedKeys = new HashSet<PdfStyleIdentifier>();
 
-        while (currentStyle != null)
+        setters.Insert(0, currentStyle.Setter);
+
+        while (currentStyle.BasedOnKey.HasValue)
         {
-            if (!visitedKeys.Add(currentKey))
+            var parentKey = currentStyle.BasedOnKey.Value;
+
+            if (_styles.TryGetValue(parentKey, out var parentStyle))
             {
-                throw new InvalidOperationException($"Circular dependency detected in style inheritance involving key '{currentKey}'.");
+                currentStyle = parentStyle;
+                setters.Insert(0, currentStyle.Setter);
             }
-
-            setters.Insert(0, currentStyle.Setter);
-
-            if (!currentStyle.BasedOnKey.HasValue)
+            else
             {
+
+                if (Parent is null)
+                {
+                    throw new KeyNotFoundException($"The specified `BasedOn` style with key '{parentKey}' was not found in the local resource dictionary and no parent dictionary exists.");
+                }
+
+                var parentChainSetter = Parent.GetCombinedSetter(parentKey);
+
+                if (parentChainSetter is null)
+                {
+                    throw new KeyNotFoundException($"The specified `BasedOn` style with key '{parentKey}' was not found in the parent resource dictionary.");
+                }
+
+                setters.Insert(0, parentChainSetter);
+
                 break;
-            }
-
-            currentKey = currentStyle.BasedOnKey.Value;
-            if (!_styles.TryGetValue(currentKey, out currentStyle))
-            {
-                throw new KeyNotFoundException($"The specified `BasedOn` style with key '{currentKey}' was not found in the resource dictionary.");
             }
         }
 

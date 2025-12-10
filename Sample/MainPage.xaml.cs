@@ -4,6 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fonts;
+using MauiPdfGenerator.Styles;
 
 namespace Sample;
 
@@ -651,11 +652,6 @@ public partial class MainPage : ContentPage
     private async void GenerateStylesShowcase_Clicked(object sender, EventArgs e)
     {
         string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Sample-Styles.pdf");
-
-        var nota = new PdfStyleIdentifier("Nota");
-        var nota1 = new PdfStyleIdentifier("Nota1");
-        var titulo = new PdfStyleIdentifier("Título");
-
         try
         {
             var doc = pdfDocFactory.CreateDocument();
@@ -678,12 +674,13 @@ public partial class MainPage : ContentPage
                 {
                     s.FontSize(22);
                     s.TextColor(Colors.Blue);
+                    s.FontFamily(PdfFonts.Comic);
                 });
             })
             .ContentPage()
             .Resources(rd =>
             {
-                rd.Style<IPdfParagraph>("Nota1", nota, s =>
+                rd.Style<IPdfParagraph>("Nota1", PdfStyles.Nota, s =>
                 {
                     s.FontAttributes(FontAttributes.Italic);
                 });
@@ -697,10 +694,10 @@ public partial class MainPage : ContentPage
 
                     ch.HorizontalLine();
 
-                    ch.Paragraph("Hola mundo 1").Style(nota);
+                    ch.Paragraph("Hola mundo 1").Style(PdfStyles.Nota);
                     ch.Paragraph("Hola mundo 2").FontSize(16).TextColor(Colors.Green);
-                    ch.Paragraph("Hola mundo 3").Style(titulo);
-                    ch.Paragraph("Hola mundo 4").Style(nota1);
+                    ch.Paragraph("Hola mundo 3").Style(PdfStyles.Titulo);
+                    ch.Paragraph("Hola mundo 4").Style(PdfStyles.Nota1);
                 });
             })
             .Build()

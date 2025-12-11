@@ -5,6 +5,7 @@ using MauiPdfGenerator.Fluent.Builders.Layouts.Grids;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts;
 
@@ -28,7 +29,6 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
     {
         var elementModel = element.GetModel();
         elementModel.ApplyContextualDefaults(LayoutAlignment.Fill, LayoutAlignment.Fill);
-        // ... (Lógica de celdas ocupadas sin cambios) ...
         var cellInfo = (IPdfGridCellInfo)elementModel;
         var startRow = cellInfo.Row;
         var startCol = cellInfo.Column;
@@ -115,11 +115,11 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
     #region IPdfLayoutElement<IPdfGrid> implementation
     public IPdfGrid HorizontalOptions(LayoutAlignment a) { _model.SetHorizontalOptions(a); return this; }
     public IPdfGrid VerticalOptions(LayoutAlignment a) { _model.SetVerticalOptions(a); return this; }
-    public IPdfGrid Style(string key) { _model.Style(key); return this; }
+    public IPdfGrid Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations (IPdfGrid)
-    IPdfGrid IPdfElement<IPdfGrid>.Style(string k) { Style(k); return this; }
+    IPdfGrid IPdfElement<IPdfGrid>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfGrid IPdfElement<IPdfGrid>.Margin(double u) { Margin(u); return this; }
     IPdfGrid IPdfElement<IPdfGrid>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfGrid IPdfElement<IPdfGrid>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }

@@ -1,4 +1,6 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces;
+﻿using MauiPdfGenerator.Fluent.Models;
+
+namespace MauiPdfGenerator.Fluent.Interfaces;
 
 public interface IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
 {
@@ -11,5 +13,5 @@ public interface IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
     TSelf WidthRequest(double width);
     TSelf HeightRequest(double height);
     TSelf BackgroundColor(Color? color);
-    TSelf Style(string key);
+    TSelf Style(PdfStyleIdentifier key);
 }

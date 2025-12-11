@@ -1,6 +1,7 @@
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -26,7 +27,7 @@ internal class PdfResourceBuilder : IPdfResourceBuilder
         return Style(key, null, setup);
     }
 
-    public IPdfResourceBuilder Style<TElement>(string key, string? basedOn, Action<TElement> setup)
+    public IPdfResourceBuilder Style<TElement>(string key, PdfStyleIdentifier? basedOn, Action<TElement> setup)
         where TElement : class, IPdfElement<TElement>
     {
         if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Style key cannot be null or empty.", nameof(key));
@@ -41,7 +42,7 @@ internal class PdfResourceBuilder : IPdfResourceBuilder
         };
 
         var style = new PdfStyle(typeof(TElement), basedOn, safeSetter);
-        _resourceDictionary.Add(key, style);
+        _resourceDictionary.Add(new PdfStyleIdentifier(key), style);
 
         return this;
     }

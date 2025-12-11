@@ -15,7 +15,5 @@ public interface IPdfContentPage<TContent> where TContent : class
     IPdfContentPage<TContent> DefaultTextColor(Color color);
     IPdfContentPage<TContent> DefaultTextDecorations(TextDecorations decorations);
     IPdfContentPage<TContent> DefaultTextTransform(TextTransform transform);
-
-    // El método de transición al contenido del layout raíz.
     IPageReadyToBuild Content(Action<TContent> contentSetup);
 }

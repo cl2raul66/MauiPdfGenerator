@@ -71,7 +71,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     public IPdfGridChildParagraph Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildParagraph RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildParagraph ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
-    public IPdfGridChildParagraph Style(string key) { _model.Style(key); return this; }
+    public IPdfGridChildParagraph Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations (Con Casting Seguro)
@@ -87,7 +87,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfParagraph IPdfParagraph<IPdfParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfParagraph IPdfParagraph<IPdfParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
 
-    IPdfParagraph IPdfElement<IPdfParagraph>.Style(string k) { Style(k); return this; }
+    IPdfParagraph IPdfElement<IPdfParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfParagraph IPdfElement<IPdfParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfParagraph IPdfElement<IPdfParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfParagraph IPdfElement<IPdfParagraph>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -108,7 +108,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.LineBreakMode(LineBreakMode m) { LineBreakMode(m); return this; }
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
-    IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Style(string k) { Style(k); return this; }
+    IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -129,7 +129,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.LineBreakMode(LineBreakMode m) { LineBreakMode(m); return this; }
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
-    IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Style(string k) { Style(k); return this; }
+    IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -152,7 +152,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.LineBreakMode(LineBreakMode m) { LineBreakMode(m); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
-    IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Style(string k) { Style(k); return this; }
+    IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }

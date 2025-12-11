@@ -25,7 +25,7 @@
 		<Copyright>Mozilla Public License Version 2.0</Copyright>
 		<PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<Version>1.0.1</Version>
+		<Version>0.0.0</Version>
 		<Company>RandAMediaLabGroup</Company>
 		<Authors>cl2raul66</Authors>
 		<PackageId>RandAMediaLabGroup.MauiPdfGenerator.Diagnostics</PackageId>

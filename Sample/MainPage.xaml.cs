@@ -2,7 +2,9 @@
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fonts;
+using MauiPdfGenerator.Styles;
 
 namespace Sample;
 
@@ -672,23 +674,51 @@ public partial class MainPage : ContentPage
                 {
                     s.FontSize(22);
                     s.TextColor(Colors.Blue);
+                    s.FontFamily(PdfFonts.Comic);
                 });
             })
             .ContentPage()
+            .Resources(rd =>
+            {
+                rd.Style<IPdfParagraph>("Nota1", PdfStyles.Nota, s =>
+                {
+                    s.FontAttributes(FontAttributes.Italic);
+                });
+            })
             .Content(c =>
             {
                 c.Spacing(15);
                 c.Children(ch =>
                 {
                     ch.Paragraph("Hola mundo 1");
-                    ch.Paragraph("Hola mundo 2");
-                    ch.Paragraph("Hola mundo 3");
 
                     ch.HorizontalLine();
 
-                    ch.Paragraph("Hola mundo 1").Style("Nota");
+                    ch.Paragraph("Hola mundo 1").Style(PdfStyles.Nota);
                     ch.Paragraph("Hola mundo 2").FontSize(16).TextColor(Colors.Green);
-                    ch.Paragraph("Hola mundo 3").Style("Título");
+                    ch.Paragraph("Hola mundo 3").Style(PdfStyles.Titulo);
+                    ch.Paragraph("Hola mundo 4").Style(PdfStyles.Nota1);
+                });
+            })
+            .Build()
+            .ContentPage()
+            .Resources(rd =>
+            {
+                rd.Style<IPdfParagraph>("Nota2", PdfStyles.Nota, s =>
+                {
+                    s.TextDecorations(TextDecorations.Underline);
+                });
+            })
+            .Content(c =>
+            {
+                c.Spacing(15);
+                c.Children(ch =>
+                {
+                    ch.Paragraph("Hola mundo 1");
+
+                    ch.HorizontalLine();
+
+                    ch.Paragraph("Hola mundo 1").Style(PdfStyles.Nota2);
                 });
             })
             .Build()

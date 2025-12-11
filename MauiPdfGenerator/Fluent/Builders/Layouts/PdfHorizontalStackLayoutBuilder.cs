@@ -4,6 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
+using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts;
 
@@ -51,14 +52,14 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     public IPdfGridChildHorizontalStackLayout Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildHorizontalStackLayout RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildHorizontalStackLayout ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
-    public IPdfGridChildHorizontalStackLayout Style(string key) { _model.Style(key); return this; }
+    public IPdfGridChildHorizontalStackLayout Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
     // IPdfHorizontalStackLayout
     IPdfHorizontalStackLayout IPdfHorizontalStackLayout<IPdfHorizontalStackLayout>.Spacing(float v) { Spacing(v); return this; }
     void IPdfHorizontalStackLayout<IPdfHorizontalStackLayout>.Children(Action<IPdfStackLayoutBuilder> s) { Children(s); }
-    IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Style(string k) { Style(k); return this; }
+    IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Margin(double u) { Margin(u); return this; }
     IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -74,7 +75,7 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     // IPdfLayoutChildHorizontalStackLayout
     IPdfLayoutChildHorizontalStackLayout IPdfHorizontalStackLayout<IPdfLayoutChildHorizontalStackLayout>.Spacing(float v) { Spacing(v); return this; }
     void IPdfHorizontalStackLayout<IPdfLayoutChildHorizontalStackLayout>.Children(Action<IPdfStackLayoutBuilder> s) { Children(s); }
-    IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Style(string k) { Style(k); return this; }
+    IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -88,6 +89,6 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     IPdfLayoutChildHorizontalStackLayout IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
     // IPdfGridChildHorizontalStackLayout
-    IPdfGridChildHorizontalStackLayout IPdfElement<IPdfGridChildHorizontalStackLayout>.Style(string k) { Style(k); return this; }
+    IPdfGridChildHorizontalStackLayout IPdfElement<IPdfGridChildHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     #endregion
 }

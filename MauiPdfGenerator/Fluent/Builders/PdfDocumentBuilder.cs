@@ -74,21 +74,27 @@ internal class PdfDocumentBuilder : IPdfDocument
             throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
         }
 
-        var allElements = GetAllElements();
-
-        // CORRECCIÓN: Se añade el tercer argumento (FontRegistry)
         var styleResolver = new StyleResolver(
             _configurationBuilder.ResourceDictionary,
             _diagnosticSink,
             _configurationBuilder.FontRegistry);
 
-        styleResolver.ApplyStyles(allElements);
-
         var pageDataList = new List<PdfPageData>();
+
         foreach (var pageBuilder in _pages)
         {
             if (pageBuilder is IPdfContentPageBuilder contentPageBuilder)
             {
+                var content = contentPageBuilder.GetContent();
+
+                var pageElements = new List<PdfElementData>();
+                if (content is not null)
+                {
+                    Traverse(content, pageElements);
+                }
+
+                styleResolver.ApplyStyles(pageElements, contentPageBuilder.PageResources);
+
                 var pageData = new PdfPageData(
                     contentPageBuilder.GetEffectivePageSize(),
                     contentPageBuilder.GetEffectivePageOrientation(),
@@ -137,23 +143,6 @@ internal class PdfDocumentBuilder : IPdfDocument
             _logger.LogError(ex, "An unexpected error occurred while saving the PDF.");
             throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
         }
-    }
-
-    private List<PdfElementData> GetAllElements()
-    {
-        var allElements = new List<PdfElementData>();
-        foreach (var page in _pages)
-        {
-            if (page is IPdfContentPageBuilder contentPageBuilder)
-            {
-                var content = contentPageBuilder.GetContent();
-                if (content is not null)
-                {
-                    Traverse(content, allElements);
-                }
-            }
-        }
-        return allElements;
     }
 
     private void Traverse(PdfElementData element, List<PdfElementData> list)

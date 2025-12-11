@@ -16,5 +16,6 @@ public interface IPdfConfigurablePage<TContent> where TContent : class
     IPdfConfigurablePage<TContent> DefaultTextColor(Color color);
     IPdfConfigurablePage<TContent> DefaultTextDecorations(TextDecorations decorations);
     IPdfConfigurablePage<TContent> DefaultTextTransform(TextTransform transform);
+    IPdfConfigurablePage<TContent> Resources(Action<IPdfResourceBuilder> resourceBuilderAction);
     IPageReadyToBuild Content(Action<TContent> contentSetup);
 }

@@ -13,6 +13,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Tests", "MauiPdfGenerator.Tests\MauiPdfGenerator.Tests.csproj", "{F05601AD-47DB-44C2-C17C-938364066B1A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Diagnostics.Test", "MauiPdfGenerator.Diagnostics.Test\MauiPdfGenerator.Diagnostics.Test.csproj", "{37FCD63F-C630-46B9-A943-569D27F95221}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.SourceGenerators.Test", "MauiPdfGenerator.SourceGenerators.Test\MauiPdfGenerator.SourceGenerators.Test.csproj", "{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.IntegrationTests", "MauiPdfGenerator.IntegrationTests\MauiPdfGenerator.IntegrationTests.csproj", "{4D4A83BE-AA9E-1FD1-4ABB-37284D5B0AB2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +46,18 @@ Global
 		{F05601AD-47DB-44C2-C17C-938364066B1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F05601AD-47DB-44C2-C17C-938364066B1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F05601AD-47DB-44C2-C17C-938364066B1A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37FCD63F-C630-46B9-A943-569D27F95221}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37FCD63F-C630-46B9-A943-569D27F95221}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37FCD63F-C630-46B9-A943-569D27F95221}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37FCD63F-C630-46B9-A943-569D27F95221}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D4A83BE-AA9E-1FD1-4ABB-37284D5B0AB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D4A83BE-AA9E-1FD1-4ABB-37284D5B0AB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D4A83BE-AA9E-1FD1-4ABB-37284D5B0AB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D4A83BE-AA9E-1FD1-4ABB-37284D5B0AB2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

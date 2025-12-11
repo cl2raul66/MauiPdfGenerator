@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFramework>net10.0</TargetFramework>
 
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -23,9 +23,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
-		<ProjectReference Include="..\MauiPdfGenerator\MauiPdfGenerator.csproj" />
-		<ProjectReference Include="..\MauiPdfGenerator.SourceGenerators\MauiPdfGenerator.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+		<ProjectReference Include="..\MauiPdfGenerator.SourceGenerators\MauiPdfGenerator.SourceGenerators.csproj"
+						OutputItemType="Analyzer"
+						ReferenceOutputAssembly="true" />
 	</ItemGroup>
 
 </Project>

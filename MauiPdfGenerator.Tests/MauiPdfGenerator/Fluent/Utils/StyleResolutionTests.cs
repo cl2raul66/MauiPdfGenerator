@@ -6,10 +6,10 @@ using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Elements;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Utils;
-using Moq; 
+using Moq;
 using Xunit;
 
-namespace MauiPdfGenerator.Tests.Styles;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Fluent.Utils;
 
 public class StyleResolutionTests
 {
@@ -113,8 +113,8 @@ public class StyleResolutionTests
 
         _resolver.ApplyStyles([paragraphData], null);
 
-        Assert.Equal(Colors.Blue, paragraphData.CurrentTextColor); 
-        Assert.Equal(20f, paragraphData.CurrentFontSize);         
+        Assert.Equal(Colors.Blue, paragraphData.CurrentTextColor);
+        Assert.Equal(20f, paragraphData.CurrentFontSize);
     }
 
     [Fact]
@@ -136,7 +136,8 @@ public class StyleResolutionTests
 
         _resolver.ApplyStyles([paragraphData], null);
 
-        Assert.Equal(Colors.Green, paragraphData.CurrentTextColor); 
-        Assert.Equal(20f, paragraphData.CurrentFontSize);           
+        Assert.Equal(Colors.Green, paragraphData.CurrentTextColor);
+        Assert.Equal(20f, paragraphData.CurrentFontSize);
     }
 }
+

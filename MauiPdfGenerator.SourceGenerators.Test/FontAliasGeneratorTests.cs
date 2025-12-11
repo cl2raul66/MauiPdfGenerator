@@ -2,9 +2,9 @@
 using MauiPdfGenerator.SourceGenerators;
 using Microsoft.CodeAnalysis.Text;
 using Xunit;
-using Verify = MauiPdfGenerator.Tests.SourceGenerators.CSharpSourceGeneratorVerifier<MauiPdfGenerator.SourceGenerators.FontAliasGenerator>;
+using Verify = MauiPdfGenerator.SourceGenerators.Tests.CSharpSourceGeneratorVerifier<MauiPdfGenerator.SourceGenerators.FontAliasGenerator>;
 
-namespace MauiPdfGenerator.Tests.SourceGenerators;
+namespace MauiPdfGenerator.SourceGenerators.Tests;
 
 public class FontAliasGeneratorTests
 {

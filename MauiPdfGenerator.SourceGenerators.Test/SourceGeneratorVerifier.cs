@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
 using Xunit;
 
-namespace MauiPdfGenerator.Tests.SourceGenerators;
+namespace MauiPdfGenerator.SourceGenerators.Tests;
 
 public static class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourceGenerator : IIncrementalGenerator, new()
 {

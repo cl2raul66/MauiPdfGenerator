@@ -9,7 +9,7 @@ using MauiPdfGenerator.Fluent.Utils;
 using Moq; 
 using Xunit;
 
-namespace MauiPdfGenerator.Tests.Styles;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Fluent.Utils;
 
 public class StyleResolutionTests
 {

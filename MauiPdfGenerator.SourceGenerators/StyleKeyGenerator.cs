@@ -5,7 +5,6 @@ using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace MauiPdfGenerator.SourceGenerators
 {
@@ -17,7 +16,6 @@ namespace MauiPdfGenerator.SourceGenerators
         private const string GeneratedFileName = "PdfStyles.g.cs";
         private const string PdfStyleIdentifierFullName = "global::MauiPdfGenerator.Fluent.Models.PdfStyleIdentifier";
 
-        // La interfaz objetivo
         private const string TargetInterface = "MauiPdfGenerator.Fluent.Interfaces.Builders.IPdfResourceBuilder";
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -58,15 +56,12 @@ namespace MauiPdfGenerator.SourceGenerators
             string styleKey = literal.Token.ValueText;
             if (string.IsNullOrWhiteSpace(styleKey)) return null;
 
-            // --- ANÁLISIS SEMÁNTICO ROBUSTO ---
             var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, ct);
 
-            // 1. Intento directo (Código compila bien)
             if (symbolInfo.Symbol is IMethodSymbol methodSymbol)
             {
                 if (IsTargetInterface(methodSymbol.ContainingType)) return styleKey;
             }
-            // 2. Intento con candidatos (Código tiene errores, ej: PdfStyles.Nota no existe aún)
             else if (!symbolInfo.CandidateSymbols.IsEmpty)
             {
                 foreach (var candidate in symbolInfo.CandidateSymbols)
@@ -113,9 +108,11 @@ namespace MauiPdfGenerator.SourceGenerators
             sb.AppendLine("    {");
 
             var usedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
+            var keysList = uniqueKeys.ToList();
 
-            foreach (var key in uniqueKeys)
+            for (int i = 0; i < keysList.Count; i++)
             {
+                var key = keysList[i];
                 string identifier = CreateValidCSharpIdentifier(key);
 
                 if (usedIdentifiers.Contains(identifier)) continue;
@@ -123,11 +120,15 @@ namespace MauiPdfGenerator.SourceGenerators
 
                 sb.AppendLine($"        /// <summary>Style key for '{EscapeString(key)}'.</summary>");
                 sb.AppendLine($"        public static {PdfStyleIdentifierFullName} {identifier} {{ get; }} = new {PdfStyleIdentifierFullName}(\"{EscapeString(key)}\");");
-                sb.AppendLine();
+
+                if (i < keysList.Count - 1)
+                {
+                    sb.AppendLine();
+                }
             }
 
             sb.AppendLine("    }");
-            sb.AppendLine("}");
+            sb.Append("}");
 
             context.AddSource(GeneratedFileName, SourceText.From(sb.ToString(), Encoding.UTF8));
         }
@@ -138,30 +139,31 @@ namespace MauiPdfGenerator.SourceGenerators
         {
             if (string.IsNullOrWhiteSpace(input)) return "_Style";
 
-            // Normalizar para quitar acentos (Título -> Titulo)
             string normalized = RemoveDiacritics(input);
 
             var sb = new StringBuilder();
-            bool first = true;
+            bool lastWasUnderscore = false;
+
             foreach (char c in normalized)
             {
                 if (char.IsLetterOrDigit(c) || c == '_')
                 {
-                    if (first && char.IsDigit(c)) sb.Append('_');
                     sb.Append(c);
-                    first = false;
+                    lastWasUnderscore = (c == '_');
                 }
-                else
+                else if (!lastWasUnderscore)
                 {
                     sb.Append('_');
-                    first = false;
+                    lastWasUnderscore = true;
                 }
             }
 
-            string result = sb.ToString();
-            result = Regex.Replace(result, "_{2,}", "_").Trim('_');
+            string result = sb.ToString().Trim('_');
 
             if (string.IsNullOrEmpty(result)) return "_Style";
+
+            if (char.IsDigit(result[0]))
+                result = "_" + result;
 
             if (SyntaxFacts.GetKeywordKind(result) != SyntaxKind.None)
                 return "@" + result;

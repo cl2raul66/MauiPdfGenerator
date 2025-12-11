@@ -701,6 +701,27 @@ public partial class MainPage : ContentPage
                 });
             })
             .Build()
+            .ContentPage()
+            .Resources(rd =>
+            {
+                rd.Style<IPdfParagraph>("Nota2", PdfStyles.Nota, s =>
+                {
+                    s.TextDecorations(TextDecorations.Underline);
+                });
+            })
+            .Content(c =>
+            {
+                c.Spacing(15);
+                c.Children(ch =>
+                {
+                    ch.Paragraph("Hola mundo 1");
+
+                    ch.HorizontalLine();
+
+                    ch.Paragraph("Hola mundo 1").Style(PdfStyles.Nota2);
+                });
+            })
+            .Build()
             .SaveAsync(targetFilePath);
 
             await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });

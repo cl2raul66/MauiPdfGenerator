@@ -23,7 +23,7 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     public PdfElementData GetModel() => _model;
 
     #region Public API
-    public IPdfGridChildHorizontalLine Thickness(float value) { if (value <= 0) throw new ArgumentOutOfRangeException(nameof(value)); _model.ThicknessProp.Set(value, PdfPropertyPriority.Local); return this; }
+    public IPdfGridChildHorizontalLine Thickness(float value) { if (value > 0) { _model.ThicknessProp.Set(value, PdfPropertyPriority.Local); return this; } throw new ArgumentOutOfRangeException(nameof(value)); }
     public IPdfGridChildHorizontalLine Color(Color color) { _model.ColorProp.Set(color ?? PdfHorizontalLineData.DefaultColor, PdfPropertyPriority.Local); return this; }
 
     public IPdfGridChildHorizontalLine Margin(double u) { _model.SetMargin(u); return this; }

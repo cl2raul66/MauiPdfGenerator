@@ -29,7 +29,6 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
     {
         var elementModel = element.GetModel();
         elementModel.ApplyContextualDefaults(LayoutAlignment.Fill, LayoutAlignment.Fill);
-        // ... (Lógica de celdas ocupadas sin cambios) ...
         var cellInfo = (IPdfGridCellInfo)elementModel;
         var startRow = cellInfo.Row;
         var startCol = cellInfo.Column;

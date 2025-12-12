@@ -1,6 +1,6 @@
-﻿using MauiPdfGenerator.Common.Models.Styling;
+using MauiPdfGenerator.Common.Models.Styling;
 
-namespace MauiPdfGenerator.Common.Models.Elements;
+namespace MauiPdfGenerator.Common.Models.Views;
 
 internal class PdfImageData : PdfElementData
 {

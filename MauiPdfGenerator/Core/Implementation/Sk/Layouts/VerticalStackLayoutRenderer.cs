@@ -1,5 +1,5 @@
-﻿using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Models;

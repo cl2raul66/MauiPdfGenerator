@@ -1,5 +1,5 @@
-﻿using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Core.Implementation.Sk.Elements;
+using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Core.Implementation.Sk.Views;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Builders;
 using Microsoft.Extensions.Logging;

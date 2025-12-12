@@ -1,6 +1,6 @@
-﻿using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Fluent.Models;
 
-namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
+namespace MauiPdfGenerator.Fluent.Interfaces.Views;
 
 public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
 {

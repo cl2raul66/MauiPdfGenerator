@@ -1,6 +1,6 @@
 ﻿using MauiPdfGenerator;
 using MauiPdfGenerator.Fluent.Enums;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fonts;

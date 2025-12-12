@@ -1,8 +1,8 @@
-﻿using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Models;
 
-namespace MauiPdfGenerator.Common.Models.Elements;
+namespace MauiPdfGenerator.Common.Models.Views;
 
 internal class PdfParagraphData : PdfElementData
 {

@@ -1,9 +1,9 @@
-﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Common.Models.Views;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 
 internal class HorizontalLineRenderer : IElementRenderer
 {

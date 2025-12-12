@@ -1,15 +1,15 @@
-﻿using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Models;
 
-namespace MauiPdfGenerator.Fluent.Builders.Elements;
+namespace MauiPdfGenerator.Fluent.Builders.Views;
 
 internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfLayoutChildImage, IPdfGridChildImage, IPdfImage
 {
@@ -58,7 +58,7 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfImage IPdfElement<IPdfImage>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
     // IPdfPageChildImage
-    IPdfPageChildImage Interfaces.Elements.IPdfImage<IPdfPageChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
+    IPdfPageChildImage IPdfImage<IPdfPageChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Margin(double h, double v) { Margin(h, v); return this; }
@@ -71,7 +71,7 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
     // IPdfLayoutChildImage
-    IPdfLayoutChildImage Interfaces.Elements.IPdfImage<IPdfLayoutChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
+    IPdfLayoutChildImage IPdfImage<IPdfLayoutChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Margin(double h, double v) { Margin(h, v); return this; }
@@ -86,7 +86,7 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfLayoutChildImage IPdfLayoutChild<IPdfLayoutChildImage>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
     // IPdfGridChildImage
-    IPdfGridChildImage Interfaces.Elements.IPdfImage<IPdfGridChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
+    IPdfGridChildImage IPdfImage<IPdfGridChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
     IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double h, double v) { Margin(h, v); return this; }

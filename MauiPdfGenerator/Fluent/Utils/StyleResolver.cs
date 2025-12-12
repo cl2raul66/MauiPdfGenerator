@@ -1,6 +1,6 @@
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Diagnostics;
@@ -8,10 +8,10 @@ using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Diagnostics.Models;
 using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Builders.Elements;
+using MauiPdfGenerator.Fluent.Builders.Views;
 using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Models;
 

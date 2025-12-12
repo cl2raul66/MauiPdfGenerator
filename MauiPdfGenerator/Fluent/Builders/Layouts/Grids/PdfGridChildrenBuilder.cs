@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Builders.Elements;
+using MauiPdfGenerator.Fluent.Builders.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;

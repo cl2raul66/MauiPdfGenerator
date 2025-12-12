@@ -1,5 +1,5 @@
-﻿using System.Diagnostics;
-using MauiPdfGenerator.Common.Models.Elements;
+using System.Diagnostics;
+using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
@@ -9,7 +9,7 @@ using MauiPdfGenerator.Fluent.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 
 internal class TextRenderer : IElementRenderer
 {

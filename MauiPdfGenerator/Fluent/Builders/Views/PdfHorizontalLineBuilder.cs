@@ -1,15 +1,15 @@
-﻿using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Models;
 
-namespace MauiPdfGenerator.Fluent.Builders.Elements;
+namespace MauiPdfGenerator.Fluent.Builders.Views;
 
 internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHorizontalLine, IPdfLayoutChildHorizontalLine, IPdfGridChildHorizontalLine, IPdfHorizontalLine
 {

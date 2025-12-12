@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Fluent.Builders.Layouts;
@@ -23,11 +23,11 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
     private Color? _backgroundColorOverride;
     private PageOrientationType? _pageOrientationOverride;
     private PdfFontIdentifier? _pageDefaultFontFamily;
-    private float _pageDefaultFontSize = Common.Models.Elements.PdfParagraphData.DefaultFontSize;
-    private Color _pageDefaultTextColor = Common.Models.Elements.PdfParagraphData.DefaultTextColor;
-    private FontAttributes _pageDefaultFontAttributes = Common.Models.Elements.PdfParagraphData.DefaultFontAttributes;
-    private TextDecorations _pageDefaultTextDecorations = Common.Models.Elements.PdfParagraphData.DefaultTextDecorations;
-    private TextTransform _pageDefaultTextTransform = Common.Models.Elements.PdfParagraphData.DefaultTextTransform;
+    private float _pageDefaultFontSize = Common.Models.Views.PdfParagraphData.DefaultFontSize;
+    private Color _pageDefaultTextColor = Common.Models.Views.PdfParagraphData.DefaultTextColor;
+    private FontAttributes _pageDefaultFontAttributes = Common.Models.Views.PdfParagraphData.DefaultFontAttributes;
+    private TextDecorations _pageDefaultTextDecorations = Common.Models.Views.PdfParagraphData.DefaultTextDecorations;
+    private TextTransform _pageDefaultTextTransform = Common.Models.Views.PdfParagraphData.DefaultTextTransform;
 
     public PdfResourceDictionary PageResources { get; } = new(); 
 
@@ -62,7 +62,7 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
     public IPdfConfigurablePage<TContent> Padding(float leftPadding, float topPadding, float rightPadding, float bottomPadding) { _paddingOverride = new Thickness(leftPadding, topPadding, rightPadding, bottomPadding); return this; }
     public IPdfConfigurablePage<TContent> Padding(DefaultPagePaddingType defaultPaddingType) { _paddingOverride = PdfPagePaddingTypeCalculator.GetThickness(defaultPaddingType); return this; }
     public IPdfConfigurablePage<TContent> BackgroundColor(Color backgroundColor) { _backgroundColorOverride = backgroundColor; return this; }
-    public IPdfConfigurablePage<TContent> DefaultTextColor(Color color) { _pageDefaultTextColor = color ?? Common.Models.Elements.PdfParagraphData.DefaultTextColor; return this; }
+    public IPdfConfigurablePage<TContent> DefaultTextColor(Color color) { _pageDefaultTextColor = color ?? Common.Models.Views.PdfParagraphData.DefaultTextColor; return this; }
     public IPdfConfigurablePage<TContent> DefaultTextDecorations(TextDecorations decorations) { _pageDefaultTextDecorations = decorations; return this; }
     public IPdfConfigurablePage<TContent> DefaultTextTransform(TextTransform transform) { _pageDefaultTextTransform = transform; return this; }
     public IPdfConfigurablePage<TContent> DefaultFont(Action<IPdfFontDefaultsBuilder> fontDefaults)

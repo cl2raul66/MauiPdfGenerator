@@ -1,9 +1,9 @@
 ﻿using MauiPdfGenerator.Common.Enums;
-using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Models;
 using MauiPdfGenerator.Fluent.Utils;
 using Moq;

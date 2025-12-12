@@ -1,5 +1,5 @@
-﻿using MauiPdfGenerator.Core.Models;
-using MauiPdfGenerator.Common.Models.Elements;
+using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Common.Models.Views;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using MauiPdfGenerator.Diagnostics;
@@ -7,7 +7,7 @@ using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
 using System.Diagnostics;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk.Elements;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 
 internal class ImageRenderer : IElementRenderer
 {

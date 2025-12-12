@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Interfaces.Elements;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
 

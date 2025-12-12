@@ -1,6 +1,6 @@
-﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core.Exceptions;
-using MauiPdfGenerator.Core.Implementation.Sk.Elements;
+using MauiPdfGenerator.Core.Implementation.Sk.Views;
 using MauiPdfGenerator.Core.Implementation.Sk.Pages;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics.Interfaces;

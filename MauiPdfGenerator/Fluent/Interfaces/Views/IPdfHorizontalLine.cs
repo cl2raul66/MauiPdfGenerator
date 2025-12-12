@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces.Elements;
+namespace MauiPdfGenerator.Fluent.Interfaces.Views;
 
 public interface IPdfHorizontalLine<TSelf> : IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
 {

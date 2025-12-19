@@ -13,7 +13,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		
+
 		<PackageIcon>logo.png</PackageIcon>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MauiPdfGenerator</Title>
@@ -32,10 +32,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <InternalsVisibleTo Include="MauiPdfGenerator.Tests" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Essentials" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
@@ -43,19 +39,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Include="..\Media\Img\logo.png">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
-	  <None Include="..\README.md">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
-	  <None Include="Fluent\Interfaces\Pages\IPdfPageChildHorizontalLine.cs" />
+		<None Include="..\Media\Img\logo.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
+		<ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
 	</ItemGroup>
 
 </Project>

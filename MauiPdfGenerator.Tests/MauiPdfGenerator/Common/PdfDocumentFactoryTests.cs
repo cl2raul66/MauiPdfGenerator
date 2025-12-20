@@ -1,7 +1,6 @@
 using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Diagnostics.Interfaces;
-using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Builders;
 using Microsoft.Extensions.Logging;
 using Moq;

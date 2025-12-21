@@ -2,7 +2,6 @@
 using MauiPdfGenerator.Core.Implementation.Sk;
 using SkiaSharp;
 using MauiPdfGenerator.Fluent.Enums;
-using Microsoft.Maui.Graphics;
 
 namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Core.Implementation.Sk;
 

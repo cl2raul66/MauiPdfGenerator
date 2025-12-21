@@ -80,4 +80,61 @@ public class FluentApiTests
         var pagesField = typeof(PdfDocumentBuilder).GetField("_pages", BindingFlags.NonPublic | BindingFlags.Instance);
         return pagesField?.GetValue(builder) as List<IPdfPageBuilder>;
     }
+
+    [Fact]
+    public void CreateDocument_WithImage_SetsPropertiesCorrectly()
+    {
+        // Arrange
+        var fontRegistry = new PdfFontRegistryBuilder();
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var mockDiagnosticSink = new Mock<IDiagnosticSink>();
+        var mockCoreGenerator = new Mock<IPdfCoreGenerator>();
+
+        var factory = new PdfDocumentFactory(
+            fontRegistry,
+            mockLoggerFactory.Object,
+            mockDiagnosticSink.Object,
+            mockCoreGenerator.Object);
+
+        var documentBuilder = factory.CreateDocument();
+        var expectedAspect = Aspect.AspectFill;
+        var expectedWidth = 150.0f;
+        using var imageStream = new MemoryStream();
+
+        // Act
+        documentBuilder
+            .ContentPage()
+            .Content(c =>
+            {
+                c.Children(ch =>
+                {
+                    ch.Image(imageStream)
+                        .Aspect(expectedAspect)
+                        .WidthRequest(expectedWidth);
+                });
+            });
+
+        // Assert
+        var concreteBuilder = documentBuilder as PdfDocumentBuilder;
+        Assert.NotNull(concreteBuilder);
+        var pages = GetInternalPages(concreteBuilder);
+        Assert.NotNull(pages);
+        Assert.Single(pages);
+
+        var pageBuilder = pages.First() as IPdfContentPageBuilder;
+        Assert.NotNull(pageBuilder);
+
+        var content = pageBuilder.GetContent() as PdfVerticalStackLayoutData;
+        Assert.NotNull(content);
+        Assert.Single(content.GetChildren);
+
+        var image = content.GetChildren.First() as PdfImageData;
+        Assert.NotNull(image);
+        Assert.Equal(imageStream, image.ImageStream);
+        Assert.Equal(expectedAspect, image.CurrentAspect);
+        Assert.Equal(expectedWidth, image.GetWidthRequest);
+    }
 }

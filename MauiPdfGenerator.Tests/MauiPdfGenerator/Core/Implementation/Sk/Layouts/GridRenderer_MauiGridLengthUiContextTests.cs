@@ -1,4 +1,5 @@
 using System;
+using System;
 using System.Runtime.InteropServices;
 
 // Aliases para evitar ambigüedades con MAUI
@@ -15,7 +16,11 @@ namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Layouts
         {
             // Instanciar MAUI ColumnDefinition sin contexto de UI debería lanzar COMException
             var ex = Assert.Throws<COMException>(() => new MauiColumnDefinition(MauiGridLength.Auto));
-            Assert.Contains("Class not registered", ex.Message);
+            // Verificar código de error COM (0x80040154) sin depender del texto en español
+            Assert.Equal(unchecked((int)0x80040154), ex.HResult);
         }
+    }
+}
+
     }
 }

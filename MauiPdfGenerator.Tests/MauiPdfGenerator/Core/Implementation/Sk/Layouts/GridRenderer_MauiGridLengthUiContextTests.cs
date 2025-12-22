@@ -1,5 +1,4 @@
 using System;
-using System;
 using System.Runtime.InteropServices;
 
 // Aliases para evitar ambigüedades con MAUI
@@ -19,8 +18,5 @@ namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Layouts
             // Verificar código de error COM (0x80040154) sin depender del texto en español
             Assert.Equal(unchecked((int)0x80040154), ex.HResult);
         }
-    }
-}
-
     }
 }

@@ -6,7 +6,7 @@ namespace MauiPdfGenerator.Common.Models;
 /// Representa una medida de longitud para filas y columnas de grid en PDF.
 /// Equivalente a GridLength de .NET MAUI pero optimizado para float y sin dependencias de UI.
 /// </summary>
-internal readonly record struct PdfGridLength(float Value, PdfGridUnitType GridUnitType)
+public readonly record struct PdfGridLength(float Value, PdfGridUnitType GridUnitType)
 {
     /// <summary>
     /// Unidad absoluta (puntos).

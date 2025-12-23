@@ -31,7 +31,7 @@ internal enum PdfPropertyPriority
 /// Define los tipos de unidades para medidas de grid en PDF.
 /// Similar a GridUnitType de .NET MAUI pero optimizado para el motor de PDF.
 /// </summary>
-internal enum PdfGridUnitType
+public enum PdfGridUnitType
 {
     /// <summary>
     /// Unidad absoluta en puntos (pt).

@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Common.Enums;
+namespace MauiPdfGenerator.Common.Enums;
 
 /// <summary>
 /// Define la jerarquía de autoridad para el valor de una propiedad.
@@ -21,8 +21,30 @@ internal enum PdfPropertyPriority
     /// </summary>
     ExplicitStyle = 2,
 
-    /// <summary>
-    /// Valor aplicado directamente por el usuario en el Builder. Prioridad máxima.
-    /// </summary>
+/// <summary>
+/// Valor aplicado directamente por el usuario en el Builder. Prioridad máxima.
+/// </summary>
     Local = 3
+}
+
+/// <summary>
+/// Define los tipos de unidades para medidas de grid en PDF.
+/// Similar a GridUnitType de .NET MAUI pero optimizado para el motor de PDF.
+/// </summary>
+internal enum PdfGridUnitType
+{
+    /// <summary>
+    /// Unidad absoluta en puntos (pt).
+    /// </summary>
+    Absolute,
+
+    /// <summary>
+    /// Unidad automática: el tamaño se determina por el contenido.
+    /// </summary>
+    Auto,
+
+    /// <summary>
+    /// Unidad proporcional: ocupa el espacio restante proporcionalmente.
+    /// </summary>
+    Star
 }

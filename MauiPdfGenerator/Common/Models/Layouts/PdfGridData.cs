@@ -1,12 +1,13 @@
-﻿using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models.Styling;
+using MauiPdfGenerator.Common.Models;
 
 namespace MauiPdfGenerator.Common.Models.Layouts;
 
 internal class PdfGridData : PdfLayoutElementData, IPdfLayoutElement
 {
-    internal IReadOnlyList<RowDefinition> GetRowDefinitions { get; private set; } = [];
-    internal IReadOnlyList<ColumnDefinition> GetColumnDefinitions { get; private set; } = [];
+internal IReadOnlyList<PdfRowDefinition> GetRowDefinitions { get; private set; } = [];
+    internal IReadOnlyList<PdfColumnDefinition> GetColumnDefinitions { get; private set; } = [];
 
     internal PdfStyledProperty<double> RowSpacingProp { get; } = new(0);
     internal PdfStyledProperty<double> ColumnSpacingProp { get; } = new(0);
@@ -25,8 +26,8 @@ internal class PdfGridData : PdfLayoutElementData, IPdfLayoutElement
         ColumnSpacingProp.Set(original.ColumnSpacingProp.Value, PdfPropertyPriority.Local);
     }
 
-    internal void SetRowDefinitions(IReadOnlyList<RowDefinition> definitions) => GetRowDefinitions = definitions;
-    internal void SetColumnDefinitions(IReadOnlyList<ColumnDefinition> definitions) => GetColumnDefinitions = definitions;
+    internal void SetRowDefinitions(IReadOnlyList<PdfRowDefinition> definitions) => GetRowDefinitions = definitions;
+    internal void SetColumnDefinitions(IReadOnlyList<PdfColumnDefinition> definitions) => GetColumnDefinitions = definitions;
 
     internal void SetRowSpacing(double value)
     {

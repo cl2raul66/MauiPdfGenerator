@@ -36,8 +36,8 @@ public class GridRendererTests
         var grid = new PdfGridData();
         var paragraph = new PdfParagraphData("Test");
         grid.Add(paragraph);
-        grid.SetColumnDefinitions([new ColumnDefinition(GridLength.Auto)]);
-        grid.SetRowDefinitions([new RowDefinition(GridLength.Auto)]);
+        grid.SetColumnDefinitions([new PdfColumnDefinition(PdfGridLength.Auto)]);
+        grid.SetRowDefinitions([new PdfRowDefinition(PdfGridLength.Auto)]);
 
         var context = CreateContext(grid);
 
@@ -63,8 +63,8 @@ public class GridRendererTests
         var grid = new PdfGridData();
         var paragraph = new PdfParagraphData("Test");
         grid.Add(paragraph);
-        grid.SetColumnDefinitions([new ColumnDefinition(GridLength.Auto)]);
-        grid.SetRowDefinitions([new RowDefinition(GridLength.Auto)]);
+        grid.SetColumnDefinitions([new PdfColumnDefinition(PdfGridLength.Auto)]);
+        grid.SetRowDefinitions([new PdfRowDefinition(PdfGridLength.Auto)]);
 
         var context = CreateContext(grid);
 

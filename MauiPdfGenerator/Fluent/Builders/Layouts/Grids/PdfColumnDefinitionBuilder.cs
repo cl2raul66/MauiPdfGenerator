@@ -9,29 +9,22 @@ internal class PdfColumnDefinitionBuilder : IPdfColumnDefinitionBuilder
     private readonly List<PdfColumnDefinition> _columns = [];
     public IReadOnlyList<PdfColumnDefinition> Columns => _columns.AsReadOnly();
 
-    public IPdfColumnDefinitionBuilder GridLength(GridLength width)
+    public IPdfColumnDefinitionBuilder GridLength(PdfGridLength width)
     {
-        var pdfGridLength = ConvertToPdfGridLength(width);
-        _columns.Add(new PdfColumnDefinition(pdfGridLength));
+        _columns.Add(new PdfColumnDefinition(width));
         return this;
     }
 
-    public IPdfColumnDefinitionBuilder GridLength(GridUnitType gridUnitType, double value = 1)
+    public IPdfColumnDefinitionBuilder GridLength(PdfGridUnitType gridUnitType, double value = 1)
     {
-        var pdfGridLength = ConvertToPdfGridLength(new GridLength(value, gridUnitType));
-        _columns.Add(new PdfColumnDefinition(pdfGridLength));
-        return this;
-    }
-
-    private static PdfGridLength ConvertToPdfGridLength(GridLength gridLength)
-    {
-        var pdfUnitType = gridLength.GridUnitType switch
+        var pdfGridLength = gridUnitType switch
         {
-            GridUnitType.Absolute => PdfGridUnitType.Absolute,
-            GridUnitType.Auto => PdfGridUnitType.Auto,
-            GridUnitType.Star => PdfGridUnitType.Star,
-            _ => throw new ArgumentOutOfRangeException(nameof(gridLength.GridUnitType))
+            PdfGridUnitType.Absolute => PdfGridLength.FromAbsolute((float)value),
+            PdfGridUnitType.Auto => PdfGridLength.Auto,
+            PdfGridUnitType.Star => PdfGridLength.FromStar((float)value),
+            _ => throw new ArgumentOutOfRangeException(nameof(gridUnitType))
         };
-        return new PdfGridLength((float)gridLength.Value, pdfUnitType);
+        _columns.Add(new PdfColumnDefinition(pdfGridLength));
+        return this;
     }
 }

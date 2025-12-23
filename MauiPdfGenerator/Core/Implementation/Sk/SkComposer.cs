@@ -14,7 +14,7 @@ namespace MauiPdfGenerator.Core.Implementation.Sk;
 internal class SkComposer : IPdfCoreGenerator
 {
     private readonly PageRendererFactory _pageRendererFactory = new();
-    private readonly ElementRendererFactory _elementRendererFactory = new();
+    private readonly IElementRendererFactory _elementRendererFactory = new ElementRendererFactory();
     private readonly ILogger<SkComposer> _logger;
     private readonly IDiagnosticSink _diagnosticSink;
     private readonly IVisualDiagnosticStore? _visualStore;

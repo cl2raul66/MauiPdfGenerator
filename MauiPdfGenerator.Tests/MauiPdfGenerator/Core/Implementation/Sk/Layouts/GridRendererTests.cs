@@ -10,7 +10,6 @@ using MauiPdfGenerator.Diagnostics.Interfaces;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Microsoft.Maui.Layouts;
 
 namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Layouts;
 
@@ -18,14 +17,14 @@ public class GridRendererTests
 {
     private readonly Mock<ILogger> _mockLogger;
     private readonly Mock<IDiagnosticSink> _mockDiagnosticSink;
-    private readonly Mock<ElementRendererFactory> _mockRendererFactory;
+    private readonly Mock<IElementRendererFactory> _mockRendererFactory;
     private readonly GridRenderer _renderer;
 
     public GridRendererTests()
     {
         _mockLogger = new Mock<ILogger>();
         _mockDiagnosticSink = new Mock<IDiagnosticSink>();
-        _mockRendererFactory = new Mock<ElementRendererFactory>();
+        _mockRendererFactory = new Mock<IElementRendererFactory>();
         _renderer = new GridRenderer();
     }
 

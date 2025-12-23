@@ -11,7 +11,7 @@ internal record PdfGenerationContext(
     PdfFontRegistryBuilder FontRegistry,
     Dictionary<object, object> LayoutState,
     ILogger Logger,
-    ElementRendererFactory RendererFactory,
+    IElementRendererFactory RendererFactory,
     IDiagnosticSink DiagnosticSink,
     object? Element = null
 );

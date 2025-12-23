@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 
 		<LangVersion>latest</LangVersion>
-		
+
 		<IsRoslynAnalyzer>true</IsRoslynAnalyzer>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
@@ -42,6 +42,12 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" Pack="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>MauiPdfGenerator.SourceGenerators.Tests</_Parameter1>
+		</AssemblyAttribute>
 	</ItemGroup>
 
 </Project>

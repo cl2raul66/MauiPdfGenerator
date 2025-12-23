@@ -1,4 +1,6 @@
-﻿using MauiPdfGenerator;
+using MauiPdfGenerator;
+using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
@@ -551,7 +553,7 @@ public partial class MainPage : ContentPage
                     ch.Grid(g =>
                     {
                         g.ColumnSpacing(10).Padding(10).BackgroundColor(Colors.WhiteSmoke);
-                        g.ColumnDefinitions(cd => { cd.GridLength(GridLength.Auto); cd.GridLength(GridLength.Star); });
+                        g.ColumnDefinitions(cd => { cd.GridLength(PdfGridLength.Auto); cd.GridLength(PdfGridLength.Star); });
 
                         g.Children(cells =>
                         {
@@ -579,7 +581,7 @@ public partial class MainPage : ContentPage
                     ch.Grid(g =>
                     {
                         g.BackgroundColor(Colors.AliceBlue).HeightRequest(100);
-                        g.ColumnDefinitions(cd => { cd.GridLength(GridUnitType.Star); cd.GridLength(GridUnitType.Star); });
+                        g.ColumnDefinitions(cd => { cd.GridLength(PdfGridUnitType.Star); cd.GridLength(PdfGridUnitType.Star); });
 
                         g.Children(cells =>
                         {
@@ -604,9 +606,9 @@ public partial class MainPage : ContentPage
                         table.RowSpacing(5);
                         table.ColumnDefinitions(cd =>
                         {
-                            cd.GridLength(40);              // Miniatura
-                            cd.GridLength(GridUnitType.Star); // Descripción
-                            cd.GridLength(60);              // Total
+                            cd.GridLength(PdfGridLength.FromAbsolute(40));              // Miniatura
+                            cd.GridLength(PdfGridLength.Star); // Descripción
+                            cd.GridLength(PdfGridLength.FromAbsolute(60));              // Total
                         });
 
                         // Encabezados

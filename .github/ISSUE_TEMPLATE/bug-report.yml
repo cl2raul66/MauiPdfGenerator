@@ -1,26 +1,22 @@
 name: 🐞 Reporte de Error
 description: Crea un reporte para ayudarnos a mejorar
-title: "[Bug]: "
-labels: ["type: bug"]
+title: "fix: "
+labels: ["fix"]
 body:
   - type: markdown
     attributes:
       value: |
         Gracias por tomarte el tiempo de reportar esto.
 
-  - type: dropdown
-    id: scope
+  - type: textarea
+    id: tasks
     attributes:
-      label: ¿Qué componente está fallando?
-      description: Selecciona la librería afectada.
-      options:
-        - "MauiPdfGenerator (Core)"
-        - "MauiPdfGenerator.Diagnostics"
-        - "MauiPdfGenerator.SourceGenerators"
-        - "Sample App"
-        - "CI/CD (Pipelines)"
+      label: Plan de Implementación
+      description: Lista las partes técnicas necesarias (Core, SourceGen, etc.) para resolver esto.
+      value: |
+        - [ ] 
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: description

@@ -54,8 +54,12 @@
 	  <None Include="Fluent\Interfaces\Pages\IPdfPageChildHorizontalLine.cs" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="'$(Configuration)' != 'Release'">
 	  <ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+	  <PackageReference Include="RandAMediaLabGroup.MauiPdfGenerator.Diagnostics" Version="$(DiagnosticsVersion)" />
 	</ItemGroup>
 
 </Project>

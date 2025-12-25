@@ -1,7 +1,10 @@
-﻿namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
+using MauiPdfGenerator.Common.Enums;
+using MauiPdfGenerator.Common.Models;
+
+namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
 public interface IPdfColumnDefinitionBuilder
 {
-    IPdfColumnDefinitionBuilder GridLength(GridLength width);
-    IPdfColumnDefinitionBuilder GridLength(GridUnitType gridUnitType, double value = 1);
+    IPdfColumnDefinitionBuilder GridLength(PdfGridLength width);
+    IPdfColumnDefinitionBuilder GridLength(PdfGridUnitType gridUnitType, double value = 1);
 }

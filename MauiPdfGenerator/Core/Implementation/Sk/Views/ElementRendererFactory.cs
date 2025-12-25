@@ -4,7 +4,7 @@ using MauiPdfGenerator.Common.Models.Layouts;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 
-internal class ElementRendererFactory
+internal class ElementRendererFactory : IElementRendererFactory
 {
     private readonly Dictionary<Type, IElementRenderer> _renderers;
 

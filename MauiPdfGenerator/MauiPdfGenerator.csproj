@@ -59,7 +59,6 @@
 			<_Parameter1>MauiPdfGenerator.IntegrationTests</_Parameter1>
 		</AssemblyAttribute>
 	</ItemGroup>
-	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'Release'">
 	  <PackageReference Include="RandAMediaLabGroup.MauiPdfGenerator.Diagnostics" Version="$(DiagnosticsVersion)" />

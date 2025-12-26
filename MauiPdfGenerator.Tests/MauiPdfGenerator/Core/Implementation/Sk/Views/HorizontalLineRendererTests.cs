@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Microsoft.Maui;
+using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Builders;
 
 namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Views;
 
@@ -68,8 +70,8 @@ public class HorizontalLineRendererTests
     private PdfGenerationContext CreateContext(PdfHorizontalLineData line)
     {
         var pageData = new PdfPageData(
-            Fluent.Enums.PageSizeType.A4,
-            Fluent.Enums.PageOrientationType.Portrait,
+            PageSizeType.A4,
+            PageOrientationType.Portrait,
             new Thickness(0),
             null,
             new PdfVerticalStackLayoutData(),
@@ -83,7 +85,7 @@ public class HorizontalLineRendererTests
 
         return new PdfGenerationContext(
             pageData,
-            new Fluent.Builders.PdfFontRegistryBuilder(),
+            new PdfFontRegistryBuilder(),
             new Dictionary<object, object>(),
             _mockLogger.Object,
             _rendererFactory,

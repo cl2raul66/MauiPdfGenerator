@@ -61,6 +61,15 @@ public partial class MainPage : ContentPage
                         ch.Paragraph("Color de texto (TextColor) Rojo.").TextColor(Colors.Red);
                         ch.HorizontalLine();
 
+                        //ch.Paragraph(t =>
+                        //{
+                        //    t.Span("Hola ").FontSize(14);
+                        //    t.Span("Mundo").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
+                        //    t.Span(" Cruel");
+                        //})
+                        //.TextColor(Colors.Azure);
+                        //ch.HorizontalLine();
+
                         // --- SECCIÓN 3: Alineación del Contenido (TextAlignment) ---
                         ch.Paragraph("3. Alineación del Contenido (TextAlignment)").FontSize(18).FontAttributes(FontAttributes.Bold);
                         ch.Paragraph("Estas propiedades alinean el texto HORIZONTALMENTE DENTRO de la caja del párrafo. Usamos 'Start' y 'End' en lugar de 'Left' y 'Right' para dar soporte a la internacionalización (se adaptan automáticamente a idiomas de escritura de izquierda a derecha (LTR) y de derecha a izquierda (RTL)). La alineación vertical se demuestra en la siguiente sección.").FontSize(10).FontAttributes(FontAttributes.Italic);

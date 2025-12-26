@@ -7,6 +7,8 @@ using MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 using MauiPdfGenerator.Core.Implementation.Sk.Views;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics.Interfaces;
+using MauiPdfGenerator.Fluent.Builders;
+using MauiPdfGenerator.Fluent.Enums;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -92,8 +94,8 @@ public class GridRendererTests
     private PdfGenerationContext CreateContext(PdfGridData grid)
     {
         var pageData = new PdfPageData(
-            Fluent.Enums.PageSizeType.A4,
-            Fluent.Enums.PageOrientationType.Portrait,
+            PageSizeType.A4,
+            PageOrientationType.Portrait,
             new Thickness(0),
             null,
             new PdfVerticalStackLayoutData(),
@@ -107,7 +109,7 @@ public class GridRendererTests
 
         return new PdfGenerationContext(
             pageData,
-            new Fluent.Builders.PdfFontRegistryBuilder(),
+            new PdfFontRegistryBuilder(),
             new Dictionary<object, object>(),
             _mockLogger.Object,
             _mockRendererFactory.Object,

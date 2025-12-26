@@ -12,6 +12,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Microsoft.Maui;
+using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Builders;
 
 namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Layouts;
 
@@ -111,8 +113,8 @@ public class PaginationTests
     private PdfGenerationContext CreateContext(PdfVerticalStackLayoutData vsl)
     {
         var pageData = new PdfPageData(
-            Fluent.Enums.PageSizeType.A4,
-            Fluent.Enums.PageOrientationType.Portrait,
+            PageSizeType.A4,
+            PageOrientationType.Portrait,
             new Thickness(0),
             null,
             vsl,
@@ -126,7 +128,7 @@ public class PaginationTests
 
         return new PdfGenerationContext(
             pageData,
-            new Fluent.Builders.PdfFontRegistryBuilder(),
+            new PdfFontRegistryBuilder(),
             new Dictionary<object, object>(),
             _mockLogger.Object,
             new ElementRendererFactory(),

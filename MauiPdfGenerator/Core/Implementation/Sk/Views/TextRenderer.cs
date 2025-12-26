@@ -30,10 +30,47 @@ internal class TextRenderer : IElementRenderer
         float VisualBottomOffset = 0
     );
 
+    // --- Multi-Span Records ---
+    private record ProcessedSpan(
+        string Text,
+        SKFont Font,
+        SKPaint Paint,
+        TextDecorations TextDecorations,
+        float SpaceWidth
+    );
+
+    private record VisualSpanFragment(
+        string Text,
+        ProcessedSpan SourceSpan,
+        float Width
+    );
+
+    private record VisualLine(
+        List<VisualSpanFragment> Fragments,
+        float Width,
+        float Height,
+        float BaselineAscent,
+        float BaselineDescent
+    );
+
+    private record MultiSpanLayoutCache(
+        List<VisualLine>? LinesToDraw = null,
+        PdfRect? FinalArrangedRect = null,
+        TextAlignment HorizontalAlignment = TextAlignment.Start,
+        TextAlignment VerticalTextAlignment = TextAlignment.Start,
+        List<ProcessedSpan>? OriginalSpans = null,
+        List<VisualLine>? AllMeasuredLines = null
+    );
+
     public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
     {
         if (context.Element is not PdfParagraphData paragraph)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
+
+        if (paragraph.HasSpans)
+        {
+            return await MeasureSpansAsync(paragraph, context, availableSize);
+        }
 
         var (font, paint, textToRender, horizontalAlignment, verticalTextAlignment, lineBreakMode, textDecorations, textTransform) = await GetTextPropertiesAsync(paragraph, context);
 
@@ -98,7 +135,12 @@ internal class TextRenderer : IElementRenderer
         if (context.Element is not PdfParagraphData paragraph)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
 
-        if (!context.LayoutState.TryGetValue(paragraph, out var state) || state is not TextLayoutCache baseCache)
+        if (paragraph.HasSpans)
+        {
+            return ArrangeSpansAsync(paragraph, finalRect, context);
+        }
+
+        if (!context.LayoutState.TryGetValue(paragraph, out var stateObj) || stateObj is not TextLayoutCache cache)
         {
             context.Logger.LogError("Text layout cache not found.");
             return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
@@ -108,12 +150,12 @@ internal class TextRenderer : IElementRenderer
         if (paragraph.GetHeightRequest.HasValue)
         {
             // CASO A: Caja Fija (Atomic Box)
-            return ArrangeAsFixedBox(finalRect, paragraph, baseCache, context);
+            return ArrangeAsFixedBox(finalRect, paragraph, cache, context);
         }
         else
         {
             // CASO B: Flujo Continuo (Flow Text)
-            return ArrangeAsFlowText(finalRect, paragraph, baseCache, context);
+            return ArrangeAsFlowText(finalRect, paragraph, cache, context);
         }
     }
 
@@ -205,24 +247,29 @@ internal class TextRenderer : IElementRenderer
         if (context.Element is not PdfParagraphData paragraph)
             throw new InvalidOperationException($"Element in context is not a {nameof(PdfParagraphData)} or is null.");
 
-        if (!context.LayoutState.TryGetValue(paragraph, out var cachedState) || cachedState is not TextLayoutCache textCache)
+        if (paragraph.HasSpans)
+        {
+            return RenderSpansAsync(canvas, paragraph, context);
+        }
+
+        if (!context.LayoutState.TryGetValue(paragraph, out var stateObj) || stateObj is not TextLayoutCache cache)
         {
             return Task.CompletedTask;
         }
 
-        var linesToDraw = textCache.LinesToDrawOnThisPage;
-        var pdfRenderRect = textCache.FinalArrangedRect;
+        var linesToDraw = cache.LinesToDrawOnThisPage;
+        var pdfRenderRect = cache.FinalArrangedRect;
 
         if (linesToDraw is null || linesToDraw.Count == 0 || pdfRenderRect is null)
         {
-            textCache.Font.Dispose();
-            textCache.Paint.Dispose();
+            cache.Font.Dispose();
+            cache.Paint.Dispose();
             return Task.CompletedTask;
         }
 
         var (font, paint, lineAdvance, horizontalAlignment, verticalTextAlignment, textDecorations, visualTopOffset) =
-            (textCache.Font, textCache.Paint, textCache.LineAdvance, textCache.HorizontalAlignment,
-             textCache.VerticalTextAlignment, textCache.TextDecorations, textCache.VisualTopOffset);
+            (cache.Font, cache.Paint, cache.LineAdvance, cache.HorizontalAlignment,
+             cache.VerticalTextAlignment, cache.TextDecorations, cache.VisualTopOffset);
 
         var renderRect = new SKRect(pdfRenderRect.Value.Left, pdfRenderRect.Value.Top, pdfRenderRect.Value.Right, pdfRenderRect.Value.Bottom);
 
@@ -287,7 +334,7 @@ internal class TextRenderer : IElementRenderer
                 DrawJustifiedLine(canvas, line, contentRect.Left, contentRect.Width, baselineY, font, paint);
                 if (textDecorations is not TextDecorations.None)
                 {
-                    DrawTextDecorations(canvas, font, paint, textDecorations, contentRect.Left, baselineY, contentRect.Width);
+                    DrawTextDecorations(canvas, line, contentRect.Left, baselineY, font, paint, textDecorations);
                 }
             }
             else
@@ -299,7 +346,7 @@ internal class TextRenderer : IElementRenderer
 
                 if (textDecorations is not TextDecorations.None)
                 {
-                    DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                    DrawTextDecorations(canvas, line, drawX, baselineY, font, paint, textDecorations);
                 }
             }
 
@@ -353,8 +400,9 @@ internal class TextRenderer : IElementRenderer
         return Task.CompletedTask;
     }
 
-    private void DrawTextDecorations(SKCanvas canvas, SKFont font, SKPaint paint, TextDecorations decorations, float x, float baselineY, float width)
+    private void DrawTextDecorations(SKCanvas canvas, string text, float x, float baselineY, SKFont font, SKPaint paint, TextDecorations decorations)
     {
+        float width = font.MeasureText(text);
         float decorationThickness = Math.Max(1f, font.Size / 12f);
         using var decorationPaint = new SKPaint
         {
@@ -633,4 +681,200 @@ internal class TextRenderer : IElementRenderer
         }
         return resultingLines;
     }
+
+    #region Multi-Span Implementation
+
+    private async Task<PdfLayoutInfo> MeasureSpansAsync(PdfParagraphData paragraph, PdfGenerationContext context, SKSize availableSize)
+    {
+        var processedSpans = new List<ProcessedSpan>();
+        foreach (var spanData in paragraph.Spans)
+        {
+            processedSpans.Add(await CreateProcessedSpanAsync(spanData, paragraph, context));
+        }
+
+        float maxWidth = paragraph.GetWidthRequest.HasValue
+            ? (float)paragraph.GetWidthRequest.Value - (float)paragraph.GetPadding.HorizontalThickness
+            : availableSize.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness;
+
+        var allLines = WrapSpansToLines(processedSpans, maxWidth);
+
+        float totalHeight = allLines.Sum(l => l.Height);
+        float boxWidth = paragraph.GetWidthRequest.HasValue ? (float)paragraph.GetWidthRequest.Value : (allLines.Count > 0 ? allLines.Max(l => l.Width) : 0) + (float)paragraph.GetPadding.HorizontalThickness;
+        float boxHeight = paragraph.GetHeightRequest.HasValue ? (float)paragraph.GetHeightRequest.Value : totalHeight + (float)paragraph.GetPadding.VerticalThickness;
+
+        context.LayoutState[paragraph] = new MultiSpanLayoutCache(
+            HorizontalAlignment: paragraph.CurrentHorizontalTextAlignment,
+            VerticalTextAlignment: paragraph.CurrentVerticalTextAlignment,
+            OriginalSpans: processedSpans,
+            AllMeasuredLines: allLines
+        );
+
+        return new PdfLayoutInfo(paragraph, boxWidth + (float)paragraph.GetMargin.HorizontalThickness, boxHeight + (float)paragraph.GetMargin.VerticalThickness);
+    }
+
+    private Task<PdfLayoutInfo> ArrangeSpansAsync(PdfParagraphData paragraph, PdfRect finalRect, PdfGenerationContext context)
+    {
+        if (!context.LayoutState.TryGetValue(paragraph, out var stateObj) || stateObj is not MultiSpanLayoutCache cache)
+            throw new InvalidOperationException("Layout cache not found for paragraph with spans.");
+
+        var allLines = cache.AllMeasuredLines ?? [];
+        float availableHeight = finalRect.Height - (float)paragraph.GetPadding.VerticalThickness;
+        float currentY = 0;
+        var linesForThisPage = new List<VisualLine>();
+
+        foreach (var line in allLines)
+        {
+            if (currentY + line.Height <= availableHeight)
+            {
+                linesForThisPage.Add(line);
+                currentY += line.Height;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        context.LayoutState[paragraph] = cache with
+        {
+            LinesToDraw = linesForThisPage,
+            FinalArrangedRect = finalRect
+        };
+
+        return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height));
+    }
+
+    private Task RenderSpansAsync(SKCanvas canvas, PdfParagraphData paragraph, PdfGenerationContext context)
+    {
+        if (!context.LayoutState.TryGetValue(paragraph, out var stateObj) || stateObj is not MultiSpanLayoutCache cache)
+            return Task.CompletedTask;
+
+        var lines = cache.LinesToDraw ?? [];
+        var rect = cache.FinalArrangedRect ?? PdfRect.Empty;
+
+        float currentY = rect.Top + (float)paragraph.GetPadding.Top;
+
+        foreach (var line in lines)
+        {
+            float currentX = rect.Left + (float)paragraph.GetPadding.Left;
+
+            // Simple horizontal alignment for the whole line
+            if (cache.HorizontalAlignment == TextAlignment.Center)
+                currentX += (rect.Width - (float)paragraph.GetPadding.HorizontalThickness - line.Width) / 2;
+            else if (cache.HorizontalAlignment == TextAlignment.End)
+                currentX += rect.Width - (float)paragraph.GetPadding.HorizontalThickness - line.Width;
+
+            foreach (var fragment in line.Fragments)
+            {
+                canvas.DrawText(fragment.Text, currentX, currentY + line.BaselineAscent, fragment.SourceSpan.Font, fragment.SourceSpan.Paint);
+                
+                if (fragment.SourceSpan.TextDecorations != TextDecorations.None)
+                {
+                    DrawTextDecorations(canvas, fragment.Text, currentX, currentY + line.BaselineAscent, fragment.SourceSpan.Font, fragment.SourceSpan.Paint, fragment.SourceSpan.TextDecorations);
+                }
+
+                currentX += fragment.Width;
+            }
+
+            currentY += line.Height;
+        }
+
+        DisposeSpans(cache.OriginalSpans);
+        return Task.CompletedTask;
+    }
+
+    private async Task<ProcessedSpan> CreateProcessedSpanAsync(PdfSpanData span, PdfParagraphData paragraph, PdfGenerationContext context)
+    {
+        float fontSize = span.FontSizeProp.Value ?? paragraph.CurrentFontSize;
+        Color textColor = span.TextColorProp.Value ?? paragraph.CurrentTextColor ?? PdfParagraphData.DefaultTextColor;
+        FontAttributes fontAttrs = span.FontAttributesProp.Value ?? paragraph.CurrentFontAttributes ?? PdfParagraphData.DefaultFontAttributes;
+        TextDecorations textDecs = span.TextDecorationsProp.Value ?? paragraph.CurrentTextDecorations ?? PdfParagraphData.DefaultTextDecorations;
+        
+        PdfFontIdentifier? family = span.FontFamilyProp.Value ?? paragraph.CurrentFontFamily;
+        var fontReg = family.HasValue ? context.FontRegistry.GetFontRegistration(family.Value) : paragraph.ResolvedFontRegistration;
+
+        string? filePathToLoad = fontReg?.FilePath;
+        string skiaFontAlias = family?.Alias ?? string.Empty;
+
+        var typeface = await SkiaUtils.CreateSkTypefaceAsync(
+            skiaFontAlias,
+            fontAttrs,
+            async (fileName) => 
+            {
+                if (string.IsNullOrEmpty(fileName)) return null;
+                try { return await FileSystem.OpenAppPackageFileAsync(fileName); }
+                catch { return null; }
+            },
+            filePathToLoad
+        );
+
+        var font = new SKFont(typeface, fontSize);
+        var paint = new SKPaint { Color = SkiaUtils.ConvertToSkColor(textColor), IsAntialias = true };
+
+        return new ProcessedSpan(span.Text, font, paint, textDecs, font.MeasureText(" "));
+    }
+
+    private List<VisualLine> WrapSpansToLines(List<ProcessedSpan> spans, float maxWidth)
+    {
+        var lines = new List<VisualLine>();
+        var currentFragments = new List<VisualSpanFragment>();
+        float currentLineWidth = 0;
+
+        foreach (var span in spans)
+        {
+            var words = span.Text.Split(' ');
+            for (int i = 0; i < words.Length; i++)
+            {
+                var word = words[i];
+                if (i < words.Length - 1) word += " ";
+                
+                float wordWidth = span.Font.MeasureText(word);
+
+                if (currentLineWidth + wordWidth > maxWidth && currentFragments.Count > 0)
+                {
+                    lines.Add(CreateVisualLine(currentFragments));
+                    currentFragments = new List<VisualSpanFragment>();
+                    currentLineWidth = 0;
+                }
+
+                currentFragments.Add(new VisualSpanFragment(word, span, wordWidth));
+                currentLineWidth += wordWidth;
+            }
+        }
+
+        if (currentFragments.Count > 0)
+        {
+            lines.Add(CreateVisualLine(currentFragments));
+        }
+
+        return lines;
+    }
+
+    private VisualLine CreateVisualLine(List<VisualSpanFragment> fragments)
+    {
+        float width = fragments.Sum(f => f.Width);
+        float maxAscent = 0;
+        float maxDescent = 0;
+
+        foreach (var f in fragments)
+        {
+            var metrics = f.SourceSpan.Font.Metrics;
+            maxAscent = Math.Max(maxAscent, -metrics.Ascent);
+            maxDescent = Math.Max(maxDescent, metrics.Descent);
+        }
+
+        return new VisualLine(fragments, width, maxAscent + maxDescent, maxAscent, maxDescent);
+    }
+
+    private void DisposeSpans(List<ProcessedSpan>? spans)
+    {
+        if (spans == null) return;
+        foreach (var span in spans)
+        {
+            span.Font?.Dispose();
+            span.Paint?.Dispose();
+        }
+    }
+
+    #endregion
 }

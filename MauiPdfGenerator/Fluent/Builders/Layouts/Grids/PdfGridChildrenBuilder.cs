@@ -2,6 +2,7 @@ using MauiPdfGenerator.Fluent.Builders.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts.Grids;
 
@@ -18,6 +19,13 @@ internal class PdfGridChildrenBuilder(PdfFontRegistryBuilder fontRegistry) : IPd
     public IPdfGridChildParagraph Paragraph(string text)
     {
         var builder = new PdfParagraphBuilder(text, _fontRegistry);
+        AddChild(builder);
+        return builder;
+    }
+
+    public IPdfGridChildParagraph Paragraph(Action<IPdfSpanConfigurator> configure)
+    {
+        var builder = new PdfParagraphBuilder(configure, _fontRegistry);
         AddChild(builder);
         return builder;
     }

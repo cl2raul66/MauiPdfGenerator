@@ -44,6 +44,10 @@ internal class PdfParagraphData : PdfElementData
 
     internal PdfFontRegistration? ResolvedFontRegistration { get; set; }
 
+    // --- Spans Support ---
+    internal IReadOnlyList<PdfSpanData> Spans { get; private set; } = [];
+    internal bool HasSpans => Spans.Count > 0;
+
     internal PdfParagraphData() : base() { Text = string.Empty; }
     internal PdfParagraphData(string text) : base() { Text = text ?? string.Empty; }
 
@@ -69,5 +73,10 @@ internal class PdfParagraphData : PdfElementData
         BackgroundColorProp.Set(original.BackgroundColorProp.Value, PdfPropertyPriority.Local);
         HorizontalOptionsProp.Set(original.HorizontalOptionsProp.Value, PdfPropertyPriority.Local);
         VerticalOptionsProp.Set(original.VerticalOptionsProp.Value, PdfPropertyPriority.Local);
+    }
+
+    internal void SetSpans(IReadOnlyList<PdfSpanData> spans)
+    {
+        Spans = spans ?? [];
     }
 }

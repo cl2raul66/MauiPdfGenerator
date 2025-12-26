@@ -23,6 +23,16 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
         _fontRegistry = fontRegistry;
     }
 
+    public PdfParagraphBuilder(Action<IPdfSpanConfigurator> configure, PdfFontRegistryBuilder fontRegistry)
+    {
+        _model = new PdfParagraphData(string.Empty);
+        _fontRegistry = fontRegistry;
+
+        var configurator = new PdfSpanConfigurator(fontRegistry);
+        configure(configurator);
+        _model.SetSpans(configurator.BuildSpans());
+    }
+
     public PdfElementData GetModel() => _model;
 
     // NOTA: Los métodos públicos retornan 'this' (el builder completo).

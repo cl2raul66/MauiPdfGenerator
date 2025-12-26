@@ -1,7 +1,5 @@
 using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Layouts;
-using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Interfaces;
@@ -29,7 +27,6 @@ public class DiagnosticIntegrationTests
         mockCoreGenerator.Setup(g => g.GenerateAsync(It.IsAny<PdfDocumentData>(), It.IsAny<string>(), It.IsAny<PdfFontRegistryBuilder>()))
             .Callback<PdfDocumentData, string, PdfFontRegistryBuilder>((data, path, fonts) =>
             {
-                // Simulate layout overflow diagnostic
                 mockDiagnosticSink.Object.Submit(new DiagnosticMessage(
                     DiagnosticSeverity.Warning,
                     "LAYOUT-001",
@@ -45,7 +42,6 @@ public class DiagnosticIntegrationTests
 
         var documentBuilder = factory.CreateDocument("dummy.pdf");
 
-        // Create content that might overflow
         documentBuilder
             .ContentPage()
             .Content(c =>
@@ -53,7 +49,7 @@ public class DiagnosticIntegrationTests
                 c.Children(ch =>
                 {
                     ch.Paragraph("Very long text that might overflow the page width and height constraints in a real scenario.")
-                        .WidthRequest(50f); // Force small width to simulate overflow
+                        .WidthRequest(50f); 
                 });
             });
 
@@ -79,7 +75,6 @@ public class DiagnosticIntegrationTests
         mockCoreGenerator.Setup(g => g.GenerateAsync(It.IsAny<PdfDocumentData>(), It.IsAny<string>(), It.IsAny<PdfFontRegistryBuilder>()))
             .Callback<PdfDocumentData, string, PdfFontRegistryBuilder>((data, path, fonts) =>
             {
-                // Simulate font not found diagnostic
                 mockDiagnosticSink.Object.Submit(new DiagnosticMessage(
                     DiagnosticSeverity.Error,
                     "RESOURCE-002",
@@ -102,7 +97,6 @@ public class DiagnosticIntegrationTests
                 c.Children(ch =>
                 {
                     ch.Paragraph("Text with missing font");
-                    // In real scenario, specifying a font not in registry would trigger this
                 });
             });
 
@@ -128,7 +122,6 @@ public class DiagnosticIntegrationTests
         mockCoreGenerator.Setup(g => g.GenerateAsync(It.IsAny<PdfDocumentData>(), It.IsAny<string>(), It.IsAny<PdfFontRegistryBuilder>()))
             .Callback<PdfDocumentData, string, PdfFontRegistryBuilder>((data, path, fonts) =>
             {
-                // Simulate image decode error diagnostic
                 mockDiagnosticSink.Object.Submit(new DiagnosticMessage(
                     DiagnosticSeverity.Error,
                     "RESOURCE-001",
@@ -144,7 +137,7 @@ public class DiagnosticIntegrationTests
 
         var documentBuilder = factory.CreateDocument("dummy.pdf");
 
-        using var invalidImageStream = new MemoryStream(new byte[] { 1, 2, 3 }); // Invalid image data
+        using var invalidImageStream = new MemoryStream([1, 2, 3]); 
 
         documentBuilder
             .ContentPage()

@@ -47,7 +47,7 @@ public class ImageRendererTests
         return new PdfGenerationContext(
             pageData,
             fontRegistry,
-            new Dictionary<object, object>(),
+            [],
             _mockLogger.Object,
             new ElementRendererFactory(),
             _mockDiagnosticSink.Object,
@@ -59,7 +59,6 @@ public class ImageRendererTests
     public async Task RenderAsync_WithValidImage_DrawsImageOnCanvas()
     {
         // Arrange
-        // Create a valid 1x1 pixel red bitmap to use as a stream
         using var bitmap = new SKBitmap(1, 1);
         using (var canvas = new SKCanvas(bitmap))
         {
@@ -73,7 +72,6 @@ public class ImageRendererTests
         var context = CreateContext(imageData);
 
         // Act
-        // We must call Measure and Arrange before Render to set the internal state
         var availableSize = new SKSize(100, 100);
         await _renderer.MeasureAsync(context, availableSize);
 
@@ -85,7 +83,6 @@ public class ImageRendererTests
         await _renderer.RenderAsync(renderCanvas, context);
 
         // Assert
-        // Ensure no exceptions are thrown during rendering
         Assert.True(true);
     }
 
@@ -102,7 +99,7 @@ public class ImageRendererTests
         var availableSize = new SKSize(100, 100);
         await _renderer.MeasureAsync(context, availableSize);
 
-        var finalRect = new PdfRect(10, 10, 80, 80); // x, y, width, height
+        var finalRect = new PdfRect(10, 10, 80, 80); 
         await _renderer.ArrangeAsync(finalRect, context);
 
         using var renderBitmap = new SKBitmap(100, 100);
@@ -110,7 +107,6 @@ public class ImageRendererTests
         await _renderer.RenderAsync(renderCanvas, context);
 
         // Assert
-        // Ensure no exceptions are thrown during rendering
         Assert.True(true);
     }
 }

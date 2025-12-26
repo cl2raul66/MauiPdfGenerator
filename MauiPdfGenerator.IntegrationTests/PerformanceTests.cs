@@ -23,7 +23,7 @@ public class PerformanceTests
         var mockDiagnosticSink = new Mock<IDiagnosticSink>();
         var mockCoreGenerator = new Mock<IPdfCoreGenerator>();
         mockCoreGenerator.Setup(g => g.GenerateAsync(It.IsAny<PdfDocumentData>(), It.IsAny<string>(), It.IsAny<PdfFontRegistryBuilder>()))
-            .Callback(async () => await Task.Delay(10)) // Simulate some processing time
+            .Callback(async () => await Task.Delay(10)) 
             .Returns(Task.CompletedTask);
 
         var factory = new PdfDocumentFactory(
@@ -49,7 +49,6 @@ public class PerformanceTests
             .SaveAsync();
         stopwatch.Stop();
 
-        // Assert - Should complete within reasonable time (less than 1 second for simple doc)
         Assert.True(stopwatch.ElapsedMilliseconds < 1000, $"Generation took {stopwatch.ElapsedMilliseconds}ms, expected < 1000ms");
     }
 
@@ -65,7 +64,7 @@ public class PerformanceTests
         var mockDiagnosticSink = new Mock<IDiagnosticSink>();
         var mockCoreGenerator = new Mock<IPdfCoreGenerator>();
         mockCoreGenerator.Setup(g => g.GenerateAsync(It.IsAny<PdfDocumentData>(), It.IsAny<string>(), It.IsAny<PdfFontRegistryBuilder>()))
-            .Callback(async () => await Task.Delay(20)) // Simulate processing for multiple elements
+            .Callback(async () => await Task.Delay(20)) 
             .Returns(Task.CompletedTask);
 
         var factory = new PdfDocumentFactory(
@@ -94,7 +93,6 @@ public class PerformanceTests
             .SaveAsync();
         stopwatch.Stop();
 
-        // Assert - Should still complete quickly even with more elements
         Assert.True(stopwatch.ElapsedMilliseconds < 2000, $"Generation took {stopwatch.ElapsedMilliseconds}ms, expected < 2000ms");
     }
 }

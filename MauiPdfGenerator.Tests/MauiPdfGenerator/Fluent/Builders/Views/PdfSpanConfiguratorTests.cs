@@ -2,7 +2,7 @@ using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Builders.Views;
 using Xunit;
 
-namespace MauiPdfGenerator.Tests.Fluent.Builders.Views;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Fluent.Builders.Views;
 
 public class PdfSpanConfiguratorTests
 {

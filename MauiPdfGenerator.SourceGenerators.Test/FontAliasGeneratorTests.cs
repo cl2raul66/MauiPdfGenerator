@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using MauiPdfGenerator.SourceGenerators;
 using Microsoft.CodeAnalysis.Text;
 using Xunit;
 using Verify = MauiPdfGenerator.SourceGenerators.Tests.CSharpSourceGeneratorVerifier<MauiPdfGenerator.SourceGenerators.FontAliasGenerator>;

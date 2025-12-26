@@ -13,9 +13,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Tests", "MauiPdfGenerator.Tests\MauiPdfGenerator.Tests.csproj", "{F05601AD-47DB-44C2-C17C-938364066B1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Diagnostics.Test", "MauiPdfGenerator.Diagnostics.Test\MauiPdfGenerator.Diagnostics.Test.csproj", "{37FCD63F-C630-46B9-A943-569D27F95221}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Diagnostics.Tests", "MauiPdfGenerator.Diagnostics.Test\MauiPdfGenerator.Diagnostics.Tests.csproj", "{37FCD63F-C630-46B9-A943-569D27F95221}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.SourceGenerators.Test", "MauiPdfGenerator.SourceGenerators.Test\MauiPdfGenerator.SourceGenerators.Test.csproj", "{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.SourceGenerators.Tests", "MauiPdfGenerator.SourceGenerators.Test\MauiPdfGenerator.SourceGenerators.Tests.csproj", "{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.IntegrationTests", "MauiPdfGenerator.IntegrationTests\MauiPdfGenerator.IntegrationTests.csproj", "{4D4A83BE-AA9E-1FD1-4ABB-37284D5B0AB2}"
 EndProject

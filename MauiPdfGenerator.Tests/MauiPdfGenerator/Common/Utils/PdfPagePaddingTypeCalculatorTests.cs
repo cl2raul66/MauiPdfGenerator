@@ -1,6 +1,5 @@
 using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Fluent.Enums;
-using Microsoft.Maui;
 using Xunit;
 
 namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Common.Utils;

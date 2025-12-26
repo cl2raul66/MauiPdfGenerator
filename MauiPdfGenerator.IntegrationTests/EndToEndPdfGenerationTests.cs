@@ -6,7 +6,6 @@ using MauiPdfGenerator.Fluent.Builders;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Microsoft.Maui;
 
 namespace MauiPdfGenerator.IntegrationTests;
 
@@ -41,8 +40,7 @@ public class EndToEndPdfGenerationTests : IDisposable
         mockCoreGenerator.Setup(g => g.GenerateAsync(It.IsAny<PdfDocumentData>(), It.IsAny<string>(), It.IsAny<PdfFontRegistryBuilder>()))
             .Callback<PdfDocumentData, string, PdfFontRegistryBuilder>((data, path, fonts) =>
             {
-                // Create a dummy PDF file for testing
-                File.WriteAllBytes(path, new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A }); // Minimal PDF header
+                File.WriteAllBytes(path, [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A]); 
             });
 
         var factory = new PdfDocumentFactory(
@@ -87,8 +85,7 @@ public class EndToEndPdfGenerationTests : IDisposable
         mockCoreGenerator.Setup(g => g.GenerateAsync(It.IsAny<PdfDocumentData>(), It.IsAny<string>(), It.IsAny<PdfFontRegistryBuilder>()))
             .Callback<PdfDocumentData, string, PdfFontRegistryBuilder>((data, path, fonts) =>
             {
-                // Create a dummy PDF file for testing
-                File.WriteAllBytes(path, new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A }); // Minimal PDF header
+                File.WriteAllBytes(path, [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A]); 
             });
 
         var factory = new PdfDocumentFactory(
@@ -97,7 +94,6 @@ public class EndToEndPdfGenerationTests : IDisposable
             mockDiagnosticSink.Object,
             mockCoreGenerator.Object);
 
-        // Small 1x1 red PNG bytes (hardcoded for simplicity)
         var pngBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
             0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
             0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0xF8, 0x00, 0x00, 0x00,

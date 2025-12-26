@@ -1,4 +1,3 @@
-using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
@@ -11,11 +10,10 @@ using MauiPdfGenerator.Diagnostics.Interfaces;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Microsoft.Maui;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Builders;
 
-namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Layouts;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
 public class PaginationTests
 {
@@ -47,27 +45,23 @@ public class PaginationTests
 
         var context = CreateContext(vsl);
 
-        // Mock child renderer to return fixed height
         var mockChildRenderer = new Mock<IElementRenderer>();
         mockChildRenderer.Setup(r => r.MeasureAsync(It.IsAny<PdfGenerationContext>(), It.IsAny<SkiaSharp.SKSize>()))
-            .ReturnsAsync(new PdfLayoutInfo(null, 100, 20));
+            .ReturnsAsync(new PdfLayoutInfo(null!, 100, 20));
         mockChildRenderer.Setup(r => r.ArrangeAsync(It.IsAny<PdfRect>(), It.IsAny<PdfGenerationContext>()))
-            .ReturnsAsync(new PdfLayoutInfo(null, 100, 20));
+            .ReturnsAsync(new PdfLayoutInfo(null!, 100, 20));
 
         var renderersField = typeof(ElementRendererFactory).GetField("_renderers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField.GetValue(context.RendererFactory);
-        renderersDict[typeof(PdfParagraphData)] = mockChildRenderer.Object;
+        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField!.GetValue(context.RendererFactory)!;
+        renderersDict![typeof(PdfParagraphData)] = mockChildRenderer.Object;
 
-        // First measure
         await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(100, 100));
 
-        // Act: Arrange with limited height (only fit ~3 items: 20*3 + 5*2 = 70, page height 100)
         var finalRect = new PdfRect(0, 0, 100, 100);
         var result = await _renderer.ArrangeAsync(finalRect, context);
 
-        // Assert: Should create remaining element since not all fit
         Assert.NotNull(result.RemainingElement);
-        Assert.True(result.Height < 100); // Not full height
+        Assert.True(result.Height < 100); 
     }
 
     [Fact]
@@ -76,8 +70,6 @@ public class PaginationTests
         // Arrange
         var vsl = new PdfVerticalStackLayoutData();
         vsl.SetSpacing(5);
-
-        // Add few paragraphs that fit
         for (int i = 0; i < 3; i++)
         {
             var paragraph = new PdfParagraphData($"Line {i}");
@@ -87,25 +79,21 @@ public class PaginationTests
 
         var context = CreateContext(vsl);
 
-        // Mock child renderer
         var mockChildRenderer = new Mock<IElementRenderer>();
         mockChildRenderer.Setup(r => r.MeasureAsync(It.IsAny<PdfGenerationContext>(), It.IsAny<SkiaSharp.SKSize>()))
-            .ReturnsAsync(new PdfLayoutInfo(null, 100, 20));
+            .ReturnsAsync(new PdfLayoutInfo(null!, 100, 20));
         mockChildRenderer.Setup(r => r.ArrangeAsync(It.IsAny<PdfRect>(), It.IsAny<PdfGenerationContext>()))
-            .ReturnsAsync(new PdfLayoutInfo(null, 100, 20));
+            .ReturnsAsync(new PdfLayoutInfo(null!, 100, 20));
 
         var renderersField = typeof(ElementRendererFactory).GetField("_renderers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField.GetValue(context.RendererFactory);
+        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField!.GetValue(context.RendererFactory)!;
         renderersDict[typeof(PdfParagraphData)] = mockChildRenderer.Object;
 
-        // First measure
         await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(100, 200));
 
-        // Act: Arrange with enough height
         var finalRect = new PdfRect(0, 0, 100, 200);
         var result = await _renderer.ArrangeAsync(finalRect, context);
 
-        // Assert: No remaining element
         Assert.Null(result.RemainingElement);
         Assert.True(result.Height <= 200);
     }
@@ -129,7 +117,7 @@ public class PaginationTests
         return new PdfGenerationContext(
             pageData,
             new PdfFontRegistryBuilder(),
-            new Dictionary<object, object>(),
+            [],
             _mockLogger.Object,
             new ElementRendererFactory(),
             _mockDiagnosticSink.Object,

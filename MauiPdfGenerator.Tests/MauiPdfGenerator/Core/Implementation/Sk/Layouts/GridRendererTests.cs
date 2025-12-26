@@ -1,4 +1,3 @@
-using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Common.Models.Views;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Layouts;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
 public class GridRendererTests
 {
@@ -42,7 +41,6 @@ public class GridRendererTests
 
         var context = CreateContext(grid);
 
-        // Mock the child renderer
         var mockChildRenderer = new Mock<IElementRenderer>();
         mockChildRenderer.Setup(r => r.MeasureAsync(It.IsAny<PdfGenerationContext>(), It.IsAny<SkiaSharp.SKSize>()))
             .ReturnsAsync(new PdfLayoutInfo(paragraph, 50, 20));
@@ -53,8 +51,8 @@ public class GridRendererTests
         var result = await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(100, 100));
 
         // Assert
-        Assert.Equal(50, result.Width); // Width of child
-        Assert.Equal(20, result.Height); // Height of child
+        Assert.Equal(50, result.Width); 
+        Assert.Equal(20, result.Height); 
     }
 
     [Fact]
@@ -110,7 +108,7 @@ public class GridRendererTests
         return new PdfGenerationContext(
             pageData,
             new PdfFontRegistryBuilder(),
-            new Dictionary<object, object>(),
+            [],
             _mockLogger.Object,
             _mockRendererFactory.Object,
             _mockDiagnosticSink.Object,

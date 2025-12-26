@@ -1,14 +1,9 @@
-using MauiPdfGenerator.Common.Enums;
-using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Builders.Views;
 using MauiPdfGenerator.Fluent.Models;
-using Microsoft.Maui;
-using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Controls;
 using Xunit;
 
-namespace MauiPdfGenerator.Tests.Fluent.Builders.Views;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Fluent.Builders.Views;
 
 public class PdfSpanBuilderTests
 {
@@ -113,7 +108,7 @@ public class PdfSpanBuilderTests
     {
         // Arrange
         var family = new PdfFontIdentifier("OpenSansSemibold");
-        _fontRegistry.Font(family); // Register it
+        _fontRegistry.Font(family); 
         var builder = new PdfSpanBuilder("test", _fontRegistry);
 
         // Act

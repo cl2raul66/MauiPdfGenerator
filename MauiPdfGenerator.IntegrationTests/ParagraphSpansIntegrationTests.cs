@@ -6,8 +6,6 @@ using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Views;
-using MauiPdfGenerator.Fluent.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -129,15 +127,14 @@ public class ParagraphSpansIntegrationTests
         var concreteBuilder = documentBuilder as PdfDocumentBuilder;
         Assert.NotNull(concreteBuilder);
         var pages = GetInternalPages(concreteBuilder);
-        var pageBuilder = pages.First() as IPdfContentPageBuilder;
-        var content = pageBuilder.GetContent() as PdfVerticalStackLayoutData;
-        var paragraph = content.GetChildren.First() as PdfParagraphData;
+        var pageBuilder = pages!.First() as IPdfContentPageBuilder;
+        var content = pageBuilder!.GetContent() as PdfVerticalStackLayoutData;
+        var paragraph = content!.GetChildren[0] as PdfParagraphData;
 
-        Assert.Equal(paragraphFontSize, paragraph.FontSizeProp.Value);
+        Assert.Equal(paragraphFontSize, paragraph!.FontSizeProp.Value);
         Assert.Equal(paragraphTextColor, paragraph.TextColorProp.Value);
 
-        // Verification of DTO values before rendering/resolution
-        Assert.Null(paragraph.Spans[0].FontSizeProp.Value); // Should be null in DTO to allow inheritance
+        Assert.Null(paragraph.Spans[0].FontSizeProp.Value); 
         Assert.Null(paragraph.Spans[0].TextColorProp.Value);
 
         Assert.Equal(30f, paragraph.Spans[1].FontSizeProp.Value);

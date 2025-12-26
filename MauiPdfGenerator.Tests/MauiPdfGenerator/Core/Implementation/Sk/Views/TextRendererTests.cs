@@ -1,20 +1,17 @@
-using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Common.Models.Views;
-using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Implementation.Sk.Views;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Microsoft.Maui;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Builders;
 
-namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Views;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Core.Implementation.Sk.Views;
 
 public class TextRendererTests
 {
@@ -74,8 +71,8 @@ public class TextRendererTests
         var paragraph = new PdfParagraphData();
         var spans = new List<PdfSpanData>
         {
-            new PdfSpanData("Hello "),
-            new PdfSpanData("World")
+            new("Hello "),
+            new("World")
         };
         paragraph.SetSpans(spans);
 
@@ -100,7 +97,7 @@ public class TextRendererTests
         var span2 = new PdfSpanData("Large");
         span2.FontSizeProp.Set(24f, PdfPropertyPriority.Local);
 
-        paragraph.SetSpans(new List<PdfSpanData> { span1, span2 });
+        paragraph.SetSpans([span1, span2]);
 
         var context = CreateContext(paragraph);
 
@@ -108,7 +105,6 @@ public class TextRendererTests
         var result = await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(500, 500));
 
         // Assert
-        // The height should be at least large enough for the 24pt font
         Assert.True(result.Height > 24); 
     }
 
@@ -119,13 +115,12 @@ public class TextRendererTests
         var paragraph = new PdfParagraphData();
         var spans = new List<PdfSpanData>
         {
-            new PdfSpanData("This is a long sentence that should wrap because the width is very restricted.")
+            new("This is a long sentence that should wrap because the width is very restricted.")
         };
         paragraph.SetSpans(spans);
 
         var context = CreateContext(paragraph);
 
-        // Measure with restricted width
         var restrictedWidth = 50f;
         var measureResult = await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(restrictedWidth, 1000));
 
@@ -135,7 +130,7 @@ public class TextRendererTests
 
         // Assert
         Assert.Equal(restrictedWidth, result.Width);
-        // If it wrapped, the height should be significantly more than a single line height (~12-15)
+
         Assert.True(result.Height > 20); 
     }
 
@@ -149,17 +144,14 @@ public class TextRendererTests
         paragraph.FontSizeProp.Set(15f, PdfPropertyPriority.Local);
 
         var span = new PdfSpanData("Test");
-        paragraph.SetSpans(new List<PdfSpanData> { span });
+        paragraph.SetSpans([span]);
 
         var context = CreateContext(paragraph);
 
-        // Measure/Arrange to trigger internal processing
         await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(500, 500));
         await _renderer.ArrangeAsync(new PdfRect(0, 0, 500, 500), context);
 
         // Act & Assert
-        // We can't easily inspect the internal 'ProcessedSpan' without reflection or making it internal-visible,
-        // but if RenderAsync finishes without error, it's a good sign.
         var canvas = new SkiaSharp.SKCanvas(new SkiaSharp.SKBitmap(100, 100));
         await _renderer.RenderAsync(canvas, context);
     }
@@ -173,7 +165,7 @@ public class TextRendererTests
 
         var span = new PdfSpanData("Test");
         span.TextColorProp.Set(Colors.Red, PdfPropertyPriority.Local);
-        paragraph.SetSpans(new List<PdfSpanData> { span });
+        paragraph.SetSpans([span]);
 
         var context = CreateContext(paragraph);
 
@@ -183,8 +175,6 @@ public class TextRendererTests
         
         var canvas = new SkiaSharp.SKCanvas(new SkiaSharp.SKBitmap(100, 100));
         await _renderer.RenderAsync(canvas, context);
-
-        // Verification is implicit: if it doesn't throw, the style resolution logic worked.
     }
 
     private PdfGenerationContext CreateContext(PdfParagraphData paragraph)
@@ -206,7 +196,7 @@ public class TextRendererTests
         return new PdfGenerationContext(
             pageData,
             new PdfFontRegistryBuilder(),
-            new Dictionary<object, object>(),
+            [],
             _mockLogger.Object,
             _rendererFactory,
             _mockDiagnosticSink.Object,

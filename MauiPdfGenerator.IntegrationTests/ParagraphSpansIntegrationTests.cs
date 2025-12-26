@@ -49,8 +49,8 @@ public class ParagraphSpansIntegrationTests
                 {
                     ch.Paragraph(p =>
                     {
-                        p.Span(span1Text);
-                        p.Span(span2Text)
+                        p.Text(span1Text);
+                        p.Text(span2Text)
                             .FontSize(span2FontSize)
                             .TextColor(span2TextColor);
                     });
@@ -114,8 +114,8 @@ public class ParagraphSpansIntegrationTests
                 {
                     ch.Paragraph(p =>
                     {
-                        p.Span("Inheriting span");
-                        p.Span("Overriding span")
+                        p.Text("Inheriting span");
+                        p.Text("Overriding span")
                             .FontSize(30f);
                     })
                     .FontSize(paragraphFontSize)

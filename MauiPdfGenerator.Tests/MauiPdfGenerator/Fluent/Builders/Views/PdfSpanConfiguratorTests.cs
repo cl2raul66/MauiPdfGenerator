@@ -23,9 +23,9 @@ public class PdfSpanConfiguratorTests
         var text3 = "Third Span";
 
         // Act
-        configurator.Span(text1);
-        configurator.Span(text2);
-        configurator.Span(text3);
+        configurator.Text(text1);
+        configurator.Text(text2);
+        configurator.Text(text3);
         
         var spans = configurator.BuildSpans();
 

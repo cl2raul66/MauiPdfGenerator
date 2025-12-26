@@ -4,7 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Views;
 
 namespace MauiPdfGenerator.Fluent.Builders.Views;
 
-internal class PdfSpanConfigurator : IPdfSpanConfigurator
+internal class PdfSpanConfigurator : IPdfSpanText
 {
     private readonly List<PdfSpanBuilder> _spanBuilders = [];
     private readonly PdfFontRegistryBuilder _fontRegistry;
@@ -14,7 +14,7 @@ internal class PdfSpanConfigurator : IPdfSpanConfigurator
         _fontRegistry = fontRegistry;
     }
 
-    public IPdfSpan Span(string text)
+    public IPdfSpan Text(string text)
     {
         var builder = new PdfSpanBuilder(text, _fontRegistry);
         _spanBuilders.Add(builder);

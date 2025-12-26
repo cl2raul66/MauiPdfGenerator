@@ -21,7 +21,7 @@ internal class PageContentBuilder(PdfFontRegistryBuilder fontRegistry) : IPageCo
         return builder;
     }
 
-    public IPdfPageChildParagraph Paragraph(Action<IPdfSpanConfigurator> configure)
+    public IPdfPageChildParagraph Paragraph(Action<IPdfSpanText> configure)
     {
         var builder = new PdfParagraphBuilder(configure, _fontRegistry);
         _children.Add(builder);

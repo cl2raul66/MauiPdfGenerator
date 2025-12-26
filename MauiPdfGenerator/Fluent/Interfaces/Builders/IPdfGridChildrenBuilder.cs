@@ -7,7 +7,7 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 public interface IPdfGridChildrenBuilder
 {
     IPdfGridChildParagraph Paragraph(string text);
-    IPdfGridChildParagraph Paragraph(Action<IPdfSpanConfigurator> configure);
+    IPdfGridChildParagraph Paragraph(Action<IPdfSpanText> configure);
     IPdfGridChildImage Image(Stream stream);
     IPdfGridChildHorizontalLine HorizontalLine();
     void VerticalStackLayout(Action<IPdfGridChildVerticalStackLayout> layoutSetup);

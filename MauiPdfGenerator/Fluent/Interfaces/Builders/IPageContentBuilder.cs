@@ -7,7 +7,7 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 public interface IPageContentBuilder
 {
     IPdfPageChildParagraph Paragraph(string text);
-    IPdfPageChildParagraph Paragraph(Action<IPdfSpanConfigurator> configure);
+    IPdfPageChildParagraph Paragraph(Action<IPdfSpanText> configure);
     IPdfPageChildHorizontalLine HorizontalLine();
     IPdfPageChildImage Image(Stream stream);
     void VerticalStackLayout(Action<IPdfVerticalStackLayout> layoutSetup);

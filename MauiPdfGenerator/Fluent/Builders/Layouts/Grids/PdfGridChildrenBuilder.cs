@@ -23,7 +23,7 @@ internal class PdfGridChildrenBuilder(PdfFontRegistryBuilder fontRegistry) : IPd
         return builder;
     }
 
-    public IPdfGridChildParagraph Paragraph(Action<IPdfSpanConfigurator> configure)
+    public IPdfGridChildParagraph Paragraph(Action<IPdfSpanText> configure)
     {
         var builder = new PdfParagraphBuilder(configure, _fontRegistry);
         AddChild(builder);

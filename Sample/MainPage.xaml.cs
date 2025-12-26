@@ -61,14 +61,14 @@ public partial class MainPage : ContentPage
                         ch.Paragraph("Color de texto (TextColor) Rojo.").TextColor(Colors.Red);
                         ch.HorizontalLine();
 
-                        //ch.Paragraph(t =>
-                        //{
-                        //    t.Span("Hola ").FontSize(14);
-                        //    t.Span("Mundo").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
-                        //    t.Span(" Cruel");
-                        //})
-                        //.TextColor(Colors.Azure);
-                        //ch.HorizontalLine();
+                        ch.Paragraph(s =>
+                        {
+                            s.Text("Hola ").FontSize(14);
+                            s.Text("Mundo").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
+                            s.Text(" Cruel");
+                        })
+                        .TextColor(Colors.Azure);
+                        ch.HorizontalLine();
 
                         // --- SECCIÓN 3: Alineación del Contenido (TextAlignment) ---
                         ch.Paragraph("3. Alineación del Contenido (TextAlignment)").FontSize(18).FontAttributes(FontAttributes.Bold);

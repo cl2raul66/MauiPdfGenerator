@@ -18,9 +18,9 @@ internal class PdfStackLayoutContentBuilder(dynamic layoutBuilder, PdfFontRegist
         return builder;
     }
 
-    public IPdfLayoutChildParagraph Paragraph(Action<IPdfSpanConfigurator> configure)
+    public IPdfLayoutChildParagraph Paragraph(Action<IPdfSpanText> span)
     {
-        var builder = new PdfParagraphBuilder(configure, _fontRegistry);
+        var builder = new PdfParagraphBuilder(span, _fontRegistry);
         _layoutBuilder.Add(builder);
         return builder;
     }

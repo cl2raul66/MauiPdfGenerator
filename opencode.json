@@ -1,0 +1,262 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  
+  "model": "opencode/grok-code",
+  
+  "tools": {
+    "write": true,
+    "edit": true,
+    "bash": true,
+    "read": true,
+    "grep": true,
+    "glob": true,
+    "list": true,
+    "webfetch": true,
+    "patch": true,
+    "skill": true,
+    "todowrite": true,
+    "todoread": true
+  },
+  
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "git push": "ask",
+      "git push --force": "deny",
+      "rm -rf": "ask",
+      "dotnet pack": "allow",
+      "dotnet build": "allow",
+      "dotnet test": "allow",
+      "dotnet publish": "ask",
+      "dotnet nuget push": "ask",
+      "gh release create": "ask",
+      "git checkout main": "ask",
+      "git merge": "ask",
+      "*": "allow"
+    },
+    "webfetch": "allow",
+    "doom_loop": "ask",
+    "external_directory": "ask",
+    "skill": {
+      "*": "allow"
+    }
+  },
+  
+  "agent": {
+    "product-owner": {
+      "mode": "primary",
+      "description": "Stakeholder liaison coordinating the development team. Manages priorities, delegates to specialized agents, and synthesizes results.",
+      "model": "opencode/grok-code",
+      "temperature": 0.3,
+      "prompt": "{file:./.opencode/agent/product-owner.md}",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false,
+        "patch": false,
+        "webfetch": true,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "list": true,
+        "skill": true,
+        "todowrite": true,
+        "todoread": true
+      },
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    
+    "solution-architect": {
+      "mode": "subagent",
+      "description": "Design overall architecture, establish patterns, define abstractions and extensibility points.",
+      "model": "opencode/glm-4.7-free",
+      "temperature": 0.1,
+      "prompt": "{file:./.opencode/agent/solution-architect.md}",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false,
+        "webfetch": true,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "list": true,
+        "skill": true
+      }
+    },
+    
+    "api-designer": {
+      "mode": "subagent",
+      "description": "Design intuitive public API surfaces, fluent interfaces, method signatures and developer experience.",
+      "model": "opencode/grok-code",
+      "temperature": 0.2,
+      "prompt": "{file:./.opencode/agent/api-designer.md}",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false,
+        "webfetch": true,
+        "read": true,
+        "grep": true,
+        "skill": true
+      }
+    },
+    
+    "lead-library-developer": {
+      "mode": "subagent",
+      "description": "Lead technical implementation, mentor team, implement core infrastructure, conduct code reviews.",
+      "model": "opencode/grok-code",
+      "temperature": 0.3,
+      "prompt": "{file:./.opencode/agent/lead-library-developer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "patch": true,
+        "webfetch": true,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "list": true,
+        "skill": true
+      },
+      "permission": {
+        "bash": {
+          "git push": "ask",
+          "rm -rf": "ask",
+          "*": "allow"
+        }
+      }
+    },
+    
+    "library-developer": {
+      "mode": "subagent",
+      "description": "Implement features, components, extension methods, write tests and XML documentation.",
+      "model": "opencode/grok-code",
+      "temperature": 0.3,
+      "prompt": "{file:./.opencode/agent/library-developer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "patch": true,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "list": true,
+        "skill": true
+      },
+      "permission": {
+        "bash": {
+          "git push": "deny",
+          "npm publish": "deny",
+          "*": "allow"
+        }
+      }
+    },
+    
+    "qa-engineer": {
+      "mode": "subagent",
+      "description": "Create test plans, execute testing, verify compatibility across frameworks, document bugs.",
+      "model": "opencode/grok-code",
+      "temperature": 0.2,
+      "prompt": "{file:./.opencode/agent/qa-engineer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "list": true,
+        "skill": true
+      },
+      "permission": {
+        "bash": {
+          "dotnet test": "allow",
+          "dotnet build": "allow",
+          "*": "ask"
+        }
+      }
+    },
+    
+    "performance-engineer": {
+      "mode": "subagent",
+      "description": "Profile performance, identify bottlenecks, optimize algorithms and memory usage.",
+      "model": "opencode/grok-code",
+      "temperature": 0.1,
+      "prompt": "{file:./.opencode/agent/performance-engineer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "grep": true,
+        "skill": true
+      }
+    },
+    
+    "security-specialist": {
+      "mode": "subagent",
+      "description": "Conduct security audits, review authentication/authorization, ensure compliance.",
+      "model": "opencode/glm-4.7-free",
+      "temperature": 0.1,
+      "prompt": "{file:./.opencode/agent/security-specialist.md}",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false,
+        "webfetch": true,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "list": true,
+        "skill": true
+      }
+    },
+    
+    "technical-writer": {
+      "mode": "subagent",
+      "description": "Create API documentation, tutorials, release notes, migration guides and code examples.",
+      "model": "opencode/gpt-5-nano",
+      "temperature": 0.4,
+      "prompt": "{file:./.opencode/agent/technical-writer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": false,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "skill": true
+      }
+    },
+    
+    "devops-engineer": {
+      "mode": "subagent",
+      "description": "Configure CI/CD pipelines, automate builds, manage NuGet deployment and code signing.",
+      "model": "opencode/grok-code",
+      "temperature": 0.2,
+      "prompt": "{file:./.opencode/agent/devops-engineer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "skill": true
+      },
+      "permission": {
+        "bash": {
+          "dotnet pack": "allow",
+          "dotnet publish": "ask",
+          "*": "allow"
+        }
+      }
+    }
+  }
+}

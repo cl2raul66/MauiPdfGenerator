@@ -1,10 +1,8 @@
 using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -44,7 +42,7 @@ public class ErrorHandlingTests
                     c.Children(ch =>
                     {
                         ch.Paragraph("Text")
-                            .FontSize(-5f); // Invalid negative font size
+                            .FontSize(-5f); 
                     });
                 })
                 .Build()
@@ -70,7 +68,7 @@ public class ErrorHandlingTests
             mockDiagnosticSink.Object,
             mockCoreGenerator.Object);
 
-        var documentBuilder = factory.CreateDocument(); // No path
+        var documentBuilder = factory.CreateDocument(); 
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
@@ -118,7 +116,7 @@ public class ErrorHandlingTests
                 {
                     c.Children(ch =>
                     {
-                        ch.Image(null!); // Null stream
+                        ch.Image(null!); 
                     });
                 })
                 .Build()
@@ -145,7 +143,6 @@ public class ErrorHandlingTests
             mockCoreGenerator.Object);
 
         var documentBuilder = factory.CreateDocument("dummy.pdf");
-        // No pages added
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>

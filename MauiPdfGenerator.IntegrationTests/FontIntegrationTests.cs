@@ -6,7 +6,6 @@ using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
-using MauiPdfGenerator.Fluent.Interfaces.Pages;
 using MauiPdfGenerator.Fluent.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -53,14 +52,13 @@ public class FontIntegrationTests
 
         await documentBuilder.SaveAsync();
 
-        // Assert - Check that the paragraph has the custom font set
         var concreteBuilder = documentBuilder as PdfDocumentBuilder;
         var pages = typeof(PdfDocumentBuilder).GetField("_pages", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(concreteBuilder) as List<IPdfPageBuilder>;
-        var page = pages[0] as IPdfContentPageBuilder;
-        var content = page.GetContent() as PdfVerticalStackLayoutData;
-        var paragraph = content.GetChildren[0] as PdfParagraphData;
+        var page = pages![0] as IPdfContentPageBuilder;
+        var content = page!.GetContent() as PdfVerticalStackLayoutData;
+        var paragraph = content!.GetChildren[0] as PdfParagraphData;
 
-        Assert.Equal(customFontId, paragraph.FontFamilyProp.Value);
+        Assert.Equal(customFontId, paragraph!.FontFamilyProp.Value);
     }
 
     [Fact]
@@ -93,20 +91,19 @@ public class FontIntegrationTests
                 c.Children(ch =>
                 {
                     ch.Paragraph("Bold text")
-                        .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold);
+                        .FontAttributes(FontAttributes.Bold);
                 });
             });
 
         await documentBuilder.SaveAsync();
 
-        // Assert - Check that the paragraph has bold attributes set
         var concreteBuilder = documentBuilder as PdfDocumentBuilder;
         var pages = typeof(PdfDocumentBuilder).GetField("_pages", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(concreteBuilder) as List<IPdfPageBuilder>;
-        var page = pages[0] as IPdfContentPageBuilder;
-        var content = page.GetContent() as PdfVerticalStackLayoutData;
-        var paragraph = content.GetChildren[0] as PdfParagraphData;
+        var page = pages![0] as IPdfContentPageBuilder;
+        var content = page!.GetContent() as PdfVerticalStackLayoutData;
+        var paragraph = content!.GetChildren[0] as PdfParagraphData;
 
-        Assert.Equal(Microsoft.Maui.Controls.FontAttributes.Bold, paragraph.FontAttributesProp.Value);
+        Assert.Equal(FontAttributes.Bold, paragraph!.FontAttributesProp.Value);
     }
 
     [Fact]
@@ -139,7 +136,7 @@ public class FontIntegrationTests
                 c.Children(ch =>
                 {
                     ch.Paragraph("Italic text")
-                        .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Italic);
+                        .FontAttributes(FontAttributes.Italic);
                 });
             });
 
@@ -148,10 +145,10 @@ public class FontIntegrationTests
         // Assert
         var concreteBuilder = documentBuilder as PdfDocumentBuilder;
         var pages = typeof(PdfDocumentBuilder).GetField("_pages", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(concreteBuilder) as List<IPdfPageBuilder>;
-        var page = pages[0] as IPdfContentPageBuilder;
-        var content = page.GetContent() as PdfVerticalStackLayoutData;
-        var paragraph = content.GetChildren[0] as PdfParagraphData;
+        var page = pages![0] as IPdfContentPageBuilder;
+        var content = page!.GetContent() as PdfVerticalStackLayoutData;
+        var paragraph = content!.GetChildren[0] as PdfParagraphData;
 
-        Assert.Equal(Microsoft.Maui.Controls.FontAttributes.Italic, paragraph.FontAttributesProp.Value);
+        Assert.Equal(FontAttributes.Italic, paragraph!.FontAttributesProp.Value);
     }
 }

@@ -3,16 +3,16 @@ using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Common.Models.Views;
-using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Implementation.Sk.Views;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics.Interfaces;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Microsoft.Maui;
+using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Builders;
 
-namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Views;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Core.Implementation.Sk.Views;
 
 public class HorizontalLineRendererTests
 {
@@ -42,8 +42,8 @@ public class HorizontalLineRendererTests
         var result = await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(100, 100));
 
         // Assert
-        Assert.Equal(100, result.Width); // Full width available
-        Assert.Equal(2, result.Height); // Requested height
+        Assert.Equal(100, result.Width); 
+        Assert.Equal(2, result.Height); 
     }
 
     [Fact]
@@ -68,8 +68,8 @@ public class HorizontalLineRendererTests
     private PdfGenerationContext CreateContext(PdfHorizontalLineData line)
     {
         var pageData = new PdfPageData(
-            Fluent.Enums.PageSizeType.A4,
-            Fluent.Enums.PageOrientationType.Portrait,
+            PageSizeType.A4,
+            PageOrientationType.Portrait,
             new Thickness(0),
             null,
             new PdfVerticalStackLayoutData(),
@@ -83,8 +83,8 @@ public class HorizontalLineRendererTests
 
         return new PdfGenerationContext(
             pageData,
-            new Fluent.Builders.PdfFontRegistryBuilder(),
-            new Dictionary<object, object>(),
+            new PdfFontRegistryBuilder(),
+            [],
             _mockLogger.Object,
             _rendererFactory,
             _mockDiagnosticSink.Object,

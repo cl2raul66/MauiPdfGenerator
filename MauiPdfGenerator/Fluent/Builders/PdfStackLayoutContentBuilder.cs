@@ -2,6 +2,7 @@ using MauiPdfGenerator.Fluent.Builders.Views;
 using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -13,6 +14,13 @@ internal class PdfStackLayoutContentBuilder(dynamic layoutBuilder, PdfFontRegist
     public IPdfLayoutChildParagraph Paragraph(string text)
     {
         var builder = new PdfParagraphBuilder(text, _fontRegistry);
+        _layoutBuilder.Add(builder);
+        return builder;
+    }
+
+    public IPdfLayoutChildParagraph Paragraph(Action<IPdfSpanText> span)
+    {
+        var builder = new PdfParagraphBuilder(span, _fontRegistry);
         _layoutBuilder.Add(builder);
         return builder;
     }

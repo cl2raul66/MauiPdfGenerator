@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Text;
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
@@ -16,17 +18,30 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
 {
     private readonly PdfParagraphData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
+    private readonly PdfResourceDictionary? _resourceDictionary;
 
-    public PdfParagraphBuilder(string text, PdfFontRegistryBuilder fontRegistry)
+    public PdfParagraphBuilder(string text, PdfFontRegistryBuilder fontRegistry, PdfResourceDictionary? resourceDictionary = null)
     {
         _model = new PdfParagraphData(text);
         _fontRegistry = fontRegistry;
+        _resourceDictionary = resourceDictionary;
+    }
+
+    public PdfParagraphBuilder(Action<IPdfSpanText> configure, PdfFontRegistryBuilder fontRegistry, PdfResourceDictionary? resourceDictionary = null)
+    {
+        _model = new PdfParagraphData(string.Empty);
+        _fontRegistry = fontRegistry;
+        _resourceDictionary = resourceDictionary;
+
+        var configurator = new PdfSpanConfigurator(fontRegistry, resourceDictionary);
+        configure(configurator);
+
+        var (text, spans) = configurator.Build();
+        _model.SetText(text);
+        _model.SetSpans(spans);
     }
 
     public PdfElementData GetModel() => _model;
-
-    // NOTA: Los métodos públicos retornan 'this' (el builder completo).
-    // Al retornar 'this', podemos hacer casting seguro en las interfaces explícitas.
 
     #region Public API (Retorna el tipo más específico para facilitar el uso general)
     public IPdfGridChildParagraph FontFamily(PdfFontIdentifier? family)
@@ -47,7 +62,12 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
         return this;
     }
 
-    public IPdfGridChildParagraph FontSize(float size) { if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size)); _model.FontSizeProp.Set(size, PdfPropertyPriority.Local); return this; }
+    public IPdfGridChildParagraph FontSize(float size)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+        _model.FontSizeProp.Set(size, PdfPropertyPriority.Local);
+        return this;
+    }
     public IPdfGridChildParagraph TextColor(Color color) { _model.TextColorProp.Set(color, PdfPropertyPriority.Local); return this; }
     public IPdfGridChildParagraph HorizontalTextAlignment(TextAlignment alignment) { _model.HorizontalTextAlignmentProp.Set(alignment, PdfPropertyPriority.Local); return this; }
     public IPdfGridChildParagraph VerticalTextAlignment(TextAlignment alignment) { _model.VerticalTextAlignmentProp.Set(alignment, PdfPropertyPriority.Local); return this; }

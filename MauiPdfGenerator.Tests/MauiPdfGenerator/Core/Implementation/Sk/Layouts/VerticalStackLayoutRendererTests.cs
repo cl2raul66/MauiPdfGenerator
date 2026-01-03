@@ -1,4 +1,3 @@
-using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Common.Models.Views;
@@ -7,11 +6,13 @@ using MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 using MauiPdfGenerator.Core.Implementation.Sk.Views;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics.Interfaces;
+using MauiPdfGenerator.Fluent.Builders;
+using MauiPdfGenerator.Fluent.Enums;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-namespace MauiPdfGenerator.Tests.Core.Implementation.Sk.Layouts;
+namespace MauiPdfGenerator.Tests.MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 
 public class VerticalStackLayoutRendererTests
 {
@@ -38,13 +39,12 @@ public class VerticalStackLayoutRendererTests
 
         var context = CreateContext(vsl);
 
-        // Mock the child renderer and add to factory via reflection
         var mockChildRenderer = new Mock<IElementRenderer>();
         mockChildRenderer.Setup(r => r.MeasureAsync(It.IsAny<PdfGenerationContext>(), It.IsAny<SkiaSharp.SKSize>()))
             .ReturnsAsync(new PdfLayoutInfo(paragraph, 50, 20));
 
         var renderersField = typeof(ElementRendererFactory).GetField("_renderers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField.GetValue(_rendererFactory);
+        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField!.GetValue(_rendererFactory)!;
         renderersDict[typeof(PdfParagraphData)] = mockChildRenderer.Object;
 
         // Act
@@ -68,27 +68,25 @@ public class VerticalStackLayoutRendererTests
 
         var context = CreateContext(vsl);
 
-        // Mock the child renderers
         var mockChildRenderer = new Mock<IElementRenderer>();
         mockChildRenderer.Setup(r => r.MeasureAsync(It.IsAny<PdfGenerationContext>(), It.IsAny<SkiaSharp.SKSize>()))
             .ReturnsAsync(new PdfLayoutInfo(paragraph1, 50, 20));
 
         var renderersField = typeof(ElementRendererFactory).GetField("_renderers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField.GetValue(_rendererFactory);
+        var renderersDict = (Dictionary<Type, IElementRenderer>)renderersField!.GetValue(_rendererFactory)!;
         renderersDict[typeof(PdfParagraphData)] = mockChildRenderer.Object;
 
         // Act
         var result = await _renderer.MeasureAsync(context, new SkiaSharp.SKSize(100, 100));
 
-        // Assert: 20 + 20 + 10 = 50 height
         Assert.Equal(50, result.Height);
     }
 
     private PdfGenerationContext CreateContext(PdfVerticalStackLayoutData vsl)
     {
         var pageData = new PdfPageData(
-            Fluent.Enums.PageSizeType.A4,
-            Fluent.Enums.PageOrientationType.Portrait,
+            PageSizeType.A4,
+            PageOrientationType.Portrait,
             new Thickness(0),
             null,
             new PdfVerticalStackLayoutData(),
@@ -102,8 +100,8 @@ public class VerticalStackLayoutRendererTests
 
         return new PdfGenerationContext(
             pageData,
-            new Fluent.Builders.PdfFontRegistryBuilder(),
-            new Dictionary<object, object>(),
+            new PdfFontRegistryBuilder(),
+            [],
             _mockLogger.Object,
             _rendererFactory,
             _mockDiagnosticSink.Object,

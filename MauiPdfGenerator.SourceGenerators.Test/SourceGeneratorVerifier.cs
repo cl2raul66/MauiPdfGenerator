@@ -8,7 +8,7 @@ using Xunit;
 
 namespace MauiPdfGenerator.SourceGenerators.Tests;
 
-public static class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourceGenerator : IIncrementalGenerator, new()
+public static partial class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourceGenerator : IIncrementalGenerator, new()
 {
     public class Test : CSharpSourceGeneratorTest<TSourceGenerator, RoslynNormalizingVerifier>
     {
@@ -28,13 +28,13 @@ public static class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourc
 
         private static ImmutableDictionary<string, ReportDiagnostic> GetNullableWarningsFromCompiler()
         {
-            string[] args = { "/warnaserror:nullable" };
+            string[] args = ["/warnaserror:nullable"];
             var commandLineArguments = CSharpCommandLineParser.Default.Parse(args, baseDirectory: Environment.CurrentDirectory, sdkDirectory: null);
             return commandLineArguments.CompilationOptions.SpecificDiagnosticOptions;
         }
     }
 
-    public class RoslynNormalizingVerifier : IVerifier
+    public partial class RoslynNormalizingVerifier : IVerifier
     {
         public void EqualOrDiff(string expected, string actual, string? message = null)
         {
@@ -73,6 +73,6 @@ public static class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourc
 
         public IVerifier PushContext(string? _) => this;
 
-        private sealed class EmptyDisposable : IDisposable { public void Dispose() { } }
+        private sealed partial class EmptyDisposable : IDisposable { public void Dispose() { } }
     }
 }

@@ -3,6 +3,7 @@ using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 
 namespace MauiPdfGenerator.Fluent.Builders;
 
@@ -16,6 +17,13 @@ internal class PageContentBuilder(PdfFontRegistryBuilder fontRegistry) : IPageCo
     public IPdfPageChildParagraph Paragraph(string text)
     {
         var builder = new PdfParagraphBuilder(text, _fontRegistry);
+        _children.Add(builder);
+        return builder;
+    }
+
+    public IPdfPageChildParagraph Paragraph(Action<IPdfSpanText> configure)
+    {
+        var builder = new PdfParagraphBuilder(configure, _fontRegistry);
         _children.Add(builder);
         return builder;
     }

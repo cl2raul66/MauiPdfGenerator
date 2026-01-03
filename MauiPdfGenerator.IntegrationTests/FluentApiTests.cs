@@ -8,6 +8,7 @@ using MauiPdfGenerator.Fluent.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Models;
+using MauiPdfGenerator.Fluent.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -22,7 +23,7 @@ public class FluentApiTests
         // Arrange
         var fontRegistry = new PdfFontRegistryBuilder();
         var mockLoggerFactory = new Mock<ILoggerFactory>();
-        // LoggerFactory needs to return a logger
+
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
@@ -69,7 +70,7 @@ public class FluentApiTests
         Assert.NotNull(content);
         Assert.Single(content.GetChildren);
 
-        var paragraph = content.GetChildren.First() as PdfParagraphData;
+        var paragraph = content.GetChildren[0] as PdfParagraphData;
         Assert.NotNull(paragraph);
         Assert.Equal(expectedText, paragraph.Text);
         Assert.Equal(expectedFontSize, paragraph.CurrentFontSize);
@@ -133,7 +134,7 @@ public class FluentApiTests
         Assert.NotNull(content);
         Assert.Single(content.GetChildren);
 
-        var image = content.GetChildren.First() as PdfImageData;
+        var image = content.GetChildren[0] as PdfImageData;
         Assert.NotNull(image);
         Assert.Equal(imageStream, image.ImageStream);
         Assert.Equal(expectedAspect, image.CurrentAspect);
@@ -194,13 +195,14 @@ public class FluentApiTests
         Assert.NotNull(content);
         Assert.Single(content.GetChildren);
 
-        var paragraph = content.GetChildren.First() as PdfParagraphData;
+        var paragraph = content.GetChildren[0] as PdfParagraphData;
         Assert.NotNull(paragraph);
         Assert.Equal("Header Text", paragraph.Text);
 
-        // Resolve styles manually
         var configBuilder = typeof(PdfDocumentBuilder).GetField("_configurationBuilder", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(concreteBuilder) as PdfConfigurationBuilder;
-        var styleResolver = new MauiPdfGenerator.Fluent.Utils.StyleResolver(configBuilder.ResourceDictionary, mockDiagnosticSink.Object, fontRegistry);
+        Assert.NotNull(configBuilder);
+
+        var styleResolver = new StyleResolver(configBuilder!.ResourceDictionary, mockDiagnosticSink.Object, fontRegistry);
         styleResolver.ApplyStyles([paragraph], null);
 
         Assert.Equal(expectedFontSize, paragraph.CurrentFontSize);
@@ -264,11 +266,11 @@ public class FluentApiTests
 
         var content = pageBuilder.GetContent() as PdfVerticalStackLayoutData;
         Assert.NotNull(content);
-        Assert.Single(content.GetChildren); // One VerticalStackLayout
+        Assert.Single(content.GetChildren); 
 
-        var outerVsl = content.GetChildren.First() as PdfVerticalStackLayoutData;
+        var outerVsl = content.GetChildren[0] as PdfVerticalStackLayoutData;
         Assert.NotNull(outerVsl);
-        Assert.Equal(2, outerVsl.GetChildren.Count); // Paragraph and HorizontalStackLayout
+        Assert.Equal(2, outerVsl.GetChildren.Count); 
 
         var outerParagraph = outerVsl.GetChildren[0] as PdfParagraphData;
         Assert.NotNull(outerParagraph);
@@ -276,7 +278,7 @@ public class FluentApiTests
 
         var innerHsl = outerVsl.GetChildren[1] as PdfHorizontalStackLayoutData;
         Assert.NotNull(innerHsl);
-        Assert.Equal(2, innerHsl.GetChildren.Count); // Two paragraphs
+        Assert.Equal(2, innerHsl.GetChildren.Count); 
 
         var innerParagraph1 = innerHsl.GetChildren[0] as PdfParagraphData;
         Assert.NotNull(innerParagraph1);
@@ -332,7 +334,6 @@ public class FluentApiTests
         var concreteBuilder = documentBuilder as PdfDocumentBuilder;
         Assert.NotNull(concreteBuilder);
 
-        // Access metadata via reflection or internal method
         var metaDataField = typeof(PdfDocumentBuilder).GetField("_configurationBuilder", BindingFlags.NonPublic | BindingFlags.Instance);
         var configBuilder = metaDataField?.GetValue(concreteBuilder) as PdfConfigurationBuilder;
         Assert.NotNull(configBuilder);

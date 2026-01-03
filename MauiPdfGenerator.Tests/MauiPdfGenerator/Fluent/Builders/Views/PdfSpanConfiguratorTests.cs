@@ -14,7 +14,7 @@ public class PdfSpanConfiguratorTests
     }
 
     [Fact]
-    public void SpanConfigurator_MultipleSpans_PreservesOrder()
+    public void SpanConfigurator_MultipleSpans_PreservesOrderAndTextLengths()
     {
         // Arrange
         var configurator = new PdfSpanConfigurator(_fontRegistry);
@@ -27,12 +27,12 @@ public class PdfSpanConfiguratorTests
         configurator.Text(text2);
         configurator.Text(text3);
         
-        var spans = configurator.BuildSpans();
+        var (_, spans) = configurator.Build();
 
         // Assert
         Assert.Equal(3, spans.Count);
-        Assert.Equal(text1, spans[0].Text);
-        Assert.Equal(text2, spans[1].Text);
-        Assert.Equal(text3, spans[2].Text);
+        Assert.Equal(text1.Length, spans[0].TextLength);
+        Assert.Equal(text2.Length, spans[1].TextLength);
+        Assert.Equal(text3.Length, spans[2].TextLength);
     }
 }

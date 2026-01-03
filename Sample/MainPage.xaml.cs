@@ -29,6 +29,14 @@ public partial class MainPage : ContentPage
             await doc
                 .Configuration(cfg => cfg.MetaData(data => data.Title("MauiPdfGenerator - Paragraph Showcase")))
                 .ContentPage()
+                .Resources(rd =>
+                {
+                    rd.Style<IPdfSpan>("NotaSpan", s =>
+                    {
+                        s.FontSize(10);
+                        s.TextColor(Colors.Red);
+                    });
+                })
                 .Content(c =>
                 {
                     c.Spacing(15).Padding(20);
@@ -63,11 +71,11 @@ public partial class MainPage : ContentPage
 
                         ch.Paragraph(s =>
                         {
-                            s.Text("Hola ").FontSize(14);
-                            s.Text("Mundo").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
-                            s.Text(" Cruel");
+                            s.Text("Esto ").TextTransform(TextTransform.Uppercase);
+                            s.Text("es con").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
+                            s.Text(" Span");
                         })
-                        .TextColor(Colors.Azure);
+                        .TextColor(Colors.Blue).TextDecorations(TextDecorations.Underline);
                         ch.HorizontalLine();
 
                         // --- SECCIÓN 3: Alineación del Contenido (TextAlignment) ---

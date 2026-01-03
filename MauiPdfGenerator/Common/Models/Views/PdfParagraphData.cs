@@ -1,10 +1,11 @@
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models.Styling;
+using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Common.Models.Views;
 
-internal class PdfParagraphData : PdfElementData
+internal class PdfParagraphData : PdfElementData, IPdfTextStyles
 {
     // --- CORRECCIÓN: Constantes reintroducidas para uso en TextRenderer ---
     public const float DefaultFontSize = 12f;
@@ -17,7 +18,7 @@ internal class PdfParagraphData : PdfElementData
     public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None;
     // ---------------------------------------------------------------------
 
-    internal string Text { get; }
+    internal string Text { get; private set; }
     internal bool IsContinuation { get; private set; } = false;
 
     // --- Backing Properties ---
@@ -79,4 +80,47 @@ internal class PdfParagraphData : PdfElementData
     {
         Spans = spans ?? [];
     }
+
+    internal void SetText(string text)
+    {
+        Text = text ?? string.Empty;
+    }
+
+    #region IPdfTextStyles Implementation
+
+    void IPdfTextStyles.ApplyFontFamily(PdfFontIdentifier? family)
+    {
+        FontFamilyProp.Set(family, PdfPropertyPriority.Local);
+    }
+
+    void IPdfTextStyles.ApplyFontSize(float size)
+    {
+        FontSizeProp.Set(size, PdfPropertyPriority.Local);
+    }
+
+    void IPdfTextStyles.ApplyTextColor(Color color)
+    {
+        TextColorProp.Set(color, PdfPropertyPriority.Local);
+    }
+
+    void IPdfTextStyles.ApplyFontAttributes(FontAttributes attributes)
+    {
+        FontAttributesProp.Set(attributes, PdfPropertyPriority.Local);
+    }
+
+    void IPdfTextStyles.ApplyTextDecorations(TextDecorations decorations)
+    {
+        TextDecorationsProp.Set(decorations, PdfPropertyPriority.Local);
+    }
+
+    void IPdfTextStyles.ApplyTextTransform(TextTransform transform)
+    {
+        TextTransformProp.Set(transform, PdfPropertyPriority.Local);
+    }
+
+    void IPdfTextStyles.ApplyStyle(PdfStyleIdentifier key)
+    {
+    }
+
+    #endregion
 }

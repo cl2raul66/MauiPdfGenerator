@@ -15,24 +15,25 @@ public class PdfSpanBuilderTests
     }
 
     [Fact]
-    public void Constructor_SetsText()
+    public void Constructor_SetsTextLength()
     {
         // Arrange
         var text = "Hello World";
+        var textLength = text.Length;
         
         // Act
-        var builder = new PdfSpanBuilder(text, _fontRegistry);
+        var builder = new PdfSpanBuilder(textLength, _fontRegistry);
         var model = builder.GetModel();
 
         // Assert
-        Assert.Equal(text, model.Text);
+        Assert.Equal(textLength, model.TextLength);
     }
 
     [Fact]
     public void FontSize_SetsFontSizeProp()
     {
         // Arrange
-        var builder = new PdfSpanBuilder("test", _fontRegistry);
+        var builder = new PdfSpanBuilder(4, _fontRegistry);
         float size = 15.5f;
 
         // Act
@@ -47,7 +48,7 @@ public class PdfSpanBuilderTests
     public void TextColor_SetsTextColorProp()
     {
         // Arrange
-        var builder = new PdfSpanBuilder("test", _fontRegistry);
+        var builder = new PdfSpanBuilder(4, _fontRegistry);
         var color = Colors.Red;
 
         // Act
@@ -62,7 +63,7 @@ public class PdfSpanBuilderTests
     public void FontAttributes_SetsFontAttributesProp()
     {
         // Arrange
-        var builder = new PdfSpanBuilder("test", _fontRegistry);
+        var builder = new PdfSpanBuilder(4, _fontRegistry);
         var attr = FontAttributes.Bold;
 
         // Act
@@ -77,7 +78,7 @@ public class PdfSpanBuilderTests
     public void TextDecorations_SetsTextDecorationsProp()
     {
         // Arrange
-        var builder = new PdfSpanBuilder("test", _fontRegistry);
+        var builder = new PdfSpanBuilder(4, _fontRegistry);
         var dec = TextDecorations.Underline;
 
         // Act
@@ -92,7 +93,7 @@ public class PdfSpanBuilderTests
     public void TextTransform_SetsTextTransformProp()
     {
         // Arrange
-        var builder = new PdfSpanBuilder("test", _fontRegistry);
+        var builder = new PdfSpanBuilder(4, _fontRegistry);
         var trans = TextTransform.Uppercase;
 
         // Act
@@ -109,7 +110,7 @@ public class PdfSpanBuilderTests
         // Arrange
         var family = new PdfFontIdentifier("OpenSansSemibold");
         _fontRegistry.Font(family); 
-        var builder = new PdfSpanBuilder("test", _fontRegistry);
+        var builder = new PdfSpanBuilder(4, _fontRegistry);
 
         // Act
         builder.FontFamily(family);

@@ -39,11 +39,11 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
         PageResources.Parent = _documentConfiguration.ResourceDictionary;
 
         if (typeof(TContent) == typeof(IPdfVerticalStackLayout))
-            _contentBuilder = new PdfVerticalStackLayoutBuilder(fontRegistry);
+            _contentBuilder = new PdfVerticalStackLayoutBuilder(fontRegistry, PageResources);
         else if (typeof(TContent) == typeof(IPdfHorizontalStackLayout))
-            _contentBuilder = new PdfHorizontalStackLayoutBuilder(fontRegistry);
+            _contentBuilder = new PdfHorizontalStackLayoutBuilder(fontRegistry, PageResources);
         else if (typeof(TContent) == typeof(IPdfGrid))
-            _contentBuilder = new PdfGridBuilder(fontRegistry);
+            _contentBuilder = new PdfGridBuilder(fontRegistry, PageResources);
         else
             throw new NotSupportedException($"The layout type '{typeof(TContent).Name}' is not supported as a root content element for a page.");
 

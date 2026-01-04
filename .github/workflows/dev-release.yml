@@ -10,23 +10,7 @@ on:
       - 'MauiPdfGenerator.SourceGenerators/**'
 
 jobs:
-  integration-check:
-    name: Pre-Release Checks
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - name: Install MAUI Workloads
-        run: dotnet workload install maui --ignore-failed-sources
-      - name: Run Integration Tests
-        run: |
-          dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --verbosity normal
-
   build-diagnostics:
-    needs: integration-check
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -65,9 +49,9 @@ jobs:
         run: |
           $ver = "${{ steps.final_version.outputs.VAL }}"
           Write-Host "Empaquetando Diagnostics: $ver"
-          
-          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj /p:Configuration=Release          
-          dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore          
+
+          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj /p:Configuration=Release
+          dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore
           dotnet pack MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
       - name: Upload Diagnostics Artifact
@@ -76,6 +60,29 @@ jobs:
           name: diagnostics-package
           path: ./output/*.nupkg
           retention-days: 1
+
+  integration-check:
+    name: Pre-Release Checks
+    needs: build-diagnostics
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui --ignore-failed-sources
+      - name: Download Diagnostics Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: diagnostics-package
+          path: ./local-feed
+      - name: Setup Local NuGet Feed
+        run: dotnet nuget add source "${{ github.workspace }}/local-feed" --name LocalArtifacts
+      - name: Run Integration Tests
+        run: |
+          dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --verbosity normal
 
   build-main:
     needs: build-diagnostics
@@ -126,11 +133,11 @@ jobs:
         run: |
           $mainVer = "${{ steps.final_version.outputs.VAL }}"
           $diagVer = "${{ needs.build-diagnostics.outputs.version }}"
-          
+
           Write-Host "Empaquetando Main: $mainVer (Dependencia Diagnostics: $diagVer)"
 
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer          
-          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer          
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
           dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
 
       - name: Upload Main Artifact

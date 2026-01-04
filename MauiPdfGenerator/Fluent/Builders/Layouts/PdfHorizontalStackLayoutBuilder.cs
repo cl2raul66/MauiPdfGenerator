@@ -1,5 +1,6 @@
-﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
@@ -12,18 +13,20 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
 {
     private readonly PdfHorizontalStackLayoutData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
+    private readonly PdfResourceDictionary? _resourceDictionary;
 
-    public PdfHorizontalStackLayoutBuilder(PdfFontRegistryBuilder fontRegistry)
+    public PdfHorizontalStackLayoutBuilder(PdfFontRegistryBuilder fontRegistry, PdfResourceDictionary? resourceDictionary = null)
     {
         _model = new PdfHorizontalStackLayoutData();
         _fontRegistry = fontRegistry;
+        _resourceDictionary = resourceDictionary;
     }
 
     public PdfElementData GetModel() => _model;
 
     public void Children(Action<IPdfStackLayoutBuilder> childrenSetup)
     {
-        var childrenBuilder = new PdfStackLayoutContentBuilder(this, _fontRegistry);
+        var childrenBuilder = new PdfStackLayoutContentBuilder(this, _fontRegistry, _resourceDictionary);
         childrenSetup(childrenBuilder);
     }
 

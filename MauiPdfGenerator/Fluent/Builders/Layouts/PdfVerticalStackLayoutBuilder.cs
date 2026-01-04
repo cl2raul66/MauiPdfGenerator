@@ -1,5 +1,6 @@
-﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
@@ -12,18 +13,20 @@ internal class PdfVerticalStackLayoutBuilder : IBuildablePdfElement, IPdfVertica
 {
     private readonly PdfVerticalStackLayoutData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
+    private readonly PdfResourceDictionary? _resourceDictionary;
 
-    public PdfVerticalStackLayoutBuilder(PdfFontRegistryBuilder fontRegistry)
+    public PdfVerticalStackLayoutBuilder(PdfFontRegistryBuilder fontRegistry, PdfResourceDictionary? resourceDictionary = null)
     {
         _model = new PdfVerticalStackLayoutData();
         _fontRegistry = fontRegistry;
+        _resourceDictionary = resourceDictionary;
     }
 
     public PdfElementData GetModel() => _model;
 
     public void Children(Action<IPdfStackLayoutBuilder> childrenSetup)
     {
-        var childrenBuilder = new PdfStackLayoutContentBuilder(this, _fontRegistry);
+        var childrenBuilder = new PdfStackLayoutContentBuilder(this, _fontRegistry, _resourceDictionary);
         childrenSetup(childrenBuilder);
     }
 

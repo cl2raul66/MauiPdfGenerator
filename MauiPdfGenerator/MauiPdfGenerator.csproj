@@ -61,7 +61,7 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'Release'">
-	  <PackageReference Include="RandAMediaLabGroup.MauiPdfGenerator.Diagnostics" Version="$(DiagnosticsVersion)" />
+	  <PackageReference Include="RandAMediaLabGroup.MauiPdfGenerator.Diagnostics" Version="*" />
 	</ItemGroup>
 
 </Project>

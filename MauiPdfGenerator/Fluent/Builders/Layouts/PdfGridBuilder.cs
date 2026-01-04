@@ -1,6 +1,7 @@
-﻿using MauiPdfGenerator.Common;
+using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Builders.Layouts.Grids;
 using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
@@ -13,13 +14,15 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
 {
     private readonly PdfGridData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
+    private readonly PdfResourceDictionary? _resourceDictionary;
     private readonly HashSet<(int, int)> _occupiedCells = [];
     private bool _hasRowDefinitions = false;
     private bool _hasColumnDefinitions = false;
 
-    public PdfGridBuilder(PdfFontRegistryBuilder fontRegistry)
+    public PdfGridBuilder(PdfFontRegistryBuilder fontRegistry, PdfResourceDictionary? resourceDictionary = null)
     {
         _fontRegistry = fontRegistry;
+        _resourceDictionary = resourceDictionary;
         _model = new PdfGridData();
     }
 
@@ -61,7 +64,7 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
 
     public void Children(Action<IPdfGridChildrenBuilder> builder)
     {
-        var childrenBuilder = new PdfGridChildrenBuilder(_fontRegistry);
+        var childrenBuilder = new PdfGridChildrenBuilder(_fontRegistry, _resourceDictionary);
         builder(childrenBuilder);
         foreach (var child in childrenBuilder.Children) this.Add(child);
     }

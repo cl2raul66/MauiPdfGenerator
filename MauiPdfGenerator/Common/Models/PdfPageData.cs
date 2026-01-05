@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Common.Models;
@@ -14,5 +14,6 @@ internal record PdfPageData(
     Color PageDefaultTextColor,
     FontAttributes PageDefaultFontAttributes,
     TextDecorations PageDefaultTextDecorations,
-    TextTransform PageDefaultTextTransform
+    TextTransform PageDefaultTextTransform,
+    string Culture
 );

@@ -1,4 +1,4 @@
-﻿namespace MauiPdfGenerator.Common.Models;
+namespace MauiPdfGenerator.Common.Models;
 
 internal record PdfDocumentData(
     IReadOnlyList<PdfPageData> Pages,
@@ -9,5 +9,6 @@ internal record PdfDocumentData(
     string? Creator,
     string? Producer,
     DateTime? CreationDate,
-    IReadOnlyDictionary<string, string>? CustomProperties
+    IReadOnlyDictionary<string, string>? CustomProperties,
+    string Culture
 );

@@ -1,5 +1,4 @@
 using MauiPdfGenerator.Common.Enums;
-using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Core.Models;
@@ -9,6 +8,7 @@ using MauiPdfGenerator.Diagnostics.Models;
 using MauiPdfGenerator.Fluent.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using SkiaSharp.HarfBuzz;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 
@@ -119,15 +119,12 @@ internal class TextRenderer : IElementRenderer
             return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
-        // --- LÓGICA CASUÍSTICA ---
         if (paragraph.GetHeightRequest.HasValue)
         {
-            // CASO A: Caja Fija (Atomic Box)
             return ArrangeAsFixedBox(finalRect, paragraph, baseCache, context);
         }
         else
         {
-            // CASO B: Flujo Continuo (Flow Text)
             return ArrangeAsFlowText(finalRect, paragraph, baseCache, context);
         }
     }
@@ -294,6 +291,9 @@ internal class TextRenderer : IElementRenderer
 
         var multiFontRenderer = spanRuns?.Count > 0 ? new MultiFontTextRenderer(spanRuns, font, paint, textCache.TransformedText) : null;
 
+        bool isRTL = IsRTLCulture(context.PageData.Culture);
+        SKShaper? shaper = isRTL ? new SKShaper(font.Typeface) : null;
+
         for (int i = 0; i < linesToDraw.Count; i++)
         {
             var (line, startIndex) = linesToDraw[i];
@@ -313,20 +313,28 @@ internal class TextRenderer : IElementRenderer
             }
             else
             {
-                if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
-                else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
-
-                if (multiFontRenderer != null)
+                if (isRTL && shaper != null)
                 {
-                    multiFontRenderer.DrawTextWithDecorations(canvas, line, drawX, baselineY, startIndex, textDecorations);
+                    float x = contentRect.Right;
+                    canvas.DrawShapedText(shaper, line, x, baselineY, SKTextAlign.Right, font, paint);
                 }
                 else
                 {
-                    canvas.DrawText(line, drawX, baselineY, font, paint);
+                    if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
+                    else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
 
-                    if (textDecorations is not TextDecorations.None)
+                    if (multiFontRenderer != null)
                     {
-                        DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                        multiFontRenderer.DrawTextWithDecorations(canvas, line, drawX, baselineY, startIndex, textDecorations);
+                    }
+                    else
+                    {
+                        canvas.DrawText(line, drawX, baselineY, font, paint);
+
+                        if (textDecorations is not TextDecorations.None)
+                        {
+                            DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                        }
                     }
                 }
             }
@@ -336,9 +344,25 @@ internal class TextRenderer : IElementRenderer
 
         canvas.Restore();
 
+        shaper?.Dispose();
         font.Dispose();
         paint.Dispose();
         return Task.CompletedTask;
+    }
+
+    private static bool IsRTLCulture(string culture)
+    {
+        if (string.IsNullOrEmpty(culture)) return false;
+
+        try
+        {
+            var cultureInfo = new System.Globalization.CultureInfo(culture);
+            return cultureInfo.TextInfo.IsRightToLeft;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void DrawJustifiedLine(SKCanvas canvas, string line, float x, float totalWidth, float y, SKFont font, SKPaint paint, MultiFontTextRenderer? multiFontRenderer = null, int lineStartIndex = 0)

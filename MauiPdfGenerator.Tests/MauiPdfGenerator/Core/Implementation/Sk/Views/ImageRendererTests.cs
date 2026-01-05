@@ -41,7 +41,8 @@ public class ImageRendererTests
             Colors.Black,
             FontAttributes.None,
             TextDecorations.None,
-            TextTransform.Default
+            TextTransform.Default,
+            string.Empty
         );
         
         return new PdfGenerationContext(

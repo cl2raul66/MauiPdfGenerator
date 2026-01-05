@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
@@ -17,5 +17,6 @@ public interface IPdfConfigurablePage<TContent> where TContent : class
     IPdfConfigurablePage<TContent> DefaultTextDecorations(TextDecorations decorations);
     IPdfConfigurablePage<TContent> DefaultTextTransform(TextTransform transform);
     IPdfConfigurablePage<TContent> Resources(Action<IPdfResourceBuilder> resourceBuilderAction);
+    IPdfConfigurablePage<TContent> Culture(string cultureName);
     IPageReadyToBuild Content(Action<TContent> contentSetup);
 }

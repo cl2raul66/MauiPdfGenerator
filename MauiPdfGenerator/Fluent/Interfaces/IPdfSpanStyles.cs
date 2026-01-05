@@ -1,4 +1,3 @@
-using MauiPdfGenerator.Fluent.Interfaces;
 using MauiPdfGenerator.Fluent.Interfaces.Views;
 using MauiPdfGenerator.Fluent.Models;
 
@@ -12,6 +11,4 @@ public interface IPdfSpanStyles : IPdfElement<IPdfSpan>, IPdfStylable
     IPdfSpan FontAttributes(FontAttributes attributes);
     IPdfSpan TextDecorations(TextDecorations decorations);
     IPdfSpan TextTransform(TextTransform transform);
-    IPdfSpan Style(PdfStyleIdentifier key);
-    IPdfSpan Style(string key);
 }

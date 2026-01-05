@@ -72,11 +72,6 @@
                     Clicked="GenerateGridShowcase_Clicked"
                     HorizontalOptions="Fill"
                     Text="Grid Showcase" />
-                <Button
-                    x:Name="GenerateStylesShowcase"
-                    Clicked="GenerateStylesShowcase_Clicked"
-                    HorizontalOptions="Fill"
-                    Text="Styles Showcase" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

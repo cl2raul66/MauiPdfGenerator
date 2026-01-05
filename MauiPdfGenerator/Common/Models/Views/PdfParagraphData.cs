@@ -7,7 +7,6 @@ namespace MauiPdfGenerator.Common.Models.Views;
 
 internal class PdfParagraphData : PdfElementData, IPdfTextStyles
 {
-    // --- CORRECCIÓN: Constantes reintroducidas para uso en TextRenderer ---
     public const float DefaultFontSize = 12f;
     public static readonly Color DefaultTextColor = Colors.Black;
     public const TextAlignment DefaultHorizontalTextAlignment = TextAlignment.Start;
@@ -16,12 +15,14 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
     public const LineBreakMode DefaultLineBreakMode = Microsoft.Maui.LineBreakMode.WordWrap;
     public const TextDecorations DefaultTextDecorations = Microsoft.Maui.TextDecorations.None;
     public const TextTransform DefaultTextTransform = Microsoft.Maui.TextTransform.None;
-    // ---------------------------------------------------------------------
+    public const float DefaultCharacterSpacing = 0f;
+    public const float DefaultWordSpacing = 0f;
+    public const float DefaultLineSpacing = 1.0f;
 
     internal string Text { get; private set; }
     internal bool IsContinuation { get; private set; } = false;
 
-    // --- Backing Properties ---
+// --- Backing Properties ---
     internal PdfStyledProperty<PdfFontIdentifier?> FontFamilyProp { get; } = new(null);
     internal PdfStyledProperty<float> FontSizeProp { get; } = new(DefaultFontSize);
     internal PdfStyledProperty<Color?> TextColorProp { get; } = new(null);
@@ -31,8 +32,11 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
     internal PdfStyledProperty<LineBreakMode> LineBreakModeProp { get; } = new(DefaultLineBreakMode);
     internal PdfStyledProperty<TextDecorations> TextDecorationsProp { get; } = new(DefaultTextDecorations);
     internal PdfStyledProperty<TextTransform> TextTransformProp { get; } = new(DefaultTextTransform);
+    internal PdfStyledProperty<float> CharacterSpacingProp { get; } = new(DefaultCharacterSpacing);
+    internal PdfStyledProperty<float> WordSpacingProp { get; } = new(DefaultWordSpacing);
+    internal PdfStyledProperty<float> LineSpacingProp { get; } = new(DefaultLineSpacing);
 
-    // --- Core API ---
+// --- Core API ---
     internal PdfFontIdentifier? CurrentFontFamily => FontFamilyProp.Value;
     internal float CurrentFontSize => FontSizeProp.Value;
     internal Color? CurrentTextColor => TextColorProp.Value;
@@ -42,6 +46,9 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
     internal LineBreakMode? CurrentLineBreakMode => LineBreakModeProp.Value;
     internal TextDecorations? CurrentTextDecorations => TextDecorationsProp.Value;
     internal TextTransform? CurrentTextTransform => TextTransformProp.Value;
+    internal float CurrentCharacterSpacing => CharacterSpacingProp.Value;
+    internal float CurrentWordSpacing => WordSpacingProp.Value;
+    internal float CurrentLineSpacing => LineSpacingProp.Value;
 
     internal PdfFontRegistration? ResolvedFontRegistration { get; set; }
 
@@ -63,9 +70,12 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
         HorizontalTextAlignmentProp.Set(original.HorizontalTextAlignmentProp.Value, PdfPropertyPriority.Local);
         VerticalTextAlignmentProp.Set(original.VerticalTextAlignmentProp.Value, PdfPropertyPriority.Local);
         FontAttributesProp.Set(original.FontAttributesProp.Value, PdfPropertyPriority.Local);
-        LineBreakModeProp.Set(original.LineBreakModeProp.Value, PdfPropertyPriority.Local);
+LineBreakModeProp.Set(original.LineBreakModeProp.Value, PdfPropertyPriority.Local);
         TextDecorationsProp.Set(original.TextDecorationsProp.Value, PdfPropertyPriority.Local);
         TextTransformProp.Set(original.TextTransformProp.Value, PdfPropertyPriority.Local);
+        CharacterSpacingProp.Set(original.CharacterSpacingProp.Value, PdfPropertyPriority.Local);
+        WordSpacingProp.Set(original.WordSpacingProp.Value, PdfPropertyPriority.Local);
+        LineSpacingProp.Set(original.LineSpacingProp.Value, PdfPropertyPriority.Local);
 
         ResolvedFontRegistration = original.ResolvedFontRegistration;
 

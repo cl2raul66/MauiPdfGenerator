@@ -102,7 +102,8 @@ public class GridRendererTests
             Microsoft.Maui.Graphics.Colors.Black,
             Microsoft.Maui.Controls.FontAttributes.None,
             Microsoft.Maui.TextDecorations.None,
-            Microsoft.Maui.TextTransform.Default
+            Microsoft.Maui.TextTransform.Default,
+            string.Empty
         );
 
         return new PdfGenerationContext(

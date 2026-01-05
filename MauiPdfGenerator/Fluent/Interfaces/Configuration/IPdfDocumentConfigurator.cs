@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Enums;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
@@ -12,4 +12,5 @@ public interface IPdfDocumentConfigurator
     IPdfDocumentConfigurator Padding(DefaultPagePaddingType defaultPaddingType);
     IPdfDocumentConfigurator MetaData(Action<IPdfMetaData> metaData);
     IPdfDocumentConfigurator ConfigureFontRegistry(Action<IPdfFontRegistry> fontRegistryConfiguration);
+    IPdfDocumentConfigurator SetDocumentCulture(string cultureName);
 }

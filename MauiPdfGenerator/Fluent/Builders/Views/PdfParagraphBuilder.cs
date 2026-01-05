@@ -62,11 +62,29 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
         return this;
     }
 
-    public IPdfGridChildParagraph FontSize(float size)
+public IPdfGridChildParagraph FontSize(float size)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
         _model.FontSizeProp.Set(size, PdfPropertyPriority.Local);
         return this;
+    }
+    public IPdfGridChildParagraph CharacterSpacing(float spacing) 
+    { 
+        ArgumentOutOfRangeException.ThrowIfNegative(spacing);
+        _model.CharacterSpacingProp.Set(spacing, PdfPropertyPriority.Local); 
+        return this; 
+    }
+    public IPdfGridChildParagraph WordSpacing(float spacing) 
+    { 
+        ArgumentOutOfRangeException.ThrowIfNegative(spacing);
+        _model.WordSpacingProp.Set(spacing, PdfPropertyPriority.Local); 
+        return this; 
+    }
+    public IPdfGridChildParagraph LineSpacing(float spacing) 
+    { 
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(spacing);
+        _model.LineSpacingProp.Set(spacing, PdfPropertyPriority.Local); 
+        return this; 
     }
     public IPdfGridChildParagraph TextColor(Color color) { _model.TextColorProp.Set(color, PdfPropertyPriority.Local); return this; }
     public IPdfGridChildParagraph HorizontalTextAlignment(TextAlignment alignment) { _model.HorizontalTextAlignmentProp.Set(alignment, PdfPropertyPriority.Local); return this; }
@@ -98,7 +116,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
 
     // IPdfParagraph (Para Estilos)
     IPdfParagraph IPdfParagraph<IPdfParagraph>.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
-    IPdfParagraph IPdfParagraph<IPdfParagraph>.FontSize(float s) { FontSize(s); return this; }
+IPdfParagraph IPdfParagraph<IPdfParagraph>.FontSize(float s) { FontSize(s); return this; }
     IPdfParagraph IPdfParagraph<IPdfParagraph>.TextColor(Color c) { TextColor(c); return this; }
     IPdfParagraph IPdfParagraph<IPdfParagraph>.HorizontalTextAlignment(TextAlignment a) { HorizontalTextAlignment(a); return this; }
     IPdfParagraph IPdfParagraph<IPdfParagraph>.VerticalTextAlignment(TextAlignment a) { VerticalTextAlignment(a); return this; }
@@ -106,6 +124,9 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfParagraph IPdfParagraph<IPdfParagraph>.LineBreakMode(LineBreakMode m) { LineBreakMode(m); return this; }
     IPdfParagraph IPdfParagraph<IPdfParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfParagraph IPdfParagraph<IPdfParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
+    IPdfParagraph IPdfParagraph<IPdfParagraph>.CharacterSpacing(float s) { CharacterSpacing(s); return this; }
+    IPdfParagraph IPdfParagraph<IPdfParagraph>.WordSpacing(float s) { WordSpacing(s); return this; }
+    IPdfParagraph IPdfParagraph<IPdfParagraph>.LineSpacing(float s) { LineSpacing(s); return this; }
 
     IPdfParagraph IPdfElement<IPdfParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfParagraph IPdfElement<IPdfParagraph>.Margin(double u) { Margin(u); return this; }
@@ -120,7 +141,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
 
     // IPdfPageChildParagraph
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
-    IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.FontSize(float s) { FontSize(s); return this; }
+IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.FontSize(float s) { FontSize(s); return this; }
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.TextColor(Color c) { TextColor(c); return this; }
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.HorizontalTextAlignment(TextAlignment a) { HorizontalTextAlignment(a); return this; }
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.VerticalTextAlignment(TextAlignment a) { VerticalTextAlignment(a); return this; }
@@ -128,6 +149,9 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.LineBreakMode(LineBreakMode m) { LineBreakMode(m); return this; }
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
+    IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.CharacterSpacing(float s) { CharacterSpacing(s); return this; }
+    IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.WordSpacing(float s) { WordSpacing(s); return this; }
+    IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.LineSpacing(float s) { LineSpacing(s); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
@@ -141,7 +165,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
 
     // IPdfLayoutChildParagraph
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
-    IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.FontSize(float s) { FontSize(s); return this; }
+IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.FontSize(float s) { FontSize(s); return this; }
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.TextColor(Color c) { TextColor(c); return this; }
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.HorizontalTextAlignment(TextAlignment a) { HorizontalTextAlignment(a); return this; }
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.VerticalTextAlignment(TextAlignment a) { VerticalTextAlignment(a); return this; }
@@ -149,6 +173,9 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.LineBreakMode(LineBreakMode m) { LineBreakMode(m); return this; }
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
+    IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.CharacterSpacing(float s) { CharacterSpacing(s); return this; }
+    IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.WordSpacing(float s) { WordSpacing(s); return this; }
+    IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.LineSpacing(float s) { LineSpacing(s); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildParagraph IPdfElement<IPdfLayoutChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }
@@ -164,7 +191,7 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
 
     // IPdfGridChildParagraph
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
-    IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.FontSize(float s) { FontSize(s); return this; }
+IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.FontSize(float s) { FontSize(s); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.TextColor(Color c) { TextColor(c); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.HorizontalTextAlignment(TextAlignment a) { HorizontalTextAlignment(a); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.VerticalTextAlignment(TextAlignment a) { VerticalTextAlignment(a); return this; }
@@ -172,6 +199,9 @@ internal class PdfParagraphBuilder : IBuildablePdfElement, IPdfPageChildParagrap
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.LineBreakMode(LineBreakMode m) { LineBreakMode(m); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.TextTransform(TextTransform t) { TextTransform(t); return this; }
+    IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.CharacterSpacing(float s) { CharacterSpacing(s); return this; }
+    IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.WordSpacing(float s) { WordSpacing(s); return this; }
+    IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.LineSpacing(float s) { LineSpacing(s); return this; }
     IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Margin(double u) { Margin(u); return this; }
     IPdfGridChildParagraph IPdfElement<IPdfGridChildParagraph>.Margin(double h, double v) { Margin(h, v); return this; }

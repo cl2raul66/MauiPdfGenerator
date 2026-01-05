@@ -12,12 +12,10 @@ public static class MauiProgram
             .UseMauiPdfGenerator()
             .PdfConfigureFonts(fonts =>
             {
-                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("OpenSans.ttf", "OpenSans");
                 fonts.AddFont("comic.ttf", "Comic");
-                fonts.AddFont("comicbd.ttf", "ComicBold");
-                fonts.AddFont("comici.ttf", "ComicBoldItalica");
-                fonts.AddFont("comicz.ttf", "ComicItalica");
+                fonts.AddFont("NotoSansArabic.ttf", "NotoSansArabic");
+                fonts.AddFont("NotoSansHebrew.ttf", "NotoSansHebrew");
             });
 
 #if DEBUG

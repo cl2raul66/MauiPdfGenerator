@@ -19,8 +19,11 @@ internal class PdfGridChildParagraphBuilder : PdfGridChildBuilder<PdfParagraphBu
     public IPdfGridChildParagraph VerticalTextAlignment(TextAlignment alignment) { _internalBuilder.VerticalTextAlignment(alignment); return this; }
     public IPdfGridChildParagraph FontAttributes(FontAttributes attributes) { _internalBuilder.FontAttributes(attributes); return this; }
     public IPdfGridChildParagraph LineBreakMode(LineBreakMode mode) { _internalBuilder.LineBreakMode(mode); return this; }
-    public IPdfGridChildParagraph TextDecorations(TextDecorations decorations) { _internalBuilder.TextDecorations(decorations); return this; }
+public IPdfGridChildParagraph TextDecorations(TextDecorations decorations) { _internalBuilder.TextDecorations(decorations); return this; }
     public IPdfGridChildParagraph TextTransform(TextTransform transform) { _internalBuilder.TextTransform(transform); return this; }
+    public IPdfGridChildParagraph CharacterSpacing(float spacing) { _internalBuilder.CharacterSpacing(spacing); return this; }
+    public IPdfGridChildParagraph WordSpacing(float spacing) { _internalBuilder.WordSpacing(spacing); return this; }
+    public IPdfGridChildParagraph LineSpacing(float spacing) { _internalBuilder.LineSpacing(spacing); return this; }
     public IPdfGridChildParagraph Margin(double uniformMargin) { _internalBuilder.Margin(uniformMargin); return this; }
     public IPdfGridChildParagraph Margin(double horizontalMargin, double verticalMargin) { _internalBuilder.Margin(horizontalMargin, verticalMargin); return this; }
     public IPdfGridChildParagraph Margin(double leftMargin, double topMargin, double rightMargin, double bottomMargin) { _internalBuilder.Margin(leftMargin, topMargin, rightMargin, bottomMargin); return this; }

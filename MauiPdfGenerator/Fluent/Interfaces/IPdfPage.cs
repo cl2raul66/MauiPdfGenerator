@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Enums;
 
 namespace MauiPdfGenerator.Fluent.Interfaces;
 
@@ -17,6 +17,8 @@ public interface IPdfPage<TSelf> where TSelf : IPdfPage<TSelf>
     TSelf Padding(DefaultPagePaddingType defaultPaddingType);
 
     TSelf BackgroundColor(Color backgroundColor);
+
+    TSelf Culture(string cultureName);
 
     IPdfDocument Build();
 }

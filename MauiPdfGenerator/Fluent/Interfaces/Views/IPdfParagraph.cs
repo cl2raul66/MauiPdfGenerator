@@ -13,6 +13,9 @@ public interface IPdfParagraph<TSelf> : IPdfElement<TSelf>, IPdfStylable where T
     TSelf LineBreakMode(LineBreakMode mode);
     TSelf TextDecorations(TextDecorations decorations);
     TSelf TextTransform(TextTransform transform);
+    TSelf CharacterSpacing(float spacing);
+    TSelf WordSpacing(float spacing);
+    TSelf LineSpacing(float spacing);
 }
 
 public interface IPdfParagraph : IPdfParagraph<IPdfParagraph>

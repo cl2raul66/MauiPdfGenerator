@@ -1,4 +1,3 @@
-using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Core.Models;
 using SkiaSharp;
 
@@ -116,7 +115,7 @@ internal class MultiFontTextRenderer
             var run = GetRunAtAbsoluteIndex(absoluteIndex);
             TextDecorations decorations = run?.Decorations ?? paragraphDecorations;
 
-            if (decorations != TextDecorations.None)
+            if (decorations is not TextDecorations.None)
             {
                 SKFont font = run?.Font ?? _defaultFont;
                 SKPaint paint = run?.Paint ?? _defaultPaint;

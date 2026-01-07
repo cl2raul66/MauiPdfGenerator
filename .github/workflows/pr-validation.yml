@@ -10,6 +10,7 @@ on:
       - 'MauiPdfGenerator/**'
       - 'MauiPdfGenerator.Diagnostics/**'
       - 'MauiPdfGenerator.SourceGenerators/**'
+  workflow_dispatch:
 
 jobs:
   validate-solution:

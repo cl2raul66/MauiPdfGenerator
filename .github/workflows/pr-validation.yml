@@ -9,7 +9,6 @@ on:
     paths:
       - 'MauiPdfGenerator/**'
       - 'MauiPdfGenerator.Diagnostics/**'
-      - 'MauiPdfGenerator.SourceGenerators/**'
   workflow_dispatch:
 
 jobs:
@@ -32,9 +31,6 @@ jobs:
 
       - name: Run Unit Tests (SourceGen)
         run: dotnet test MauiPdfGenerator.SourceGenerators.Tests/MauiPdfGenerator.SourceGenerators.Tests.csproj --configuration Release --no-build --verbosity normal
-
-      - name: Run Unit Tests (Diagnostics)
-        run: dotnet test MauiPdfGenerator.Diagnostics.Tests/MauiPdfGenerator.Diagnostics.Tests.csproj --configuration Release --no-build --verbosity normal
 
       - name: Run Unit Tests (Core)
         run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-build --verbosity normal

@@ -29,7 +29,7 @@ jobs:
 
       - name: Build All Projects
         run: |
-          dotnet build MauiPdfGenerator.sln --configuration Debug
+          dotnet build MauiPdfGenerator.sln --configuration Release
 
       - name: Run Unit Tests (Core)
         run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-build --verbosity normal
@@ -41,4 +41,8 @@ jobs:
         run: dotnet test MauiPdfGenerator.SourceGenerators.Tests/MauiPdfGenerator.SourceGenerators.Tests.csproj --configuration Release --no-build --verbosity normal
 
       - name: Run Integration Tests
+<<<<<<< Updated upstream
         run: dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --no-build --verbosity normal
+=======
+        run: dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --no-build --verbosity normal
+>>>>>>> Stashed changes

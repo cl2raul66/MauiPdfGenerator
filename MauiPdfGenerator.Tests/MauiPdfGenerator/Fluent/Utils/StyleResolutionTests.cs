@@ -79,8 +79,8 @@ public class StyleResolutionTests
         var explicitId = new PdfStyleIdentifier("Explicit");
         var styleBuilder = new PdfResourceBuilder(_resourceDictionary);
 
-        styleBuilder.Style<IPdfParagraph>(s => s.FontSize(10)); // Implícito
-        styleBuilder.Style<IPdfParagraph>("Explicit", s => s.FontSize(30)); // Explícito
+        styleBuilder.Style<IPdfParagraph>(s => s.FontSize(10)); 
+        styleBuilder.Style<IPdfParagraph>("Explicit", s => s.FontSize(30)); 
 
         var paragraphData = new PdfParagraphData("Test");
         paragraphData.Style(explicitId);
@@ -140,4 +140,3 @@ public class StyleResolutionTests
         Assert.Equal(20f, paragraphData.CurrentFontSize);
     }
 }
-

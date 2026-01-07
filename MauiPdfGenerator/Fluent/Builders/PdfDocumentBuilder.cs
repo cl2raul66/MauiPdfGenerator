@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Exceptions;
 using MauiPdfGenerator.Diagnostics.Interfaces;
@@ -48,7 +48,7 @@ internal class PdfDocumentBuilder : IPdfDocument
 
     public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
-        var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry);
+var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry, _diagnosticSink);
         _pages.Add(pageBuilder);
         return pageBuilder;
     }
@@ -95,7 +95,7 @@ internal class PdfDocumentBuilder : IPdfDocument
 
                 styleResolver.ApplyStyles(pageElements, contentPageBuilder.PageResources);
 
-                var pageData = new PdfPageData(
+var pageData = new PdfPageData(
                     contentPageBuilder.GetEffectivePageSize(),
                     contentPageBuilder.GetEffectivePageOrientation(),
                     contentPageBuilder.GetEffectivePadding(),
@@ -106,7 +106,8 @@ internal class PdfDocumentBuilder : IPdfDocument
                     contentPageBuilder.GetPageDefaultTextColor(),
                     contentPageBuilder.GetPageDefaultFontAttributes(),
                     contentPageBuilder.GetPageDefaultTextDecorations(),
-                    contentPageBuilder.GetPageDefaultTextTransform()
+                    contentPageBuilder.GetPageDefaultTextTransform(),
+                    contentPageBuilder.GetEffectiveCulture()
                 );
                 pageDataList.Add(pageData);
             }
@@ -121,12 +122,13 @@ internal class PdfDocumentBuilder : IPdfDocument
             throw new InvalidOperationException("Cannot save PDF document: No pages have been added or processed.");
         }
 
-        var meta = _configurationBuilder.MetaDataBuilder;
+var meta = _configurationBuilder.MetaDataBuilder;
         var documentData = new PdfDocumentData(
             pageDataList.AsReadOnly(),
             meta.GetTitle, meta.GetAuthor, meta.GetSubject, meta.GetKeywords,
             meta.GetCreator, meta.GetProducer, meta.GetCreationDate,
-            meta.GetCustomProperties
+            meta.GetCustomProperties,
+            _configurationBuilder.Culture
         );
 
         try

@@ -26,50 +26,18 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      - name: Build Diagnostics
+      - name: Build All Projects
         run: |
-          dotnet restore MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj /p:Configuration=Release
-          dotnet build MauiPdfGenerator.Diagnostics/MauiPdfGenerator.Diagnostics.csproj --configuration Release --no-restore          
+          dotnet build MauiPdfGenerator.sln --configuration Debug
 
-      - name: Build SourceGenerators
-        run: |
-          dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj /p:Configuration=Release
-          dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore   
+      - name: Run Unit Tests (Core)
+        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-build --verbosity normal
 
-      - name: Build MauiPdfGenerator
-        run:  |
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release
-          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore  
+      - name: Run Unit Tests (Diagnostics)
+        run: dotnet test MauiPdfGenerator.Diagnostics.Tests/MauiPdfGenerator.Diagnostics.Tests.csproj --configuration Release --no-build --verbosity normal
 
-      - name: Build Diagnostics Tests 
-        run: |
-          dotnet restore MauiPdfGenerator.Tests/MauiPdfGenerator.Diagnostics.Tests.csproj /p:Configuration=Release
-          dotnet build MauiPdfGenerator.Tests/MauiPdfGenerator.Diagnostics.Tests.csproj --configuration Release --no-restore
-
-      - name: Run Diagnostics Tests
-        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-build --verbosity normal 
-
-      - name: Build SourceGenerators Tests
-        run: |
-          dotnet restore MauiPdfGenerator.Tests/MauiPdfGenerator.SourceGenerators.Tests.csproj /p:Configuration=Release
-          dotnet build MauiPdfGenerator.Tests/MauiPdfGenerator.SourceGenerators.Tests.csproj --configuration Release --no-restore
-
-      - name: Run SourceGenerators Tests
-        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.SourceGenerators.Tests.csproj --configuration Release --no-build --verbosity normal 
-
-      - name: Build MauiPdfGenerator Tests
-        run: |
-          dotnet restore MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj /p:Configuration=Release
-          dotnet build MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-restore
-
-      - name: Run MauiPdfGenerator Tests
-        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-build --verbosity normal 
-
-      - name: Build Integration Tests
-        run: |
-          dotnet restore MauiPdfGenerator.Tests/MauiPdfGenerator.IntegrationTests.csproj /p:Configuration=Release
-          dotnet build MauiPdfGenerator.Tests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --no-restore
+      - name: Run Unit Tests (SourceGen)
+        run: dotnet test MauiPdfGenerator.SourceGenerators.Tests/MauiPdfGenerator.SourceGenerators.Tests.csproj --configuration Release --no-build --verbosity normal
 
       - name: Run Integration Tests
-        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --no-build --verbosity normal
-        
+        run: dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --no-build --verbosity normal

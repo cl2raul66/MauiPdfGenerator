@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Core.Models;
@@ -8,6 +8,7 @@ using MauiPdfGenerator.Diagnostics.Models;
 using MauiPdfGenerator.Fluent.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using SkiaSharp.HarfBuzz;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 
@@ -23,11 +24,12 @@ internal class TextRenderer : IElementRenderer
         TextDecorations TextDecorations,
         LineBreakMode LineBreakMode,
         string TransformedText,
-        List<string>? LinesToDrawOnThisPage = null,
+        List<(string Line, int StartIndex)>? LinesToDrawOnThisPage = null,
         PdfRect? FinalArrangedRect = null,
         float LineAdvance = 0,
         float VisualTopOffset = 0,
-        float VisualBottomOffset = 0
+        float VisualBottomOffset = 0,
+        List<SpanRun>? SpanRuns = null
     );
 
     public async Task<PdfLayoutInfo> MeasureAsync(PdfGenerationContext context, SKSize availableSize)
@@ -41,7 +43,19 @@ internal class TextRenderer : IElementRenderer
             ? (float)paragraph.GetWidthRequest.Value - (float)paragraph.GetPadding.HorizontalThickness
             : availableSize.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness;
 
-        var allLines = WrapTextToLines(textToRender, font, widthForMeasure, lineBreakMode);
+        var spanRuns = new List<SpanRun>();
+        MultiFontTextRenderer? multiFontRenderer = null;
+
+        if (paragraph.HasSpans)
+        {
+            spanRuns = await ResolveSpanRunsAsync(paragraph, context, font, paint);
+            if (spanRuns.Count > 0)
+            {
+                multiFontRenderer = new MultiFontTextRenderer(spanRuns, font, paint, textToRender);
+            }
+        }
+
+        var allLines = WrapTextToLinesWithIndex(textToRender, font, widthForMeasure, lineBreakMode, multiFontRenderer);
 
         SKFontMetrics fontMetrics = font.Metrics;
         float lineAdvance = -fontMetrics.Ascent + fontMetrics.Descent;
@@ -52,11 +66,11 @@ internal class TextRenderer : IElementRenderer
         if (allLines.Count != 0)
         {
             SKRect firstLineBounds = new();
-            font.MeasureText(allLines[0], out firstLineBounds);
+            font.MeasureText(allLines[0].Line, out firstLineBounds);
             visualTopOffset = -firstLineBounds.Top;
 
             SKRect lastLineBounds = new();
-            font.MeasureText(allLines[^1], out lastLineBounds);
+            font.MeasureText(allLines[^1].Line, out lastLineBounds);
             visualBottomOffset = lastLineBounds.Bottom;
         }
 
@@ -66,7 +80,7 @@ internal class TextRenderer : IElementRenderer
             if (allLines.Count == 1)
             {
                 SKRect bounds = new();
-                font.MeasureText(allLines[0], out bounds);
+                font.MeasureText(allLines[0].Line, out bounds);
                 totalTextHeight = bounds.Height;
             }
             else
@@ -75,7 +89,7 @@ internal class TextRenderer : IElementRenderer
             }
         }
 
-        float contentWidth = allLines.Count != 0 ? allLines.Max(line => font.MeasureText(line)) : 0;
+        float contentWidth = allLines.Count != 0 ? allLines.Max(line => font.MeasureText(line.Line)) : 0;
 
         float boxWidth = paragraph.GetWidthRequest.HasValue ? (float)paragraph.GetWidthRequest.Value : contentWidth + (float)paragraph.GetPadding.HorizontalThickness;
         float boxHeight = paragraph.GetHeightRequest.HasValue ? (float)paragraph.GetHeightRequest.Value : totalTextHeight + (float)paragraph.GetPadding.VerticalThickness;
@@ -85,7 +99,8 @@ internal class TextRenderer : IElementRenderer
             lineBreakMode, textToRender,
             LinesToDrawOnThisPage: allLines,
             LineAdvance: lineAdvance,
-            VisualTopOffset: visualTopOffset, VisualBottomOffset: visualBottomOffset);
+            VisualTopOffset: visualTopOffset, VisualBottomOffset: visualBottomOffset,
+            SpanRuns: spanRuns);
 
         var totalWidth = boxWidth + (float)paragraph.GetMargin.HorizontalThickness;
         var totalHeight = boxHeight + (float)paragraph.GetMargin.VerticalThickness;
@@ -104,26 +119,25 @@ internal class TextRenderer : IElementRenderer
             return Task.FromResult(new PdfLayoutInfo(paragraph, finalRect.Width, finalRect.Height, finalRect));
         }
 
-        // --- LÓGICA CASUÍSTICA ---
         if (paragraph.GetHeightRequest.HasValue)
         {
-            // CASO A: Caja Fija (Atomic Box)
             return ArrangeAsFixedBox(finalRect, paragraph, baseCache, context);
         }
         else
         {
-            // CASO B: Flujo Continuo (Flow Text)
             return ArrangeAsFlowText(finalRect, paragraph, baseCache, context);
         }
     }
 
     private Task<PdfLayoutInfo> ArrangeAsFixedBox(PdfRect finalRect, PdfParagraphData paragraph, TextLayoutCache baseCache, PdfGenerationContext context)
     {
-        // En modo Caja Fija, usamos todas las líneas calculadas.
-        // El VSL nos ha pasado finalRect.Height = HeightRequest + Margin, así que confiamos en ello.
-        var allLines = WrapTextToLines(baseCache.TransformedText, baseCache.Font,
+        var multiFontRenderer = baseCache.SpanRuns?.Count > 0
+            ? new MultiFontTextRenderer(baseCache.SpanRuns, baseCache.Font, baseCache.Paint, baseCache.TransformedText)
+            : null;
+
+        var allLines = WrapTextToLinesWithIndex(baseCache.TransformedText, baseCache.Font,
             finalRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness,
-            baseCache.LineBreakMode);
+            baseCache.LineBreakMode, multiFontRenderer);
 
         var finalCache = baseCache with
         {
@@ -137,9 +151,13 @@ internal class TextRenderer : IElementRenderer
 
     private Task<PdfLayoutInfo> ArrangeAsFlowText(PdfRect finalRect, PdfParagraphData paragraph, TextLayoutCache baseCache, PdfGenerationContext context)
     {
-        var allLines = WrapTextToLines(baseCache.TransformedText, baseCache.Font,
+        var multiFontRenderer = baseCache.SpanRuns?.Count > 0
+            ? new MultiFontTextRenderer(baseCache.SpanRuns, baseCache.Font, baseCache.Paint, baseCache.TransformedText)
+            : null;
+
+        var allLines = WrapTextToLinesWithIndex(baseCache.TransformedText, baseCache.Font,
             finalRect.Width - (float)paragraph.GetMargin.HorizontalThickness - (float)paragraph.GetPadding.HorizontalThickness,
-            baseCache.LineBreakMode);
+            baseCache.LineBreakMode, multiFontRenderer);
 
         float availableHeightForText = finalRect.Height - (float)paragraph.GetMargin.VerticalThickness - (float)paragraph.GetPadding.VerticalThickness;
         float lineAdvance = baseCache.LineAdvance > 0 ? baseCache.LineAdvance : 1;
@@ -168,7 +186,6 @@ internal class TextRenderer : IElementRenderer
 
         if (linesThatFit >= allLines.Count)
         {
-            // Cabe todo
             float totalTextHeight = (allLines.Count == 1)
                 ? (visualTop + visualBottom)
                 : visualTop + ((allLines.Count - 1) * lineAdvance) + visualBottom;
@@ -183,10 +200,9 @@ internal class TextRenderer : IElementRenderer
         }
         else
         {
-            // Split
             var linesForPage = allLines.Take(linesThatFit).ToList();
             var remainingLines = allLines.Skip(linesThatFit).ToList();
-            string remainingText = string.Join(PdfStringUtils.NormalizeNewline, remainingLines);
+            string remainingText = string.Join(PdfStringUtils.NormalizeNewline, remainingLines.Select(l => l.Line));
             var remainingParagraph = new PdfParagraphData(remainingText, paragraph);
 
             float heightOnPage = visualTop + ((linesForPage.Count - 1) * lineAdvance) + visualBottom;
@@ -220,9 +236,9 @@ internal class TextRenderer : IElementRenderer
             return Task.CompletedTask;
         }
 
-        var (font, paint, lineAdvance, horizontalAlignment, verticalTextAlignment, textDecorations, visualTopOffset) =
+        var (font, paint, lineAdvance, horizontalAlignment, verticalTextAlignment, textDecorations, visualTopOffset, spanRuns) =
             (textCache.Font, textCache.Paint, textCache.LineAdvance, textCache.HorizontalAlignment,
-             textCache.VerticalTextAlignment, textCache.TextDecorations, textCache.VisualTopOffset);
+             textCache.VerticalTextAlignment, textCache.TextDecorations, textCache.VisualTopOffset, textCache.SpanRuns);
 
         var renderRect = new SKRect(pdfRenderRect.Value.Left, pdfRenderRect.Value.Top, pdfRenderRect.Value.Right, pdfRenderRect.Value.Bottom);
 
@@ -250,13 +266,13 @@ internal class TextRenderer : IElementRenderer
         if (linesToDraw.Count == 1)
         {
             SKRect bounds = new();
-            font.MeasureText(linesToDraw[0], out bounds);
+            font.MeasureText(linesToDraw[0].Line, out bounds);
             actualTextHeight = bounds.Height;
         }
         else
         {
             SKRect lastBounds = new();
-            font.MeasureText(linesToDraw[^1], out lastBounds);
+            font.MeasureText(linesToDraw[^1].Line, out lastBounds);
             float visualBottom = lastBounds.Bottom;
             actualTextHeight = visualTopOffset + ((linesToDraw.Count - 1) * lineAdvance) + visualBottom;
         }
@@ -273,10 +289,15 @@ internal class TextRenderer : IElementRenderer
         canvas.Save();
         canvas.ClipRect(contentRect);
 
+        var multiFontRenderer = spanRuns?.Count > 0 ? new MultiFontTextRenderer(spanRuns, font, paint, textCache.TransformedText) : null;
+
+        bool isRTL = IsRTLCulture(context.PageData.Culture);
+        SKShaper? shaper = isRTL ? new SKShaper(font.Typeface) : null;
+
         for (int i = 0; i < linesToDraw.Count; i++)
         {
-            string line = linesToDraw[i];
-            float measuredWidth = font.MeasureText(line);
+            var (line, startIndex) = linesToDraw[i];
+            float measuredWidth = multiFontRenderer?.MeasureTextWidth(line, startIndex) ?? font.MeasureText(line);
             float drawX = contentRect.Left;
 
             bool isLastLine = (i == linesToDraw.Count - 1);
@@ -284,7 +305,7 @@ internal class TextRenderer : IElementRenderer
 
             if (shouldJustify)
             {
-                DrawJustifiedLine(canvas, line, contentRect.Left, contentRect.Width, baselineY, font, paint);
+                DrawJustifiedLine(canvas, line, contentRect.Left, contentRect.Width, baselineY, font, paint, multiFontRenderer, startIndex);
                 if (textDecorations is not TextDecorations.None)
                 {
                     DrawTextDecorations(canvas, font, paint, textDecorations, contentRect.Left, baselineY, contentRect.Width);
@@ -292,14 +313,29 @@ internal class TextRenderer : IElementRenderer
             }
             else
             {
-                if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
-                else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
-
-                canvas.DrawText(line, drawX, baselineY, font, paint);
-
-                if (textDecorations is not TextDecorations.None)
+                if (isRTL && shaper != null)
                 {
-                    DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                    float x = contentRect.Right;
+                    canvas.DrawShapedText(shaper, line, x, baselineY, SKTextAlign.Right, font, paint);
+                }
+                else
+                {
+                    if (horizontalAlignment is TextAlignment.Center) drawX = contentRect.Left + (contentRect.Width - measuredWidth) / 2f;
+                    else if (horizontalAlignment is TextAlignment.End) drawX = contentRect.Right - measuredWidth;
+
+                    if (multiFontRenderer != null)
+                    {
+                        multiFontRenderer.DrawTextWithDecorations(canvas, line, drawX, baselineY, startIndex, textDecorations);
+                    }
+                    else
+                    {
+                        canvas.DrawText(line, drawX, baselineY, font, paint);
+
+                        if (textDecorations is not TextDecorations.None)
+                        {
+                            DrawTextDecorations(canvas, font, paint, textDecorations, drawX, baselineY, measuredWidth);
+                        }
+                    }
                 }
             }
 
@@ -308,28 +344,58 @@ internal class TextRenderer : IElementRenderer
 
         canvas.Restore();
 
+        shaper?.Dispose();
         font.Dispose();
         paint.Dispose();
         return Task.CompletedTask;
     }
 
-    private void DrawJustifiedLine(SKCanvas canvas, string line, float x, float totalWidth, float y, SKFont font, SKPaint paint)
+    private static bool IsRTLCulture(string culture)
+    {
+        if (string.IsNullOrEmpty(culture)) return false;
+
+        try
+        {
+            var cultureInfo = new System.Globalization.CultureInfo(culture);
+            return cultureInfo.TextInfo.IsRightToLeft;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void DrawJustifiedLine(SKCanvas canvas, string line, float x, float totalWidth, float y, SKFont font, SKPaint paint, MultiFontTextRenderer? multiFontRenderer = null, int lineStartIndex = 0)
     {
         string[] words = line.Split(' ');
         if (words.Length <= 1)
         {
-            canvas.DrawText(line, x, y, font, paint);
+            if (multiFontRenderer != null)
+            {
+                multiFontRenderer.DrawText(canvas, line, x, y, lineStartIndex);
+            }
+            else
+            {
+                canvas.DrawText(line, x, y, font, paint);
+            }
             return;
         }
 
-        float totalWordWidth = words.Sum(w => font.MeasureText(w));
-        float spaceWidth = font.MeasureText(" ");
+        float totalWordWidth = words.Sum(w => multiFontRenderer?.MeasureTextWidth(w, lineStartIndex + line.IndexOf(w, StringComparison.Ordinal)) ?? font.MeasureText(w));
+        float spaceWidth = multiFontRenderer?.MeasureTextWidth(" ", lineStartIndex + line.IndexOf(" ", StringComparison.Ordinal)) ?? font.MeasureText(" ");
         float totalSpaceWidth = (words.Length - 1) * spaceWidth;
         float extraSpace = totalWidth - totalWordWidth - totalSpaceWidth;
 
         if (extraSpace < 0)
         {
-            canvas.DrawText(line, x, y, font, paint);
+            if (multiFontRenderer != null)
+            {
+                multiFontRenderer.DrawText(canvas, line, x, y, lineStartIndex);
+            }
+            else
+            {
+                canvas.DrawText(line, x, y, font, paint);
+            }
             return;
         }
 
@@ -338,8 +404,16 @@ internal class TextRenderer : IElementRenderer
 
         for (int i = 0; i < words.Length; i++)
         {
-            canvas.DrawText(words[i], currentX, y, font, paint);
-            currentX += font.MeasureText(words[i]);
+            int wordStartIndex = line.IndexOf(words[i], StringComparison.Ordinal);
+            if (multiFontRenderer != null)
+            {
+                multiFontRenderer.DrawText(canvas, words[i], currentX, y, lineStartIndex + wordStartIndex);
+            }
+            else
+            {
+                canvas.DrawText(words[i], currentX, y, font, paint);
+            }
+            currentX += multiFontRenderer?.MeasureTextWidth(words[i], lineStartIndex + wordStartIndex) ?? font.MeasureText(words[i]);
 
             if (i < words.Length - 1)
             {
@@ -459,7 +533,130 @@ internal class TextRenderer : IElementRenderer
         return (font, paint, textToRender, horizontalAlignment, verticalTextAlignment, lineBreakMode, textDecorations, textTransform);
     }
 
-    private List<string> WrapTextToLines(string text, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
+    private List<(string Line, int StartIndex)> WrapTextToLinesWithIndex(string text, SKFont font, float maxWidth, LineBreakMode lineBreakMode, MultiFontTextRenderer? multiFontRenderer = null)
+    {
+        var lines = new List<(string, int)>();
+        if (string.IsNullOrEmpty(text)) return lines;
+
+        string normalizedText = PdfStringUtils.NormalizeNewlines(text);
+        string[] textSegments = normalizedText.Split(PdfStringUtils.NormalizeNewline);
+
+        int currentIndex = 0;
+
+        foreach (string segment in textSegments)
+        {
+            if (maxWidth <= 0 || lineBreakMode is LineBreakMode.NoWrap)
+            {
+                lines.Add((segment, currentIndex));
+                currentIndex += segment.Length + 1; // +1 for newline
+                continue;
+            }
+
+            if (lineBreakMode is LineBreakMode.HeadTruncation or LineBreakMode.MiddleTruncation or LineBreakMode.TailTruncation)
+            {
+                float segmentWidth = multiFontRenderer?.MeasureTextWidth(segment) ?? font.MeasureText(segment);
+                if (segmentWidth <= maxWidth)
+                {
+                    lines.Add((segment, currentIndex));
+                }
+                else
+                {
+                    lines.Add((ApplyLineBreakModeTruncation(segment, font, maxWidth, lineBreakMode, multiFontRenderer), currentIndex));
+                }
+            }
+            else
+            {
+                var wrappedLines = ApplyLineBreakModeWrappingWithIndex(segment, font, maxWidth, lineBreakMode, multiFontRenderer, currentIndex);
+                lines.AddRange(wrappedLines);
+                currentIndex += segment.Length + 1; // +1 for newline
+            }
+        }
+
+        return lines;
+    }
+
+    private List<(string Line, int StartIndex)> ApplyLineBreakModeWrappingWithIndex(string singleLine, SKFont font, float maxWidth, LineBreakMode lineBreakMode, MultiFontTextRenderer? multiFontRenderer, int startIndex)
+    {
+        var resultingLines = new List<(string, int)>();
+        if (string.IsNullOrEmpty(singleLine)) { resultingLines.Add((string.Empty, startIndex)); return resultingLines; }
+
+        float singleLineWidth = multiFontRenderer?.MeasureTextWidth(singleLine) ?? font.MeasureText(singleLine);
+        if (singleLineWidth <= maxWidth) { resultingLines.Add((singleLine, startIndex)); return resultingLines; }
+
+        int currentPosition = 0;
+        int textLength = singleLine.Length;
+
+        while (currentPosition < textLength)
+        {
+            long countMeasured = multiFontRenderer != null
+                ? CountCharactersInWidth(singleLine.Substring(currentPosition), maxWidth, multiFontRenderer)
+                : font.BreakText(singleLine.AsSpan(currentPosition), maxWidth);
+            int count = (int)countMeasured;
+
+            if (count == 0 && currentPosition < textLength)
+            {
+                float charWidth = multiFontRenderer?.MeasureTextWidth(currentPosition) ?? font.MeasureText(singleLine[currentPosition].ToString());
+                if (charWidth > maxWidth)
+                {
+                    resultingLines.Add((singleLine.Substring(currentPosition, 1), startIndex + currentPosition));
+                    currentPosition += 1;
+                    continue;
+                }
+                count = 1;
+            }
+
+            int breakPositionAttempt = currentPosition + count;
+
+            if (breakPositionAttempt >= textLength)
+            {
+                resultingLines.Add((singleLine[currentPosition..], startIndex + currentPosition));
+                break;
+            }
+
+            int actualBreakPosition = breakPositionAttempt;
+
+            if (lineBreakMode is LineBreakMode.WordWrap)
+            {
+                string segmentToConsider = singleLine.Substring(currentPosition, count);
+                int lastValidBreakInSegment = -1;
+                for (int k = segmentToConsider.Length - 1; k >= 0; --k)
+                {
+                    if (char.IsWhiteSpace(segmentToConsider[k]) || segmentToConsider[k] == '-')
+                    {
+                        lastValidBreakInSegment = k;
+                        break;
+                    }
+                }
+
+                if (lastValidBreakInSegment > 0 && currentPosition + lastValidBreakInSegment + 1 > currentPosition)
+                {
+                    actualBreakPosition = currentPosition + lastValidBreakInSegment + 1;
+                }
+                else
+                {
+                    actualBreakPosition = currentPosition + count;
+                }
+            }
+
+            if (actualBreakPosition <= currentPosition && currentPosition < textLength)
+            {
+                actualBreakPosition = currentPosition + 1;
+            }
+
+            string lineToAdd = singleLine[currentPosition..actualBreakPosition].TrimEnd();
+            resultingLines.Add((lineToAdd, startIndex + currentPosition));
+            currentPosition = actualBreakPosition;
+
+            while (currentPosition < textLength && char.IsWhiteSpace(singleLine[currentPosition]))
+            {
+                currentPosition++;
+            }
+        }
+
+        return resultingLines;
+    }
+
+    private List<string> WrapTextToLines(string text, SKFont font, float maxWidth, LineBreakMode lineBreakMode, MultiFontTextRenderer? multiFontRenderer = null)
     {
         var lines = new List<string>();
         if (string.IsNullOrEmpty(text)) return lines;
@@ -477,21 +674,21 @@ internal class TextRenderer : IElementRenderer
 
             if (lineBreakMode is LineBreakMode.HeadTruncation or LineBreakMode.MiddleTruncation or LineBreakMode.TailTruncation)
             {
-                float segmentWidth = font.MeasureText(segment);
+                float segmentWidth = multiFontRenderer?.MeasureTextWidth(segment) ?? font.MeasureText(segment);
                 if (segmentWidth <= maxWidth) lines.Add(segment);
-                else lines.Add(ApplyLineBreakModeTruncation(segment, font, maxWidth, lineBreakMode));
+                else lines.Add(ApplyLineBreakModeTruncation(segment, font, maxWidth, lineBreakMode, multiFontRenderer));
             }
             else
             {
-                lines.AddRange(ApplyLineBreakModeWrapping(segment, font, maxWidth, lineBreakMode));
+                lines.AddRange(ApplyLineBreakModeWrapping(segment, font, maxWidth, lineBreakMode, multiFontRenderer));
             }
         }
         return lines;
     }
 
-    private string ApplyLineBreakModeTruncation(string textSegment, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
+    private string ApplyLineBreakModeTruncation(string textSegment, SKFont font, float maxWidth, LineBreakMode lineBreakMode, MultiFontTextRenderer? multiFontRenderer = null)
     {
-        float ellipsisWidth = font.MeasureText(Ellipsis);
+        float ellipsisWidth = multiFontRenderer?.MeasureTextWidth(Ellipsis) ?? font.MeasureText(Ellipsis);
         if (maxWidth < ellipsisWidth && maxWidth > 0) return Ellipsis[..(int)font.BreakText(Ellipsis, maxWidth)];
         if (maxWidth <= 0) return string.Empty;
 
@@ -500,7 +697,7 @@ internal class TextRenderer : IElementRenderer
 
         if (lineBreakMode is LineBreakMode.TailTruncation)
         {
-            long count = font.BreakText(textSegment, availableWidthForText);
+            long count = multiFontRenderer != null ? CountCharactersInWidth(textSegment, availableWidthForText, multiFontRenderer) : font.BreakText(textSegment, availableWidthForText);
             return string.Concat(textSegment.AsSpan(0, (int)Math.Max(0, count)), Ellipsis);
         }
         if (lineBreakMode is LineBreakMode.HeadTruncation)
@@ -510,7 +707,8 @@ internal class TextRenderer : IElementRenderer
             for (int i = 1; i <= textLength; i++)
             {
                 string sub = textSegment[(textLength - i)..];
-                if (font.MeasureText(sub) <= availableWidthForText)
+                float width = multiFontRenderer?.MeasureTextWidth(sub) ?? font.MeasureText(sub);
+                if (width <= availableWidthForText)
                 {
                     startIndex = textLength - i;
                 }
@@ -527,14 +725,16 @@ internal class TextRenderer : IElementRenderer
             if (availableWidthForText <= 0 && ellipsisWidth <= 0) return string.Empty;
 
             float startWidth = availableWidthForText / 2f;
-            long startCount = font.BreakText(textSegment, startWidth);
+            long startCount = multiFontRenderer != null ? CountCharactersInWidth(textSegment, startWidth, multiFontRenderer) : font.BreakText(textSegment, startWidth);
 
             int textLength = textSegment.Length;
             string tempEndString = "";
             for (int i = 1; i <= textLength - (int)startCount; i++)
             {
                 string sub = textSegment[(textLength - i)..];
-                if (font.MeasureText(string.Concat(textSegment.AsSpan(0, (int)startCount), Ellipsis, sub)) <= maxWidth)
+                string fullString = string.Concat(textSegment.AsSpan(0, (int)startCount), Ellipsis, sub);
+                float width = multiFontRenderer?.MeasureTextWidth(fullString) ?? font.MeasureText(fullString);
+                if (width <= maxWidth)
                 {
                     tempEndString = sub;
                 }
@@ -546,11 +746,11 @@ internal class TextRenderer : IElementRenderer
 
             if ((int)startCount == 0 && tempEndString.Length == 0 && textLength > 0 && ellipsisWidth > 0)
             {
-                return ApplyLineBreakModeTruncation(textSegment, font, maxWidth, LineBreakMode.TailTruncation);
+                return ApplyLineBreakModeTruncation(textSegment, font, maxWidth, LineBreakMode.TailTruncation, multiFontRenderer);
             }
             if ((int)startCount >= textLength - tempEndString.Length && textLength > 0 && tempEndString.Length == 0 && ellipsisWidth > 0)
             {
-                long countTail = font.BreakText(textSegment, availableWidthForText);
+                long countTail = multiFontRenderer != null ? CountCharactersInWidth(textSegment, availableWidthForText, multiFontRenderer) : font.BreakText(textSegment, availableWidthForText);
                 return string.Concat(textSegment.AsSpan(0, (int)Math.Max(0, countTail)), Ellipsis);
             }
             return string.Concat(textSegment.AsSpan(0, (int)startCount), Ellipsis, tempEndString);
@@ -558,24 +758,48 @@ internal class TextRenderer : IElementRenderer
         return textSegment;
     }
 
-    private List<string> ApplyLineBreakModeWrapping(string singleLine, SKFont font, float maxWidth, LineBreakMode lineBreakMode)
+    private long CountCharactersInWidth(string text, float maxWidth, MultiFontTextRenderer multiFontRenderer)
+    {
+        float currentWidth = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            float charWidth = multiFontRenderer.MeasureTextWidth(text[i].ToString());
+            if (currentWidth + charWidth > maxWidth)
+            {
+                return i;
+            }
+            currentWidth += charWidth;
+        }
+        return text.Length;
+    }
+
+    private List<string> ApplyLineBreakModeWrapping(string singleLine, SKFont font, float maxWidth, LineBreakMode lineBreakMode, MultiFontTextRenderer? multiFontRenderer = null)
     {
         var resultingLines = new List<string>();
         if (string.IsNullOrEmpty(singleLine)) { resultingLines.Add(string.Empty); return resultingLines; }
 
-        float singleLineWidth = font.MeasureText(singleLine);
+        float singleLineWidth = multiFontRenderer?.MeasureTextWidth(singleLine) ?? font.MeasureText(singleLine);
         if (singleLineWidth <= maxWidth) { resultingLines.Add(singleLine); return resultingLines; }
 
         int currentPosition = 0;
         int textLength = singleLine.Length;
         while (currentPosition < textLength)
         {
-            long countMeasured = font.BreakText(singleLine.AsSpan(currentPosition), maxWidth);
+            long countMeasured;
+            if (multiFontRenderer != null)
+            {
+                countMeasured = CountCharactersInWidth(singleLine.Substring(currentPosition), maxWidth, multiFontRenderer);
+            }
+            else
+            {
+                countMeasured = font.BreakText(singleLine.AsSpan(currentPosition), maxWidth);
+            }
             int count = (int)countMeasured;
 
             if (count == 0 && currentPosition < textLength)
             {
-                if (font.MeasureText(singleLine[currentPosition].ToString()) > maxWidth)
+                float charWidth = multiFontRenderer?.MeasureTextWidth(singleLine[currentPosition].ToString()) ?? font.MeasureText(singleLine[currentPosition].ToString());
+                if (charWidth > maxWidth)
                 {
                     resultingLines.Add(singleLine.Substring(currentPosition, 1));
                     currentPosition += 1;
@@ -633,4 +857,118 @@ internal class TextRenderer : IElementRenderer
         }
         return resultingLines;
     }
+
+    #region Span Support
+
+    private async Task<List<SpanRun>> ResolveSpanRunsAsync(
+        PdfParagraphData paragraph,
+        PdfGenerationContext context,
+        SKFont defaultFont,
+        SKPaint defaultPaint)
+    {
+        if (!paragraph.HasSpans || paragraph.Spans.Count == 0)
+            return [];
+
+        var pageDefinition = context.PageData;
+        var fontRegistry = context.FontRegistry;
+
+        var runs = new List<SpanRun>();
+
+        foreach (var span in paragraph.Spans)
+        {
+            SKFont font;
+            SKPaint paint;
+            TextDecorations? decorations = null;
+            TextTransform? transform = null;
+
+            bool hasLocalFontFamily = span.FontFamilyProp.Priority > PdfPropertyPriority.Default;
+            bool hasLocalFontSize = span.FontSizeProp.Priority > PdfPropertyPriority.Default;
+            bool hasLocalTextColor = span.TextColorProp.Priority > PdfPropertyPriority.Default;
+            bool hasLocalFontAttributes = span.FontAttributesProp.Priority > PdfPropertyPriority.Default;
+            bool hasLocalDecorations = span.TextDecorationsProp.Priority > PdfPropertyPriority.Default;
+            bool hasLocalTransform = span.TextTransformProp.Priority > PdfPropertyPriority.Default;
+
+            bool hasLocalProperties = hasLocalFontFamily || hasLocalFontSize || hasLocalTextColor ||
+                                      hasLocalFontAttributes || hasLocalDecorations || hasLocalTransform;
+
+            if (!hasLocalProperties)
+            {
+                font = defaultFont;
+                paint = defaultPaint;
+            }
+            else
+            {
+                float fontSize = hasLocalFontSize ? span.FontSizeProp.Value ?? defaultFont.Size : defaultFont.Size;
+                FontAttributes fontAttributes = hasLocalFontAttributes
+                    ? (span.FontAttributesProp.Value ?? FontAttributes.None)
+                    : (paragraph.CurrentFontAttributes ?? pageDefinition.PageDefaultFontAttributes);
+
+                PdfFontIdentifier? fontIdentifierToUse = hasLocalFontFamily
+                    ? span.CurrentFontFamily
+                    : paragraph.CurrentFontFamily ?? pageDefinition.PageDefaultFontFamily ?? fontRegistry.GetUserConfiguredDefaultFontIdentifier() ?? fontRegistry.GetFirstMauiRegisteredFontIdentifier();
+
+                PdfFontRegistration? fontRegistration = span.ResolvedFontRegistration;
+                if (fontRegistration is null && fontIdentifierToUse.HasValue)
+                {
+                    fontRegistration = fontRegistry.GetFontRegistration(fontIdentifierToUse.Value);
+                }
+
+                string? filePathToLoad = fontRegistration?.FilePath;
+                string skiaFontAliasToAttempt = fontIdentifierToUse?.Alias ?? string.Empty;
+
+                var typeface = await SkiaUtils.CreateSkTypefaceAsync(
+                    skiaFontAliasToAttempt,
+                    fontAttributes,
+                    async (fileName) =>
+                    {
+                        if (string.IsNullOrEmpty(fileName)) return null;
+                        try { return await FileSystem.OpenAppPackageFileAsync(fileName); }
+                        catch { return null; }
+                    },
+                    filePathToLoad
+                );
+
+                font = new SKFont(typeface, fontSize);
+
+                Color textColor = hasLocalTextColor
+                    ? (span.CurrentTextColor ?? pageDefinition.PageDefaultTextColor)
+                    : (paragraph.CurrentTextColor ?? pageDefinition.PageDefaultTextColor);
+
+                paint = new SKPaint
+                {
+                    Color = SkiaUtils.ConvertToSkColor(textColor),
+                    IsAntialias = true
+                };
+
+                if (hasLocalDecorations)
+                    decorations = span.CurrentTextDecorations;
+
+                if (hasLocalTransform)
+                    transform = span.CurrentTextTransform;
+            }
+
+            runs.Add(new SpanRun(
+                StartIndex: span.StartIndex,
+                EndIndex: span.EndIndex,
+                Font: font,
+                Paint: paint,
+                Decorations: decorations,
+                Transform: transform
+            ));
+        }
+
+        return runs;
+    }
+
+    private string ApplyTextTransform(string text, TextTransform? transform)
+    {
+        return transform switch
+        {
+            TextTransform.Uppercase => text.ToUpperInvariant(),
+            TextTransform.Lowercase => text.ToLowerInvariant(),
+            _ => text
+        };
+    }
+
+    #endregion
 }

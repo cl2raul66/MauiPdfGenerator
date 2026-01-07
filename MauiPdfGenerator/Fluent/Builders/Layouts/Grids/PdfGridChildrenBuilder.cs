@@ -1,13 +1,16 @@
+using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Fluent.Builders.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts.Grids;
+using MauiPdfGenerator.Fluent.Interfaces.Views;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts.Grids;
 
-internal class PdfGridChildrenBuilder(PdfFontRegistryBuilder fontRegistry) : IPdfGridChildrenBuilder
+internal class PdfGridChildrenBuilder(PdfFontRegistryBuilder fontRegistry, PdfResourceDictionary? resourceDictionary = null) : IPdfGridChildrenBuilder
 {
     private readonly PdfFontRegistryBuilder _fontRegistry = fontRegistry;
+    private readonly PdfResourceDictionary? _resourceDictionary = resourceDictionary;
     internal List<IBuildablePdfElement> Children { get; } = [];
 
     private void AddChild(IBuildablePdfElement element)
@@ -17,7 +20,14 @@ internal class PdfGridChildrenBuilder(PdfFontRegistryBuilder fontRegistry) : IPd
 
     public IPdfGridChildParagraph Paragraph(string text)
     {
-        var builder = new PdfParagraphBuilder(text, _fontRegistry);
+        var builder = new PdfParagraphBuilder(text, _fontRegistry, _resourceDictionary);
+        AddChild(builder);
+        return builder;
+    }
+
+    public IPdfGridChildParagraph Paragraph(Action<IPdfSpanText> spans)
+    {
+        var builder = new PdfParagraphBuilder(spans, _fontRegistry, _resourceDictionary);
         AddChild(builder);
         return builder;
     }
@@ -38,21 +48,21 @@ internal class PdfGridChildrenBuilder(PdfFontRegistryBuilder fontRegistry) : IPd
 
     public void VerticalStackLayout(Action<IPdfGridChildVerticalStackLayout> layoutSetup)
     {
-        var stackBuilder = new PdfVerticalStackLayoutBuilder(_fontRegistry);
+        var stackBuilder = new PdfVerticalStackLayoutBuilder(_fontRegistry, _resourceDictionary);
         layoutSetup(stackBuilder);
         AddChild(stackBuilder);
     }
 
     public void HorizontalStackLayout(Action<IPdfGridChildHorizontalStackLayout> layoutSetup)
     {
-        var stackBuilder = new PdfHorizontalStackLayoutBuilder(_fontRegistry);
+        var stackBuilder = new PdfHorizontalStackLayoutBuilder(_fontRegistry, _resourceDictionary);
         layoutSetup(stackBuilder);
         AddChild(stackBuilder);
     }
 
     public void Grid(Action<IPdfGrid> layoutSetup)
     {
-        var gridBuilder = new PdfGridBuilder(_fontRegistry);
+        var gridBuilder = new PdfGridBuilder(_fontRegistry, _resourceDictionary);
         layoutSetup(gridBuilder);
         AddChild(gridBuilder);
     }

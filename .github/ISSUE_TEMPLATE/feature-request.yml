@@ -1,19 +1,17 @@
 name: ✨ Nueva Funcionalidad
 description: Sugiere una idea para este proyecto
-title: "[Feat]: "
-labels: ["type: feature"]
+title: "feat: "
+labels: ["feat"]
 body:
-  - type: dropdown
-    id: scope
+  - type: textarea
+    id: tasks
     attributes:
-      label: Componente Objetivo
-      options:
-        - "MauiPdfGenerator (Core)"
-        - "MauiPdfGenerator.Diagnostics"
-        - "MauiPdfGenerator.SourceGenerators"
-        - "Sample App"
+      label: Plan de Implementación
+      description: Lista las partes técnicas necesarias (Core, SourceGen, etc.) para implementar esto.
+      value: |
+        - [ ] 
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: problem

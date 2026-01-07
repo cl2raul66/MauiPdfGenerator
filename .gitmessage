@@ -1,0 +1,20 @@
+# <tipo>[alcance opcional][!]: <descripción>
+#
+# [cuerpo opcional]
+#
+# [footer opcional]
+#
+# Tipos sugeridos: 
+# - feat:     Nueva funcionalidad
+# - fix:      Corrección de bugs
+# - docs:     Documentación
+# - refactor: Refactorización de código
+# - perf:     Mejoras de rendimiento
+# - test:     Añadir o corregir tests
+# - chore:    Tareas de mantenimiento
+# - build:    Cambios en sistema de build
+# - ci:       Configuración CI/CD
+#
+# Alcances sugeridos: core, diagnostics, sourcegen, internal-task
+#
+# NOTA: Usa estos mismos prefijos (feat, fix, etc.) como etiquetas en tus Issues.

@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Common;
+using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Layouts;
 using MauiPdfGenerator.Core.Models;
@@ -13,7 +13,7 @@ namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 internal class GridRenderer : IElementRenderer
 {
     private record GridArrangeInfo(PdfRect CellRect, PdfLayoutInfo ArrangedChild);
-    private record GridCache(float[] ColumnWidths, float[] RowHeights, List<PdfLayoutInfo> ChildMeasures, IReadOnlyList<RowDefinition> RowDefs, IReadOnlyList<ColumnDefinition> ColumnDefs);
+    private record GridCache(float[] ColumnWidths, float[] RowHeights, List<PdfLayoutInfo> ChildMeasures, IReadOnlyList<PdfRowDefinition> RowDefs, IReadOnlyList<PdfColumnDefinition> ColumnDefs);
     private record GridArrangeCache(PdfRect FinalRect, List<GridArrangeInfo> ArrangedCells);
     private record ChildMeasureInfo(IPdfGridCellInfo Child, PdfLayoutInfo Measure);
 
@@ -153,14 +153,14 @@ internal class GridRenderer : IElementRenderer
         return Task.CompletedTask;
     }
 
-    private async Task<(float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, IReadOnlyList<RowDefinition> rowDefs, IReadOnlyList<ColumnDefinition> colDefs)> MeasureGridContent(PdfGridData grid, PdfGenerationContext context, SKSize availableContentSize)
+    private async Task<(float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, IReadOnlyList<PdfRowDefinition> rowDefs, IReadOnlyList<PdfColumnDefinition> colDefs)> MeasureGridContent(PdfGridData grid, PdfGenerationContext context, SKSize availableContentSize)
     {
         var children = grid.GetChildren.Cast<PdfElementData>().ToList();
         var numCols = grid.GetColumnDefinitions.Any() ? grid.GetColumnDefinitions.Count : children.Count != 0 ? children.Max(c => c.GridColumn + c.GridColumnSpan) : 1;
         var numRows = grid.GetRowDefinitions.Any() ? grid.GetRowDefinitions.Count : children.Count != 0 ? children.Max(c => c.GridRow + c.GridRowSpan) : 1;
 
-        var colDefs = grid.GetColumnDefinitions.Count == numCols ? [.. grid.GetColumnDefinitions] : Enumerable.Repeat(new ColumnDefinition(GridLength.Star), numCols).ToList();
-        var rowDefs = grid.GetRowDefinitions.Count == numRows ? grid.GetRowDefinitions.ToList() : [.. Enumerable.Repeat(new RowDefinition(GridLength.Auto), numRows)];
+        var colDefs = grid.GetColumnDefinitions.Count == numCols ? [.. grid.GetColumnDefinitions] : Enumerable.Repeat(new PdfColumnDefinition(PdfGridLength.Star), numCols).ToList();
+        var rowDefs = grid.GetRowDefinitions.Count == numRows ? grid.GetRowDefinitions.ToList() : [.. Enumerable.Repeat(new PdfRowDefinition(PdfGridLength.Auto), numRows)];
 
         var columnWidths = await CalculateColumnWidthsAsync(grid, context, availableContentSize.Width, colDefs, numCols);
 
@@ -192,7 +192,7 @@ internal class GridRenderer : IElementRenderer
         return (columnWidths, rowHeights, childMeasures, rowDefs, colDefs);
     }
 
-    private async Task<float[]> CalculateColumnWidthsAsync(PdfGridData grid, PdfGenerationContext context, float totalAvailableWidth, IReadOnlyList<ColumnDefinition> colDefs, int numCols)
+    private async Task<float[]> CalculateColumnWidthsAsync(PdfGridData grid, PdfGenerationContext context, float totalAvailableWidth, IReadOnlyList<PdfColumnDefinition> colDefs, int numCols)
     {
         var columnWidths = new float[numCols];
         var children = grid.GetChildren.Cast<PdfElementData>().ToList();
@@ -201,12 +201,12 @@ internal class GridRenderer : IElementRenderer
 
         bool treatStarAsAuto = grid.GetHorizontalOptions is not LayoutAlignment.Fill && !grid.GetWidthRequest.HasValue;
 
-        var effectiveColDefs = new List<ColumnDefinition>();
+        var effectiveColDefs = new List<PdfColumnDefinition>();
         foreach (var cd in colDefs)
         {
             if (treatStarAsAuto && cd.Width.IsStar)
             {
-                effectiveColDefs.Add(new ColumnDefinition(GridLength.Auto));
+                effectiveColDefs.Add(new PdfColumnDefinition(PdfGridLength.Auto));
             }
             else
             {
@@ -297,7 +297,7 @@ internal class GridRenderer : IElementRenderer
         return columnWidths;
     }
 
-    private float[] CalculateRowHeights(IReadOnlyList<RowDefinition> rowDefs, float totalAvailableHeight, float spacing, float[] autoSizes, List<ChildMeasureInfo> childInfos)
+    private float[] CalculateRowHeights(IReadOnlyList<PdfRowDefinition> rowDefs, float totalAvailableHeight, float spacing, float[] autoSizes, List<ChildMeasureInfo> childInfos)
     {
         var result = new float[rowDefs.Count];
         bool isHeightConstrained = !float.IsPositiveInfinity(totalAvailableHeight);
@@ -420,7 +420,7 @@ internal class GridRenderer : IElementRenderer
         return (rowsToArrange, remainingChildren);
     }
 
-    private async Task<List<GridArrangeInfo>> ArrangeChildrenInRows(PdfGridData grid, PdfGenerationContext context, float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, List<PdfElementData> childrenToArrange, PdfRect contentBox, IReadOnlyList<ColumnDefinition> colDefs, IReadOnlyList<RowDefinition> rowDefs)
+    private async Task<List<GridArrangeInfo>> ArrangeChildrenInRows(PdfGridData grid, PdfGenerationContext context, float[] columnWidths, float[] rowHeights, List<PdfLayoutInfo> childMeasures, List<PdfElementData> childrenToArrange, PdfRect contentBox, IReadOnlyList<PdfColumnDefinition> colDefs, IReadOnlyList<PdfRowDefinition> rowDefs)
     {
         var arrangedCells = new List<GridArrangeInfo>();
         var rowOffsets = new float[rowHeights.Length];

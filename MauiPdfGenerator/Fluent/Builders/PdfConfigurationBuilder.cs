@@ -1,5 +1,5 @@
 using MauiPdfGenerator.Common.Models.Styling;
-﻿using MauiPdfGenerator.Common.Utils;
+using MauiPdfGenerator.Common.Utils;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 
@@ -10,6 +10,7 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     public PageSizeType GetPageSize { get; private set; }
     public Thickness GetPadding { get; private set; }
     public PageOrientationType GetPageOrientation { get; private set; }
+    public string Culture { get; private set; } = "en-US";
     public PdfFontRegistryBuilder FontRegistry { get; }
     public PdfMetaDataBuilder MetaDataBuilder { get; }
     public PdfResourceDictionary ResourceDictionary { get; }
@@ -71,6 +72,27 @@ internal class PdfConfigurationBuilder : IPdfDocumentConfigurator
     {
         ArgumentNullException.ThrowIfNull(fontRegistryConfiguration);
         fontRegistryConfiguration(this.FontRegistry);
+        return this;
+    }
+
+    public IPdfDocumentConfigurator SetDocumentCulture(string cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName))
+        {
+            Culture = "en-US";
+            return this;
+        }
+
+        try
+        {
+            var cultureInfo = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            Culture = cultureName;
+        }
+        catch (System.Globalization.CultureNotFoundException)
+        {
+            Culture = "en-US";
+        }
+        
         return this;
     }
 

@@ -14,7 +14,23 @@ on:
       - 'MauiPdfGenerator.SourceGenerators/**'
 
 jobs:
+  integration-check:
+    name: Pre-Release Checks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui --ignore-failed-sources
+      - name: Run Integration Tests
+        run: |
+          dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --verbosity normal
+
   build-diagnostics:
+    needs: integration-check
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -37,8 +53,8 @@ jobs:
         uses: PaulHatch/semantic-version@v5.4.0
         with:
           tag_prefix: "diag-v"
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)|feat|feature"
+          major_pattern: "!:|BREAKING CHANGE:"
+          minor_pattern: "^feat"
           version_format: "${major}.${minor}.${patch}"
           change_path: "MauiPdfGenerator.Diagnostics"
           user_format_type: "json"
@@ -98,8 +114,8 @@ jobs:
         uses: PaulHatch/semantic-version@v5.4.0
         with:
           tag_prefix: "main-v"
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)|feat|feature"
+          major_pattern: "!:|BREAKING CHANGE:"
+          minor_pattern: "^feat"
           version_format: "${major}.${minor}.${patch}"
           change_path: "MauiPdfGenerator MauiPdfGenerator.Diagnostics"
           user_format_type: "json"
@@ -148,8 +164,8 @@ jobs:
         uses: PaulHatch/semantic-version@v5.4.0
         with:
           tag_prefix: "gen-v"
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)|feat|feature"
+          major_pattern: "!:|BREAKING CHANGE:"
+          minor_pattern: "^feat"
           version_format: "${major}.${minor}.${patch}"
           change_path: "MauiPdfGenerator.SourceGenerators"
           user_format_type: "json"

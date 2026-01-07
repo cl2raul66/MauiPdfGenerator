@@ -2,7 +2,7 @@ using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Views;
 
-public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfElement<TSelf>
+public interface IPdfParagraph<TSelf> : IPdfElement<TSelf>, IPdfStylable where TSelf : IPdfElement<TSelf>
 {
     TSelf FontFamily(PdfFontIdentifier? family);
     TSelf FontSize(float size);
@@ -13,6 +13,9 @@ public interface IPdfParagraph<TSelf> : IPdfElement<TSelf> where TSelf : IPdfEle
     TSelf LineBreakMode(LineBreakMode mode);
     TSelf TextDecorations(TextDecorations decorations);
     TSelf TextTransform(TextTransform transform);
+    TSelf CharacterSpacing(float spacing);
+    TSelf WordSpacing(float spacing);
+    TSelf LineSpacing(float spacing);
 }
 
 public interface IPdfParagraph : IPdfParagraph<IPdfParagraph>

@@ -1,6 +1,7 @@
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Common.Utils;
+using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Fluent.Builders.Layouts;
 using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Interfaces;
@@ -13,15 +14,17 @@ namespace MauiPdfGenerator.Fluent.Builders;
 
 internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>, IPageReadyToBuild, IPdfContentPageBuilder where TContent : class
 {
-    private readonly PdfDocumentBuilder _documentBuilder;
+private readonly PdfDocumentBuilder _documentBuilder;
     private readonly PdfConfigurationBuilder _documentConfiguration;
     private readonly IBuildablePdfElement _contentBuilder;
     private readonly TContent _contentApi;
+    private readonly IDiagnosticSink _diagnosticSink;
 
     private PageSizeType? _pageSizeOverride;
     private Thickness? _paddingOverride;
     private Color? _backgroundColorOverride;
-    private PageOrientationType? _pageOrientationOverride;
+private PageOrientationType? _pageOrientationOverride;
+    private string? _cultureOverride;
     private PdfFontIdentifier? _pageDefaultFontFamily;
     private float _pageDefaultFontSize = Common.Models.Views.PdfParagraphData.DefaultFontSize;
     private Color _pageDefaultTextColor = Common.Models.Views.PdfParagraphData.DefaultTextColor;
@@ -31,19 +34,20 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
 
     public PdfResourceDictionary PageResources { get; } = new(); 
 
-    public PdfContentPageBuilder(PdfDocumentBuilder documentBuilder, PdfConfigurationBuilder documentConfiguration, PdfFontRegistryBuilder fontRegistry)
+public PdfContentPageBuilder(PdfDocumentBuilder documentBuilder, PdfConfigurationBuilder documentConfiguration, PdfFontRegistryBuilder fontRegistry, IDiagnosticSink diagnosticSink)
     {
         _documentBuilder = documentBuilder ?? throw new ArgumentNullException(nameof(documentBuilder));
         _documentConfiguration = documentConfiguration ?? throw new ArgumentNullException(nameof(documentConfiguration));
+        _diagnosticSink = diagnosticSink ?? throw new ArgumentNullException(nameof(diagnosticSink));
 
         PageResources.Parent = _documentConfiguration.ResourceDictionary;
 
         if (typeof(TContent) == typeof(IPdfVerticalStackLayout))
-            _contentBuilder = new PdfVerticalStackLayoutBuilder(fontRegistry);
+            _contentBuilder = new PdfVerticalStackLayoutBuilder(fontRegistry, PageResources);
         else if (typeof(TContent) == typeof(IPdfHorizontalStackLayout))
-            _contentBuilder = new PdfHorizontalStackLayoutBuilder(fontRegistry);
+            _contentBuilder = new PdfHorizontalStackLayoutBuilder(fontRegistry, PageResources);
         else if (typeof(TContent) == typeof(IPdfGrid))
-            _contentBuilder = new PdfGridBuilder(fontRegistry);
+            _contentBuilder = new PdfGridBuilder(fontRegistry, PageResources);
         else
             throw new NotSupportedException($"The layout type '{typeof(TContent).Name}' is not supported as a root content element for a page.");
 
@@ -64,7 +68,37 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
     public IPdfConfigurablePage<TContent> BackgroundColor(Color backgroundColor) { _backgroundColorOverride = backgroundColor; return this; }
     public IPdfConfigurablePage<TContent> DefaultTextColor(Color color) { _pageDefaultTextColor = color ?? Common.Models.Views.PdfParagraphData.DefaultTextColor; return this; }
     public IPdfConfigurablePage<TContent> DefaultTextDecorations(TextDecorations decorations) { _pageDefaultTextDecorations = decorations; return this; }
-    public IPdfConfigurablePage<TContent> DefaultTextTransform(TextTransform transform) { _pageDefaultTextTransform = transform; return this; }
+public IPdfConfigurablePage<TContent> DefaultTextTransform(TextTransform transform) { _pageDefaultTextTransform = transform; return this; }
+
+    public IPdfConfigurablePage<TContent> Culture(string cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName))
+        {
+            _cultureOverride = "en-US"; // Fallback silencioso
+            return this;
+        }
+
+        try
+        {
+            var cultureInfo = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            _cultureOverride = cultureName;
+        }
+        catch (System.Globalization.CultureNotFoundException)
+        {
+            // Usar null para que use la cultura del documento
+            _cultureOverride = null;
+            
+            // Emitir diagnóstico
+            _diagnosticSink?.Submit(new MauiPdfGenerator.Diagnostics.Models.DiagnosticMessage(
+                MauiPdfGenerator.Diagnostics.Enums.DiagnosticSeverity.Warning,
+                MauiPdfGenerator.Diagnostics.DiagnosticCodes.InvalidCulture,
+                $"Page culture '{cultureName}' not found. Using document culture or 'en-US'."
+            ));
+        }
+        
+        return this;
+    }
+
     public IPdfConfigurablePage<TContent> DefaultFont(Action<IPdfFontDefaultsBuilder> fontDefaults)
     {
         ArgumentNullException.ThrowIfNull(fontDefaults);
@@ -95,12 +129,13 @@ internal class PdfContentPageBuilder<TContent> : IPdfConfigurablePage<TContent>,
     public PageOrientationType GetEffectivePageOrientation() => _pageOrientationOverride ?? _documentConfiguration.GetPageOrientation;
     public Color? GetEffectiveBackgroundColor() => _backgroundColorOverride;
     public PdfLayoutElementData GetContent() => (PdfLayoutElementData)_contentBuilder.GetModel();
-    public PdfFontIdentifier? GetPageDefaultFontFamily() => _pageDefaultFontFamily;
+public PdfFontIdentifier? GetPageDefaultFontFamily() => _pageDefaultFontFamily;
     public float GetPageDefaultFontSize() => _pageDefaultFontSize;
     public Color GetPageDefaultTextColor() => _pageDefaultTextColor;
     public FontAttributes GetPageDefaultFontAttributes() => _pageDefaultFontAttributes;
     public TextDecorations GetPageDefaultTextDecorations() => _pageDefaultTextDecorations;
     public TextTransform GetPageDefaultTextTransform() => _pageDefaultTextTransform;
+    public string GetEffectiveCulture() => _cultureOverride ?? _documentConfiguration.Culture;
 
     public IPdfConfigurablePage<TContent> Resources(Action<IPdfResourceBuilder> resourceBuilderAction)
     {

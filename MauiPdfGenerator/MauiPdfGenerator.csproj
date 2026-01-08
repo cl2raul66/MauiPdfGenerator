@@ -50,19 +50,11 @@
 		</None>
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)' != 'Release'">
-		<ProjectReference Include="..\MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj" />
-	</ItemGroup>
-
 	<ItemGroup>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
 			<_Parameter1>MauiPdfGenerator.Tests</_Parameter1>
 			<_Parameter1>MauiPdfGenerator.IntegrationTests</_Parameter1>
 		</AssemblyAttribute>
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(Configuration)' == 'Release'">
-	  <PackageReference Include="RandAMediaLabGroup.MauiPdfGenerator.Diagnostics" Version="*" />
 	</ItemGroup>
 
 </Project>

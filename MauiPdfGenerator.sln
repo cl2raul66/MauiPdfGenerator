@@ -7,15 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator", "MauiPdf
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.SourceGenerators", "MauiPdfGenerator.SourceGenerators\MauiPdfGenerator.SourceGenerators.csproj", "{F161A6ED-2842-4A75-96F7-43AD7B2978F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Diagnostics", "MauiPdfGenerator.Diagnostics\MauiPdfGenerator.Diagnostics.csproj", "{E5E4396B-E2F3-4226-9D36-BFA6C2BAAED8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csproj", "{E0337CCB-DD90-47E0-9087-5A89AFF969DB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Tests", "MauiPdfGenerator.Tests\MauiPdfGenerator.Tests.csproj", "{F05601AD-47DB-44C2-C17C-938364066B1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.Diagnostics.Tests", "MauiPdfGenerator.Diagnostics.Test\MauiPdfGenerator.Diagnostics.Tests.csproj", "{37FCD63F-C630-46B9-A943-569D27F95221}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.SourceGenerators.Tests", "MauiPdfGenerator.SourceGenerators.Test\MauiPdfGenerator.SourceGenerators.Tests.csproj", "{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.SourceGenerators.Tests", "MauiPdfGenerator.SourceGenerators.Tests\MauiPdfGenerator.SourceGenerators.Tests.csproj", "{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiPdfGenerator.IntegrationTests", "MauiPdfGenerator.IntegrationTests\MauiPdfGenerator.IntegrationTests.csproj", "{4D4A83BE-AA9E-1FD1-4ABB-37284D5B0AB2}"
 EndProject
@@ -33,10 +29,6 @@ Global
 		{F161A6ED-2842-4A75-96F7-43AD7B2978F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F161A6ED-2842-4A75-96F7-43AD7B2978F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F161A6ED-2842-4A75-96F7-43AD7B2978F3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E5E4396B-E2F3-4226-9D36-BFA6C2BAAED8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E5E4396B-E2F3-4226-9D36-BFA6C2BAAED8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E5E4396B-E2F3-4226-9D36-BFA6C2BAAED8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E5E4396B-E2F3-4226-9D36-BFA6C2BAAED8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E0337CCB-DD90-47E0-9087-5A89AFF969DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E0337CCB-DD90-47E0-9087-5A89AFF969DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E0337CCB-DD90-47E0-9087-5A89AFF969DB}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
@@ -46,10 +38,6 @@ Global
 		{F05601AD-47DB-44C2-C17C-938364066B1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F05601AD-47DB-44C2-C17C-938364066B1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F05601AD-47DB-44C2-C17C-938364066B1A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{37FCD63F-C630-46B9-A943-569D27F95221}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{37FCD63F-C630-46B9-A943-569D27F95221}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{37FCD63F-C630-46B9-A943-569D27F95221}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{37FCD63F-C630-46B9-A943-569D27F95221}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D1235A3-FE36-4A5E-8661-56FE6B7B016E}.Release|Any CPU.ActiveCfg = Release|Any CPU

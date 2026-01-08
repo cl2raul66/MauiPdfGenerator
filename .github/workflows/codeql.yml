@@ -1,0 +1,67 @@
+name: CodeQL Security Analysis
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+on:
+  push:
+    branches: ["development", "master"]
+    paths:
+      - 'MauiPdfGenerator/**'
+      - 'MauiPdfGenerator.SourceGenerators/**'
+      - '**.cs'
+      - '**.csproj'
+      - '.github/workflows/codeql.yml'
+  pull_request:
+    branches: ["development", "master"]
+    paths:
+      - 'MauiPdfGenerator/**'
+      - 'MauiPdfGenerator.SourceGenerators/**'
+      - '**.cs'
+      - '**.csproj'
+      - '.github/workflows/codeql.yml'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          queries: security-extended
+
+      - name: Build Solution
+        run: dotnet build MauiPdfGenerator.sln --configuration Release --no-restore
+
+      - name: Perform Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"
+          upload: true
+
+      - name: Upload Results to Security Tab
+        uses: github/codeql-action/upload-results@v3
+        if: always()
+        with:
+          category: "/language:csharp"
+          checkout_path: .

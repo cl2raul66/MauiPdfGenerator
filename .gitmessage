@@ -15,6 +15,8 @@
 # - build:    Cambios en sistema de build
 # - ci:       Configuración CI/CD
 #
-# Alcances sugeridos: core, diagnostics, sourcegen, internal-task
+# Alcances sugeridos: core, sourcegen, internal-task
 #
-# NOTA: Usa estos mismos prefijos (feat, fix, etc.) como etiquetas en tus Issues.
+# NOTA: 
+# - MauiPdfGenerator.Diagnostics ahora es parte de 'core'
+# - Usa los mismos prefijos (feat, fix, etc.) como etiquetas en tus Issues.

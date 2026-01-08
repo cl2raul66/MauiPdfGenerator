@@ -77,15 +77,6 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      - name: Download Diagnostics Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: diagnostics-package
-          path: ./local-feed
-
-      - name: Setup Local NuGet Feed
-        run: dotnet nuget add source "${{ github.workspace }}/local-feed" --name LocalArtifacts
-
       - name: Calculate Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.4.0
@@ -94,7 +85,6 @@ jobs:
           major_pattern: "!:|BREAKING CHANGE:"
           minor_pattern: "^feat"
           version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator MauiPdfGenerator.Diagnostics"
           user_format_type: "json"
 
       - name: Determine Version String
@@ -106,9 +96,9 @@ jobs:
         run: |
           $mainVer = "${{ steps.final_version.outputs.VAL }}"
 
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
-          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
-          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer 
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer 
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer 
 
       - name: Upload Main Artifact
         uses: actions/upload-artifact@v4

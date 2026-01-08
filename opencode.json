@@ -1,0 +1,114 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "CONTRIBUTING.md",
+    ".gitmessage",
+    ".opencode/skill/mauipdf-generator/SKILL.md"
+  ],
+  "mcp": {
+    "github": {
+      "enabled": true
+    }
+  },
+  "tools": {
+    "github_create_issue": true,
+    "github_update_issue": true,
+    "github_add_issue_comment": true,
+    "github_list_issues": true,
+    "github_create_pull_request": true,
+    "github_pull_request_review_write": true,
+    "github_merge_pull_request": true
+  },
+  "agent": {
+    "mauipdf-developer": {
+      "description": "Expert agent for MauiPdfGenerator development. Follows Conventional Commits, manages CI/CD workflows, GitHub Issues, and Project Board #6.",
+      "model": "anthropic/claude-sonnet-4-5",
+      "prompt": "You are an expert developer for MauiPdfGenerator, a .NET MAUI PDF generation library.\n\nKEY RULES:\n1. ALWAYS use Conventional Commits: <type>[<scope>][!]: <description>\n2. Scopes: core (includes diagnostics), sourcegen, internal-task\n3. Create feature branches from 'development' branch\n4. Link PRs to Issues using 'Closes #XX'\n5. Run tests locally before committing\n6. Update documentation when adding features\n7. Ensure CodeQL passes before merge to master\n8. Use GitHub MCP tools to manage Issues and Project Board\n\nGITHUB INTEGRATION:\n- Use github_list_issues to find existing issues before creating new ones\n- Use github_create_issue with appropriate template (feature-request.yml, bug-report.yml, maintenance.yml)\n- Auto-assign issues to 'cl2raul66' using github_update_issue(assignees=[\"cl2raul66\"])\n- Use appropriate labels: type: feature, type: breaking-change, type: maintenance, type: docs, priority: high, scope: core\n- Update Project Board by adding comments and closing issues after PR merge\n\nWORKFLOW:\n1. Understand the Issue/Task\n2. github_list_issues → Check if similar issue exists\n3. github_create_issue → Create Issue with template\n4. github_update_issue → Auto-assign to cl2raul66, add labels\n5. Create branch from development\n6. Make changes with proper commits\n7. github_create_pull_request → Create PR with template\n8. Ensure CI passes (pr-validation.yml, codeql.yml)\n9. Request review\n10. After merge: github_add_issue_comment and github_update_issue to close\n\nRefer to:\n- .gitmessage for commit format\n- CONTRIBUTING.md for full guidelines\n- .opencode/skill/mauipdf-generator/SKILL.md for complete reference"
+    }
+  },
+  "command": {
+    "build": {
+      "description": "Build the solution",
+      "template": "Build the MauiPdfGenerator solution in Release configuration. Run: dotnet build MauiPdfGenerator.sln --configuration Release",
+      "agent": "mauipdf-developer"
+    },
+    "test": {
+      "description": "Run all tests",
+      "template": "Run all tests for the solution. Execute: dotnet test MauiPdfGenerator.sln --configuration Release",
+      "agent": "mauipdf-developer"
+    },
+    "test-unit": {
+      "description": "Run unit tests only",
+      "template": "Run unit tests for Core and SourceGenerators. Execute: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release && dotnet test MauiPdfGenerator.SourceGenerators.Test/MauiPdfGenerator.SourceGenerators.Tests.csproj --configuration Release",
+      "agent": "mauipdf-developer"
+    },
+    "test-integration": {
+      "description": "Run integration tests",
+      "template": "Run integration tests. Execute: dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release",
+      "agent": "mauipdf-developer"
+    },
+    "release-preview": {
+      "description": "Create a preview release",
+      "template": "Create a preview release from the development branch. This will trigger the dev-release.yml workflow which publishes preview packages to NuGet.",
+      "agent": "mauipdf-developer"
+    },
+    "release-stable": {
+      "description": "Create a stable release",
+      "template": "Create a stable release from the master branch. This will trigger the prod-release.yml workflow which publishes stable packages to NuGet and creates Git tags.",
+      "agent": "mauipdf-developer"
+    },
+    "new-feature": {
+      "description": "Start a new feature",
+      "template": "Create a new feature branch from development and prepare for implementation. Use the feature-request.yml template for creating an Issue first.",
+      "agent": "mauipdf-developer"
+    },
+    "new-fix": {
+      "description": "Start a bug fix",
+      "template": "Create a new fix branch from development and prepare for bug fix. Use the bug-report.yml template for creating an Issue first.",
+      "agent": "mauipdf-developer"
+    },
+    "new-issue": {
+      "description": "Create a new Issue with template",
+      "template": "Create Issue #XX using feature-request.yml, bug-report.yml, or maintenance.yml. Auto-assign to cl2raul66 using github_update_issue(assignees=[\"cl2raul66\"]). Add appropriate labels: type: feature, type: breaking-change, type: maintenance, type: docs, priority: high, scope: core.",
+      "agent": "mauipdf-developer"
+    },
+    "list-issues": {
+      "description": "List all open issues",
+      "template": "Use github_list_issues to show open issues. Filter by labels (type: feature, type: fix, type: maintenance). Display in tabular format with Issue #, Title, State, and Labels.",
+      "agent": "mauipdf-developer"
+    },
+    "my-issues": {
+      "description": "List issues assigned to me",
+      "template": "Use github_list_issues with assignee=cl2raul66 to show my assigned issues. Include current status and progress.",
+      "agent": "mauipdf-developer"
+    },
+    "plan-release": {
+      "description": "Plan tasks for a release version",
+      "template": "Analyze open issues for the specified version (e.g., 1.7.0). Create new issues for missing tasks using maintenance.yml or feature-request.yml. Assign priority: high label to release blockers.",
+      "agent": "mauipdf-developer"
+    },
+    "close-issue": {
+      "description": "Close an issue with PR reference",
+      "template": "After PR merge, use github_add_issue_comment to add 'Fixed in PR #YY' and github_update_issue to close the issue. Link the issue to the PR.",
+      "agent": "mauipdf-developer"
+    },
+    "status-roadmap": {
+      "description": "Show Project Board #6 status",
+      "template": "Report the current status of Project Board #6 (MauiPdfGenerator Roadmap). List issues by status: Todo, In Progress, Done.",
+      "agent": "mauipdf-developer"
+    }
+  },
+  "tui": {
+    "scroll_speed": 1,
+    "diff_style": "auto"
+  },
+  "watcher": {
+    "ignore": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/.git/**",
+      "**/output/**",
+      "**/*.nupkg"
+    ]
+  }
+}

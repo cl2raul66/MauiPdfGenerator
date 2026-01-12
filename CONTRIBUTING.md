@@ -141,8 +141,7 @@ feat(core): add PDF table rendering support
 
 | Alcance | Carpetas | ¿Publica paquete? |
 |---------|----------|-------------------|
-| `core` | `MauiPdfGenerator/` | ✅ Sí |
-| `diagnostics` | `MauiPdfGenerator.Diagnostics/` | ✅ Sí |
+| `core` | `MauiPdfGenerator/` (incluye Diagnostics) | ✅ Sí |
 | `sourcegen` | `MauiPdfGenerator.SourceGenerators/` | ✅ Sí |
 | `internal-task` | `Sample/`, `.github/`, `Docs/` | ❌ No |
 
@@ -199,9 +198,8 @@ El `-preview-X` indica cuántos commits relevantes hay desde el último stable:
 
 ### 3.4 Versionado Independiente
 
-Cada paquete se versiona por separado:
-- `MauiPdfGenerator` → versión basada en commits `(core)`
-- `Diagnostics` → versión basada en commits `(diagnostics)`
+Ahora que Diagnostics es parte de `core`, cada paquete se versiona por separado:
+- `MauiPdfGenerator` → versión basada en commits `(core)` (incluye Diagnostics)
 - `SourceGenerators` → versión basada en commits `(sourcegen)`
 
 ---

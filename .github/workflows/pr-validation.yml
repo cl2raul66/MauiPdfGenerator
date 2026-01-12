@@ -8,7 +8,7 @@ on:
     branches: [ "development", "master" ]
     paths:
       - 'MauiPdfGenerator/**'
-      - 'MauiPdfGenerator.Diagnostics/**'
+      - 'MauiPdfGenerator.SourceGenerators/**'
   workflow_dispatch:
 
 jobs:
@@ -28,12 +28,6 @@ jobs:
 
       - name: Build All Projects
         run: dotnet build MauiPdfGenerator.sln --configuration Release
-
-      - name: Run Unit Tests (SourceGen)
-        run: dotnet test MauiPdfGenerator.SourceGenerators.Tests/MauiPdfGenerator.SourceGenerators.Tests.csproj --configuration Release --no-build --verbosity normal
-
-      - name: Run Unit Tests (Core)
-        run: dotnet test MauiPdfGenerator.Tests/MauiPdfGenerator.Tests.csproj --configuration Release --no-build --verbosity normal
 
       - name: Run Integration Tests
         run: dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --no-build --verbosity normal

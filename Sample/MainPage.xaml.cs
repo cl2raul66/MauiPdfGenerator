@@ -51,6 +51,18 @@ public partial class MainPage : ContentPage
                         s.FontAttributes(FontAttributes.Italic);
                         s.TextColor(Colors.DimGray);
                     });
+                    rd.Style<IPdfSpan>("NoteTitle", s =>
+                    {
+                        s.FontSize(10);
+                        s.FontAttributes(FontAttributes.Bold);
+                        s.TextColor(Colors.Indigo);
+                    });
+                    rd.Style<IPdfSpan>("NoteMsg", s =>
+                    {
+                        s.FontSize(10);
+                        s.FontAttributes(FontAttributes.Italic);
+                        s.TextColor(Colors.Indigo);
+                    });
                     rd.Style<IPdfSpan>("Highlight", s =>
                     {
                         s.BackgroundColor(Colors.Yellow);
@@ -101,13 +113,18 @@ public partial class MainPage : ContentPage
                         ch.Paragraph("Text Color: Red.").TextColor(Colors.Red);
                         ch.HorizontalLine();
 
-                        ch.Paragraph(s =>
+                        ch.Paragraph(sp =>
                         {
-                            s.Text("This ").TextTransform(TextTransform.Uppercase);
-                            s.Text("is with").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
-                            s.Text(" Span");
+                            sp.Text("This ").TextTransform(TextTransform.Uppercase);
+                            sp.Text("is with").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
+                            sp.Text(" Span");
                         })
                         .TextColor(Colors.Blue).TextDecorations(TextDecorations.Underline);
+                        ch.Paragraph(sp =>
+                        {
+                            sp.Text("Nota: ").Style(PdfStyles.NoteTitle);
+                            sp.Text("El mejor generador de ficheros PDF para .NET MAUI").Style(PdfStyles.NoteMsg);
+                        });
                         ch.HorizontalLine();
 
                         ch.Paragraph("2. Text Alignment (HorizontalTextAlignment)").Style(PdfStyles.SectionHeader);

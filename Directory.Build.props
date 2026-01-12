@@ -1,0 +1,8 @@
+<Project>
+  <!-- Disable MAUI workloads for CI/CD workflows -->
+  <!-- MAUI workloads (maui-android, maui-ios, maui-maccatalyst, maui-tizen) -->
+  <!-- are not needed for CodeQL analysis which only analyzes C# code -->
+  <PropertyGroup>
+    <EnableMauiWorkloads>false</EnableMauiWorkloads>
+  </PropertyGroup>
+</Project>

@@ -11,8 +11,88 @@ on:
       - 'MauiPdfGenerator/**'
       - 'MauiPdfGenerator.SourceGenerators/**'
 
-jobs:  
+jobs:
+  analyze-commits:
+    runs-on: ubuntu-latest
+    outputs:
+      has_core_changes: ${{ steps.analyze.outputs.has_core_changes }}
+      has_sourcegen_changes: ${{ steps.analyze.outputs.has_sourcegen_changes }}
+      core_version: ${{ steps.core_version.outputs.version }}
+      sourcegen_version: ${{ steps.sourcegen_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get commit messages
+        id: commits
+        run: |
+          echo "commits=$(git log ${{ github.event.before }}..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
+
+      - name: Analyze commits for version bumps
+        id: analyze
+        shell: pwsh
+        run: |
+          $commits = "${{ steps.commits.outputs.commits }}"
+          $hasCore = $false
+          $hasSourcegen = $false
+
+          # Tipos que disparan version bump: feat, fix, feat!, fix!
+          # Scopes: core (MauiPdfGenerator), sourcegen (SourceGenerators)
+          
+          $commitList = $commits.Split(',', [StringSplitOptions]::RemoveEmptyEntries)
+          
+          foreach ($commit in $commitList) {
+            # Buscar patrones como: feat(core), fix(core), feat!, fix!, etc.
+            if ($commit -match '(feat|fix)(!|\(core\)|\(sourcegen\))?:') {
+              if ($commit -match '\(core\)' -or $commit -match 'feat\(sourcegen\)|fix\(sourcegen\)') {
+                # Es feat! o fix! sin scope específico - afecta a ambos
+                $hasCore = $true
+                $hasSourcegen = $true
+              }
+              elseif ($commit -match '\(core\)') {
+                $hasCore = $true
+              }
+              elseif ($commit -match '\(sourcegen\)') {
+                $hasSourcegen = $true
+              }
+            }
+          }
+
+          "has_core_changes=$hasCore" >> $env:GITHUB_OUTPUT
+          "has_sourcegen_changes=$hasSourcegen" >> $env:GITHUB_OUTPUT
+          Write-Host "Core changes: $hasCore"
+          Write-Host "Sourcegen changes: $hasSourcegen"
+
+      - name: Calculate Core Version
+        id: core_version
+        if: steps.analyze.outputs.has_core_changes == 'true'
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "main-v"
+          major_pattern: "!:|BREAKING CHANGE:"
+          minor_pattern: "^feat"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator"
+          user_format_type: "json"
+
+      - name: Calculate SourceGen Version
+        id: sourcegen_version
+        if: steps.analyze.outputs.has_sourcegen_changes == 'true'
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "gen-v"
+          major_pattern: "!:|BREAKING CHANGE:"
+          minor_pattern: "^feat"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator.SourceGenerators"
+          user_format_type: "json"
+
   build-sourcegen:
+    needs: analyze-commits
+    if: needs.analyze-commits.outputs.has_sourcegen_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -27,21 +107,14 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Calculate Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "gen-v"
-          major_pattern: "!:|BREAKING CHANGE:"
-          minor_pattern: "^feat"
-          version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator.SourceGenerators"
-          user_format_type: "json"
-
       - name: Determine Version String
         id: final_version
         shell: pwsh
-        run: echo "VAL=${{ steps.versioning.outputs.version }}-preview-${{ steps.versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
+        run: |
+          $ver = "${{ needs.analyze-commits.outputs.sourcegen_version }}"
+          $increment = (git rev-list --count HEAD ^$(git rev-parse $(git describe --tags --abbrev=0 2>/dev/null || echo 'HEAD~1')) 2>/dev/null) || 1
+          echo "VAL=$ver-preview-$increment" >> $env:GITHUB_OUTPUT
+          Write-Host "SourceGen Version: $ver-preview-$increment"
 
       - name: Build & Pack
         run: |
@@ -60,6 +133,8 @@ jobs:
           retention-days: 1
 
   build-main:
+    needs: analyze-commits
+    if: needs.analyze-commits.outputs.has_core_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -77,38 +152,22 @@ jobs:
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      - name: Download Diagnostics Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: diagnostics-package
-          path: ./local-feed
-
-      - name: Setup Local NuGet Feed
-        run: dotnet nuget add source "${{ github.workspace }}/local-feed" --name LocalArtifacts
-
-      - name: Calculate Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "main-v"
-          major_pattern: "!:|BREAKING CHANGE:"
-          minor_pattern: "^feat"
-          version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator MauiPdfGenerator.Diagnostics"
-          user_format_type: "json"
-
       - name: Determine Version String
         id: final_version
         shell: pwsh
-        run: echo "VAL=${{ steps.versioning.outputs.version }}-preview-${{ steps.versioning.outputs.increment }}" >> $env:GITHUB_OUTPUT
+        run: |
+          $ver = "${{ needs.analyze-commits.outputs.core_version }}"
+          $increment = (git rev-list --count HEAD ^$(git rev-parse $(git describe --tags --abbrev=0 2>/dev/null || echo 'HEAD~1')) 2>/dev/null) || 1
+          echo "VAL=$ver-preview-$increment" >> $env:GITHUB_OUTPUT
+          Write-Host "Core Version: $ver-preview-$increment"
 
       - name: Build & Pack Main
         run: |
           $mainVer = "${{ steps.final_version.outputs.VAL }}"
 
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
-          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
-          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer /p:DiagnosticsVersion=$diagVer
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer
+          dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer
 
       - name: Upload Main Artifact
         uses: actions/upload-artifact@v4
@@ -116,9 +175,10 @@ jobs:
           name: main-package
           path: ./output/*.nupkg
           retention-days: 1
-  
+
   publish-nuget:
-    needs: [build-main, build-sourcegen]
+    needs: [analyze-commits, build-main, build-sourcegen]
+    if: needs.build-main.outputs.version != '' || needs.build-sourcegen.outputs.version != ''
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -138,7 +198,35 @@ jobs:
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./packages/*.nupkg
-          foreach ($pkg in $packages) {
-              Write-Host "Publicando Preview: $($pkg.Name)"
-              dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+          if ($packages.Count -eq 0) {
+            Write-Host "No packages to publish"
+            exit 0
           }
+          foreach ($pkg in $packages) {
+            Write-Host "Publicando Preview: $($pkg.Name)"
+            dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
+      - name: Create Git Tags
+        if: always()
+        shell: pwsh
+        run: |
+          $mainVer = "${{ needs.build-main.outputs.version }}"
+          $genVer = "${{ needs.build-sourcegen.outputs.version }}"
+
+          function Create-Tag {
+            param($tag, $ver)
+            if ([string]::IsNullOrEmpty($ver)) { return }
+            $fullTag = "${tag}${ver}"
+            $existingTag = git tag | Where-Object { $_ -eq $fullTag }
+            if ($existingTag) {
+              Write-Host "Tag $fullTag ya existe"
+            } else {
+              git tag $fullTag
+              git push origin $fullTag
+              Write-Host "Tag $fullTag creado"
+            }
+          }
+
+          Create-Tag "main-v" $mainVer
+          Create-Tag "gen-v" $genVer

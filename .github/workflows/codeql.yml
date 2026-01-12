@@ -14,6 +14,7 @@ on:
       - '**.cs'
       - '**.csproj'
       - '.github/workflows/codeql.yml'
+      - '!Sample/**'
   pull_request:
     branches: ["development", "master"]
     paths:
@@ -22,6 +23,7 @@ on:
       - '**.cs'
       - '**.csproj'
       - '.github/workflows/codeql.yml'
+      - '!Sample/**'
 
 jobs:
   analyze:
@@ -51,7 +53,10 @@ jobs:
           queries: security-extended
 
       - name: Build Solution
-        run: dotnet build MauiPdfGenerator.sln --configuration Release --no-restore
+        run: |
+          dotnet restore MauiPdfGenerator.sln
+          dotnet build MauiPdfGenerator.sln --configuration Release --no-restore \
+            /p:EnableWindowsTargeting=false
 
       - name: Perform Analysis
         uses: github/codeql-action/analyze@v3

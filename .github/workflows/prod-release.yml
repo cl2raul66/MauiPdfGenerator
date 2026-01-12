@@ -1,7 +1,7 @@
 name: Production Release (Stable)
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 on:
@@ -26,8 +26,132 @@ jobs:
         run: dotnet workload install maui --ignore-failed-sources
       - name: Run Integration Tests
         run: dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --verbosity normal
-  
+
+  analyze-commits:
+    runs-on: ubuntu-latest
+    outputs:
+      has_core_changes: ${{ steps.analyze.outputs.has_core_changes }}
+      has_sourcegen_changes: ${{ steps.analyze.outputs.has_sourcegen_changes }}
+      core_version: ${{ steps.core_version.outputs.version }}
+      sourcegen_version: ${{ steps.sourcegen_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get commits since last tags
+        id: commits
+        run: |
+          # Obtener último tag de cada paquete
+          mainTag=$(git describe --tags --match 'main-v*' --abbrev=0 2>/dev/null || echo '')
+          genTag=$(git describe --tags --match 'gen-v*' --abbrev=0 2>/dev/null || echo '')
+          
+          echo "Main tag: $mainTag"
+          echo "Gen tag: $genTag"
+          
+          # Obtener commits desde el tag más reciente (o desde el inicio si no hay tags)
+          if [ -n "$mainTag" ] && [ -n "$genTag" ]; then
+            # Usar el tag más reciente de ambos
+            if git rev-list "$mainTag..HEAD | grep -q ."; then
+              if git rev-list "$genTag..HEAD | grep -q ."; then
+                # Ambos tienen commits, usar el más antiguo
+                newerTag=$(git rev-list --date-order "$mainTag" "$genTag" | head -1)
+                echo "Using newer tag: $newerTag"
+                echo "commits=$(git log $newerTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
+              else
+                # Solo main tiene commits
+                echo "Using main tag: $mainTag"
+                echo "commits=$(git log $mainTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
+              fi
+            else
+              # Solo gen tiene commits
+              echo "Using gen tag: $genTag"
+              echo "commits=$(git log $genTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
+            fi
+          elif [ -n "$mainTag" ]; then
+            echo "Using main tag: $mainTag"
+            echo "commits=$(git log $mainTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
+          elif [ -n "$genTag" ]; then
+            echo "Using gen tag: $genTag"
+            echo "commits=$(git log $genTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
+          else
+            echo "No tags found, using all commits"
+            echo "commits=$(git log --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Analyze commits for version bumps
+        id: analyze
+        shell: pwsh
+        run: |
+          $commits = "${{ steps.commits.outputs.commits }}"
+          $hasCore = $false
+          $hasSourcegen = $false
+
+          # Tipos que disparan version bump: feat, fix, feat!, fix!
+          # Scopes: core (MauiPdfGenerator), sourcegen (SourceGenerators)
+          
+          $commitList = $commits.Split(',', [StringSplitOptions]::RemoveEmptyEntries)
+          
+          foreach ($commit in $commitList) {
+            Write-Host "Analyzing commit: $commit"
+            # Buscar patrones como: feat(core), fix(core), feat!, fix!, etc.
+            if ($commit -match '(feat|fix)(!|\(core\)|\(sourcegen\))?:') {
+              if ($commit -match 'feat!|fix!') {
+                # feat! o fix! sin scope específico - afecta a ambos
+                Write-Host "  -> Breaking change detected (no scope)"
+                $hasCore = $true
+                $hasSourcegen = $true
+              }
+              elseif ($commit -match '\(core\)') {
+                Write-Host "  -> Core change detected"
+                $hasCore = $true
+              }
+              elseif ($commit -match '\(sourcegen\)') {
+                Write-Host "  -> SourceGen change detected"
+                $hasSourcegen = $true
+              }
+              else {
+                # feat o fix sin scope específico - por defecto afecta a core
+                Write-Host "  -> Default to core change (no scope)"
+                $hasCore = $true
+              }
+            }
+          }
+
+          "has_core_changes=$hasCore" >> $env:GITHUB_OUTPUT
+          "has_sourcegen_changes=$hasSourcegen" >> $env:GITHUB_OUTPUT
+          Write-Host "Core changes: $hasCore"
+          Write-Host "Sourcegen changes: $hasSourcegen"
+
+      - name: Calculate Core Version
+        id: core_version
+        if: steps.analyze.outputs.has_core_changes == 'true'
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "main-v"
+          major_pattern: "!:|BREAKING CHANGE:"
+          minor_pattern: "^feat"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator"
+          user_format_type: "json"
+
+      - name: Calculate SourceGen Version
+        id: sourcegen_version
+        if: steps.analyze.outputs.has_sourcegen_changes == 'true'
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "gen-v"
+          major_pattern: "!:|BREAKING CHANGE:"
+          minor_pattern: "^feat"
+          version_format: "${major}.${minor}.${patch}"
+          change_path: "MauiPdfGenerator.SourceGenerators"
+          user_format_type: "json"
+
   build-sourcegen:
+    needs: analyze-commits
+    if: needs.analyze-commits.outputs.has_sourcegen_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -42,22 +166,13 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Calculate Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "gen-v"
-          major_pattern: "!:|BREAKING CHANGE:"
-          minor_pattern: "^feat"
-          version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator.SourceGenerators"
-          user_format_type: "json"
-
       - name: Determine Version String
         id: final_version
         shell: pwsh
         run: |
-          echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+          $ver = "${{ needs.analyze-commits.outputs.sourcegen_version }}"
+          echo "VAL=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "SourceGen Version: $ver (stable)"
 
       - name: Build & Pack
         run: |
@@ -76,6 +191,8 @@ jobs:
           retention-days: 1
 
   build-main:
+    needs: analyze-commits
+    if: needs.analyze-commits.outputs.has_core_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -92,22 +209,14 @@ jobs:
 
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
-      
-      - name: Calculate Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "main-v"
-          major_pattern: "!:|BREAKING CHANGE:"
-          minor_pattern: "^feat"
-          version_format: "${major}.${minor}.${patch}"
-          user_format_type: "json"
 
       - name: Determine Version String
         id: final_version
         shell: pwsh
         run: |
-          echo "VAL=${{ steps.versioning.outputs.version }}" >> $env:GITHUB_OUTPUT
+          $ver = "${{ needs.analyze-commits.outputs.core_version }}"
+          echo "VAL=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "Core Version: $ver (stable)"
 
       - name: Build & Pack Main
         run: |
@@ -125,7 +234,8 @@ jobs:
           retention-days: 1
 
   publish-nuget:
-    needs: [build-main, build-sourcegen]
+    needs: [analyze-commits, build-main, build-sourcegen]
+    if: needs.build-main.outputs.version != '' || needs.build-sourcegen.outputs.version != ''
     runs-on: windows-latest
     permissions:
       contents: write
@@ -147,9 +257,13 @@ jobs:
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./packages/*.nupkg
+          if ($packages.Count -eq 0) {
+            Write-Host "No packages to publish"
+            exit 0
+          }
           foreach ($pkg in $packages) {
-              Write-Host "Publicando Stable: $($pkg.Name)"
-              dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+            Write-Host "Publicando Stable: $($pkg.Name)"
+            dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 
       - name: Create Git Tags
@@ -173,5 +287,5 @@ jobs:
               }
             }
 
-            await tryCreateTag(`main-v${mainVer}`);
-            await tryCreateTag(`gen-v${genVer}`);
+            if (mainVer) await tryCreateTag(`main-v${mainVer}`);
+            if (genVer) await tryCreateTag(`gen-v${genVer}`);

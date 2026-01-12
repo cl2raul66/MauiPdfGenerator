@@ -57,11 +57,3 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:csharp"
-          upload: true
-
-      - name: Upload Results to Security Tab
-        uses: github/codeql-action/upload-results@v3
-        if: always()
-        with:
-          category: "/language:csharp"
-          checkout_path: .

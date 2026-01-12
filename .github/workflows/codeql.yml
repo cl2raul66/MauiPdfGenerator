@@ -56,7 +56,9 @@ jobs:
         run: |
           dotnet restore MauiPdfGenerator.sln
           dotnet build MauiPdfGenerator.sln --configuration Release --no-restore \
-            /p:EnableWindowsTargeting=false
+            /p:EnableWindowsTargeting=false \
+            MauiPdfGenerator/MauiPdfGenerator.csproj \
+            MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj
 
       - name: Perform Analysis
         uses: github/codeql-action/analyze@v3

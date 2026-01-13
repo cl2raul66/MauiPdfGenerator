@@ -179,6 +179,16 @@ jobs:
               return @{ HasPending = $false; Version = ""; Tag = "" }
             }
 
+            # Parsear versión stable
+            $stableVerStr = $latestStable -replace $stablePrefix, ''
+            try {
+              $stableVer = [version]$stableVerStr
+              Write-Host "Stable version: $stableVer"
+            } catch {
+              Write-Host "⚠ Error parseando stable version: $stableVerStr"
+              return @{ HasPending = $false; Version = ""; Tag = "" }
+            }
+
             # Buscar tags preview más recientes
             $previewTags = git tag -l "$tagPattern*" --sort=-version:refname
 
@@ -188,7 +198,6 @@ jobs:
               # Extraer versión de preview
               if ($latestPreview -match '(?<ver>\d+\.\d+\.\d+)-preview-(?<inc>\d+)') {
                 $previewVer = [version]$matches.ver
-                $stableVer = [version]($latestStable -replace $stablePrefix, '')
 
                 # Verificar que preview es más reciente que stable
                 if ($previewVer -gt $stableVer) {
@@ -211,20 +220,51 @@ jobs:
             try {
               $nugetVersions = Invoke-RestMethod -Uri "https://api.nuget.org/v3-flatcontainer/$pkgId/index.json" -TimeoutSec 30
 
-              if ($nugetVersions.versions) {
-                $latestNugetVersion = $nugetVersions.versions[-1]
+              if ($nugetVersions.versions -and $nugetVersions.versions.Count -gt 0) {
+                # Ordenar versiones en orden descendente
+                $sortedVersions = $nugetVersions.versions | Sort-Object -Descending
 
-                if ($latestNugetVersion -match '(?<ver>\d+\.\d+\.\d+)-preview-(?<inc>\d+)') {
-                  $nugetPreviewVer = [version]$matches.ver
+                # Buscar la versión preview más reciente
+                $previewVersions = $sortedVersions | Where-Object { $_ -match '\d+\.\d+\.\d+-preview-\d+' }
 
-                  if ($nugetPreviewVer -gt $stableVer) {
-                    Write-Host "✓ Preview encontrada en NuGet API: $latestNugetVersion"
-                    return @{
-                      HasPending = $true
-                      Version = $matches.ver
-                      Tag = ""
+                if ($previewVersions -and $previewVersions.Count -gt 0) {
+                  $latestNugetVersion = $previewVersions[0]
+
+                  if ($latestNugetVersion -match '(?<ver>\d+\.\d+\.\d+)-preview-(?<inc>\d+)') {
+                    $baseVersion = $matches.ver
+                    Write-Host "Preview encontrada en NuGet: $latestNugetVersion (base: $baseVersion)"
+
+                    # Verificar que la versión base es más reciente que la stable
+                    if ($stableVer -and $baseVersion) {
+                      try {
+                        $baseVer = [version]$baseVersion
+                        if ($baseVer -gt $stableVer) {
+                          Write-Host "✓ Preview más reciente que stable: $baseVer > $stableVer"
+                          return @{
+                            HasPending = $true
+                            Version = $baseVersion
+                            Tag = ""
+                          }
+                        } else {
+                          Write-Host "⚠ Preview no más reciente que stable: $baseVer <= $stableVer (ignorando)"
+                        }
+                      } catch {
+                        Write-Host "⚠ Error comparando versiones: $($_)"
+                      }
+                    } else {
+                      # No hay stable local, promote
+                      Write-Host "✓ No hay stable local, promoviendo preview"
+                      return @{
+                        HasPending = $true
+                        Version = $baseVersion
+                        Tag = ""
+                      }
                     }
+                  } else {
+                    Write-Host "⚠ No se pudo extraer versión base de $latestNugetVersion"
                   }
+                } else {
+                  Write-Host "No se encontraron versiones preview en NuGet"
                 }
               }
             } catch {

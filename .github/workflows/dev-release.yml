@@ -1,7 +1,7 @@
 name: Development Release (Preview)
 
 permissions:
-  contents: read
+  contents: write
 
 on:
   workflow_dispatch:
@@ -230,3 +230,45 @@ jobs:
 
           Create-Tag "main-v" $mainVer
           Create-Tag "gen-v" $genVer
+
+  create-preview-tags:
+    needs: [build-main, build-sourcegen]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create preview tags
+        shell: pwsh
+        run: |
+          $mainVer = "${{ needs.build-main.outputs.version }}"
+          $genVer = "${{ needs.build-sourcegen.outputs.version }}"
+
+          function Create-PreviewTag {
+            param($tagPrefix, $ver)
+            if ([string]::IsNullOrEmpty($ver)) { return }
+
+            # Extraer versión sin preview
+            if ($ver -match '(?<ver>\d+\.\d+\.\d+)-preview-(?<inc>\d+)') {
+              $stableVer = $matches.ver
+              $previewTag = "${tagPrefix}${ver}"
+
+              # Verificar si ya existe
+              $existing = git tag -l "$previewTag"
+              if ($existing) {
+                Write-Host "Tag $previewTag ya existe"
+                return
+              }
+
+              git tag $previewTag
+              git push origin $previewTag
+              Write-Host "✓ Tag preview creada: $previewTag"
+            }
+          }
+
+          Create-PreviewTag "main-v" $mainVer
+          Create-PreviewTag "gen-v" $genVer

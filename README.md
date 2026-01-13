@@ -22,7 +22,7 @@ This is more than just a PDF library; it's a complete ecosystem designed to maxi
 
 -   **`MauiPdfGenerator`**: The core engine, featuring a powerful layout system that emulates .NET MAUI's behavior for predictable results.
 -   **`MauiPdfGenerator.SourceGenerators`**: A smart code generator that eliminates "magic strings" for fonts, providing compile-time safety and IntelliSense for all your registered fonts.
--   **`MauiPdfGenerator.Diagnostics`**: A first-class diagnostics library that transforms layout debugging from a guessing game into a science, providing clear, actionable feedback directly in your console and optionally as a visual overlay on the PDF itself.
+-   **`MauiPdfGenerator.Diagnostics`**: A first-class diagnostics library that transforms layout debugging from a guessing game into a science, providing clear, actionable feedback directly in your console and optionally as a visual overlay on the PDF itself. Now integrated into the Core library.
 
 Together, they provide a seamless and robust solution for creating professional PDFs, allowing you to focus on your application's logic, not on fighting with a new API.
 

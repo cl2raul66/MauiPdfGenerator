@@ -15,7 +15,7 @@ MauiPdfGenerator is a .NET MAUI library for generating PDF documents using SkiaS
 |-----------|------|---------|---------|
 | Core | `MauiPdfGenerator/` | Main PDF generation library | ✅ NuGet |
 | Source Generators | `MauiPdfGenerator.SourceGenerators/` | Roslyn source generators | ✅ NuGet |
-| Tests | `MauiPdfGenerator.Tests/`, `MauiPdfGenerator.IntegrationTests/` | Unit and integration tests | ❌ |
+| Tests | `MauiPdfGenerator.IntegrationTests/` | integration tests | ❌ |
 
 ## Branch Strategy
 
@@ -122,12 +122,17 @@ Required fields:
 - Runs on push to `development`
 - Publishes preview packages to NuGet
 - Version format: `{major}.{minor}.{patch}-preview-{increment}`
-- Creates tags: `main-v*`, `gen-v*`
+- Creates preview tags: `main-v{major}.{minor}.{patch}-preview-{increment}`, `gen-v{major}.{minor}.{patch}-preview-{increment}`
+- Preview tags are used by Production Release to promote to stable
 
 ### Production Release (`prod-release.yml`)
 - Runs on push to `master` (or manual)
 - Publishes stable packages to NuGet
-- Creates Git tags
+- **New Feature:** Checks for pending preview versions (hybrid: local tags first, NuGet API fallback)
+- Creates stable Git tags: `main-v{major}.{minor}.{patch}`, `gen-v{major}.{minor}.{patch}`
+- Deletes preview tags after stable release
+- Verifies NuGet publication (3 attempts, 10-minute intervals)
+- Creates tracking issues with `status:preview-pending` label for manual verification
 
 ### CodeQL Security (`codeql.yml`)
 - Runs on push/PR to `development` and `master`
@@ -159,7 +164,7 @@ MauiPdfGenerator/
 ├── .github/
 │   ├── workflows/          # CI/CD workflows
 │   ├── ISSUE_TEMPLATE/     # Issue templates
-│   └── pull_request_template.md
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── .opencode/
 │   └── skill/mauipdf-generator/
 ├── MauiPdfGenerator/       # Core library
@@ -168,9 +173,7 @@ MauiPdfGenerator/
 │   ├── Diagnostics/        # Merged into Core
 │   └── MauiPdfGenerator.csproj
 ├── MauiPdfGenerator.SourceGenerators/
-├── MauiPdfGenerator.Tests/
 ├── MauiPdfGenerator.IntegrationTests/
-├── MauiPdfGenerator.SourceGenerators.Test/
 ├── Sample/                 # Sample MAUI app
 ├── CONTRIBUTING.md         # Development guide
 ├── .gitmessage            # Commit template
@@ -242,6 +245,41 @@ Breaking (!) > Feature (feat) > Fix (fix) > Others
 | fixes + feats + 1 breaking | 1.5.11 → 2.0.0-preview |
 | only docs/chore/test | ❌ No release |
 
+## Common CI/CD Errors and Solutions
+
+### Development Release Issues
+
+| Error                          | Solution                                        |
+| ------------------------------ | ----------------------------------------------- |
+| Preview tag not created        | Verify workflow has `contents: write` permissions |
+| Package not published to NuGet | Check `NUGET_API_KEY` secret exists and is valid  |
+| Wrong version increment        | Verify commits exist since last tag             |
+
+### Production Release Issues
+
+| Error                      | Solution                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| Preview not promoted       | Check for preview tags: `git tag -l "*preview*"`                                        |
+| Version calculation failed | Verify stable tags exist: `git tag -l "main-v*" "gen-v*"`                               |
+| NuGet verification timeout | Manually verify at https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator |
+| Tracking issue not created | Verify `status:preview-pending` label exists in repo settings                           |
+
+### Agent Commands for Debugging
+
+```bash
+# Check for pending preview tags
+git tag -l "*preview*"
+
+# Check for stable tags
+git tag -l "main-v*" "gen-v*"
+
+# List issues with preview-pending status
+gh issue list --label "status:preview-pending"
+
+# Verify NuGet package exists
+curl -s "https://api.nuget.org/v3-flatcontainer/{package-id}/index.json"
+```
+
 ## References
 
 - `.gitmessage` - Commit message template
@@ -259,40 +297,44 @@ Breaking (!) > Feature (feat) > Fix (fix) > Others
 
 ---
 
-## GitHub MCP Integration
+## GitHub CLI Integration
 
-The agent uses GitHub MCP (Model Context Protocol) tools to interact with Issues and Project Board.
+The agent uses GitHub CLI (gh) commands via bash tool to interact with Issues and Project Board.
 
-### Available MCP Tools
+**Requirements:**
+- Install GitHub CLI: `winget install --id GitHub.cli`
+- Authenticate: `gh auth login`
 
-| Tool | Usage |
-|------|-------|
-| `github_list_issues` | List issues (filterable by labels, assignee) |
-| `github_create_issue` | Create issue with template |
-| `github_update_issue` | Update state, labels, assignee |
-| `github_add_issue_comment` | Add progress comments |
-| `github_create_pull_request` | Create PR with template |
-| `github_merge_pull_request` | Merge PR after review approval |
+### Available GitHub CLI Commands
+
+| Command | Usage |
+|---------|-------|
+| `gh issue list` | List issues (filterable by labels, assignee) |
+| `gh issue create` | Create issue with template |
+| `gh issue edit` | Update state, labels, assignee |
+| `gh issue comment` | Add progress comments |
+| `gh pr create` | Create PR with template |
+| `gh pr merge` | Merge PR after review approval |
 
 ### Project Board
 
 **URL:** https://github.com/users/cl2raul66/projects/6
 **ID:** 6
 
-### Complete Agent Workflow with GitHub Integration
+### Complete Agent Workflow with GitHub CLI Integration
 
 ```
 User: "Implement PDF table rendering support"
     ↓
-Agent: github_list_issues → Check if similar issue exists
+Agent: bash gh issue list → Check if similar issue exists
     ↓
-Agent: github_create_issue → Create Issue #XX with feature-request.yml
+Agent: bash gh issue create → Create Issue #XX with feature-request.yml
     ├─ Auto-add labels: type: feature, scope: core
     └─ Title: "[Feat]: PDF table rendering support"
     ↓
-Agent: github_update_issue → Assignee = cl2raul66
+Agent: bash gh issue edit → Assignee = cl2raul66
     ↓
-Agent: github_add_issue_comment → "Started work on this"
+Agent: bash gh issue comment → "Started work on this"
     ↓
 git checkout development && git pull origin development
 git checkout -b feature/xx-pdf-table-rendering
@@ -302,21 +344,21 @@ Implement with Conventional Commits:
 - feat(core): implement TableRenderer
 - test(core): add TableRendererTests
     ↓
-Agent: github_create_pull_request → Create PR #YY
+Agent: bash gh pr create → Create PR #YY
     ├─ Title: "feat(core): add PDF table rendering support"
     ├─ Body: Closes #XX
     └─ Labels: type: feature
     ↓
 CI validates (pr-validation.yml + codeql.yml)
     ↓
-Agent: github_add_issue_comment → "Ready for review"
+Agent: bash gh issue comment → "Ready for review"
     ↓
 Human review and approval
     ↓
-github_merge_pull_request → Merge to development
+bash gh pr merge → Merge to development
     ↓
-Agent: github_add_issue_comment → "Fixed in PR #YY"
-Agent: github_update_issue → state=closed
+Agent: bash gh issue comment → "Fixed in PR #YY"
+Agent: bash gh issue close → state=closed
 ```
 
 ---
@@ -349,9 +391,10 @@ Labels are critical for version bumping and issue management.
 
 ### Status Labels
 
-| Label | Usage |
-|-------|-------|
-| `status: on-hold` | Temporarily paused |
+| Label                  | Usage                                                            |
+| ---------------------- | ---------------------------------------------------------------- |
+| `status: on-hold`        | Temporarily paused                                               |
+| `status:preview-pending` | Preview version published, awaiting manual verification in NuGet |
 
 ### Auto-Labeling Rules
 
@@ -381,9 +424,9 @@ Create a new issue with appropriate template.
 ```
 
 **Agent Actions:**
-1. github_list_issues → Verify no duplicate
-2. github_create_issue → Select template (feature-request.yml, bug-report.yml, maintenance.yml)
-3. github_update_issue → Assignee = cl2raul66, add labels
+1. bash gh issue list → Verify no duplicate
+2. bash gh issue create → Select template (feature-request.yml, bug-report.yml, maintenance.yml)
+3. bash gh issue edit → Assignee = cl2raul66, add labels
 
 ### /list-issues
 List all open issues filtered by labels.
@@ -412,7 +455,7 @@ List issues assigned to the current user (cl2raul66).
 ```
 
 **Agent Actions:**
-1. github_list_issues with assignee=cl2raul66
+1. bash gh issue list --assignee cl2raul66
 2. Show status and progress for each issue
 3. Link to Project Board status
 
@@ -425,10 +468,10 @@ Plan tasks for a specific version release.
 ```
 
 **Agent Actions:**
-1. github_list_issues → Check existing issues for version
+1. bash gh issue list → Check existing issues for version
 2. Identify missing tasks for the release
-3. github_create_issue → Create new issues using maintenance.yml
-4. github_update_issue → Add priority: high to release blockers
+3. bash gh issue create → Create new issues using maintenance.yml
+4. bash gh issue edit → Add priority: high to release blockers
 5. Summarize release plan in comment
 
 ### /close-issue
@@ -440,8 +483,8 @@ Close an issue after PR merge.
 ```
 
 **Agent Actions:**
-1. github_add_issue_comment → "Fixed in PR #55"
-2. github_update_issue → state=closed
+1. bash gh issue comment → "Fixed in PR #55"
+2. bash gh issue close → state=closed
 
 ### /status-roadmap
 Show current status of Project Board #6.
@@ -464,9 +507,48 @@ IN PROGRESS (2 issues):
   - #45: Font caching (cl2raul66)
 
 DONE (28 issues):
-  - #43: Style resolution
-  - #41: Font alias generator
+- #43: Style resolution
+- #41: Font alias generator
 ```
+
+### /verify-preview-release
+Verify and manage pending preview releases that need manual verification in NuGet.
+
+**Usage:**
+```
+/verify-preview-release
+/verify-preview-release status
+/verify-preview-release cleanup
+```
+
+**Agent Actions:**
+1. List preview tags: `git tag -l "*preview*"`
+2. List tracking issues: `gh issue list --label "status:preview-pending"`
+3. Check NuGet API for each pending preview
+4. Show status of each preview (verified, pending, failed)
+5. Provide commands to clean up resolved previews
+
+**Output Format:**
+```
+Preview Release Status
+━━━━━━━━━━━━━━━━━━━━━━
+Pending Verifications (2):
+  - gen-v1.3.4-preview-1: Issue #42 - Checking...
+  - main-v1.6.0-preview-2: Issue #45 - Checking...
+
+Verified Previews (1):
+  - gen-v1.3.3-preview-5: Issue #40 - ✅ Verified, tag deleted
+
+Cleanup Commands:
+  # Delete resolved preview tags
+  git tag -d gen-v1.3.3-preview-5
+  git push origin :refs/tags/gen-v1.3.3-preview-5
+```
+
+**Sub-commands:**
+- `status` - Show only verification status
+- `cleanup` - Show commands to delete resolved preview tags
+- `verify` - Force re-verification of all pending previews
 
 ---
 
@@ -475,7 +557,7 @@ DONE (28 issues):
 Always assign issues to the owner using:
 
 ```bash
-github_update_issue(issue_number=XX, assignees=["cl2raul66"])
+gh issue edit XX --add-assignee cl2raul66
 ```
 
 ---
@@ -505,12 +587,12 @@ This automatically links the commit to the issue and closes it when merged to ma
 User: /new-issue feat: add PDF table support
 
 Agent:
-1. github_list_issues → No duplicate found
-2. github_create_issue → Created #42
-3. github_update_issue → Assigned to cl2raul66, labels: type: feature, scope: core
+1. bash gh issue list → No duplicate found
+2. bash gh issue create → Created #42
+3. bash gh issue edit → Assigned to cl2raul66, labels: type: feature, scope: core
 4. git checkout -b feature/42-pdf-table-support
 5. Makes commits
-6. github_create_pull_request → PR #55 linked to #42
+6. bash gh pr create → PR #55 linked to #42
 7. After merge: closes #42
 ```
 
@@ -519,12 +601,12 @@ Agent:
 User: /new-issue fix: images not rendering on Android
 
 Agent:
-1. github_list_issues → No duplicate found
-2. github_create_issue → Created #43 with bug-report.yml
-3. github_update_issue → Assigned to cl2raul66, labels: type: fix, priority: high
+1. bash gh issue list → No duplicate found
+2. bash gh issue create → Created #43 with bug-report.yml
+3. bash gh issue edit → Assigned to cl2raul66, labels: type: fix, priority: high
 4. git checkout -b fix/43-android-image-render
 5. Makes commits
-6. github_create_pull_request → PR #56 linked to #43
+6. bash gh pr create → PR #56 linked to #43
 ```
 
 ### Flow 3: Maintenance Task
@@ -532,9 +614,9 @@ Agent:
 User: /new-issue chore: update .NET MAUI dependencies
 
 Agent:
-1. github_list_issues → No duplicate found
-2. github_create_issue → Created #44 with maintenance.yml
-3. github_update_issue → Assigned to cl2raul66, labels: type: maintenance
+1. bash gh issue list → No duplicate found
+2. bash gh issue create → Created #44 with maintenance.yml
+3. bash gh issue edit → Assigned to cl2raul66, labels: type: maintenance
 4. git checkout -b chore/44-update-maui-deps
 5. Makes commits
 ```
@@ -544,7 +626,7 @@ Agent:
 User: /plan-release 1.7.0
 
 Agent:
-1. github_list_issues → Finds 5 open issues
+1. bash gh issue list → Finds 5 open issues
 2. Creates 3 new issues for missing features
 3. Labels all with priority: high
 4. Comments: "Release 1.7.0 plan:
@@ -563,47 +645,25 @@ Agent:
 ### Creating Issues
 
 ```bash
-github_create_issue(
-    owner="cl2raul66",
-    repo="MauiPdfGenerator",
-    title="[Feat]: Feature description",
-    body="Use feature-request.yml template",
-    labels=["type: feature", "scope: core"]
-)
+gh issue create --title "[Feat]: Feature description" --body "Use feature-request.yml template" --label "type: feature,scope: core"
 ```
 
 ### Updating Issues
 
 ```bash
-github_update_issue(
-    owner="cl2raul66",
-    repo="MauiPdfGenerator",
-    issue_number=42,
-    assignees=["cl2raul66"],
-    labels=["type: feature", "scope: core", "priority: high"]
-)
+gh issue edit 42 --add-assignee cl2raul66 --add-label "priority: high"
 ```
 
 ### Listing Issues
 
 ```bash
-github_list_issues(
-    owner="cl2raul66",
-    repo="MauiPdfGenerator",
-    labels=["type: feature"],
-    state="OPEN"
-)
+gh issue list --label "type: feature" --state open
 ```
 
 ### Adding Comments
 
 ```bash
-github_add_issue_comment(
-    owner="cl2raul66",
-    repo="MauiPdfGenerator",
-    issue_number=42,
-    body="Started work on this. Implementing..."
-)
+gh issue comment 42 --body "Started work on this. Implementing..."
 ```
 
 ---
@@ -611,11 +671,11 @@ github_add_issue_comment(
 ## Summary
 
 This skill enables the agent to:
-1. ✅ Manage GitHub Issues with proper templates and labels
+1. ✅ Manage GitHub Issues with proper templates and labels via GitHub CLI
 2. ✅ Auto-assign issues to cl2raul66
 3. ✅ Interact with Project Board #6
 4. ✅ Create and merge Pull Requests
 5. ✅ Follow complete development workflow
 6. ✅ Ensure code quality with CI/CD and CodeQL
 
-The agent is now a complete project manager and developer for MauiPdfGenerator.
+The agent is now a complete project manager and developer for MauiPdfGenerator, using GitHub CLI for all GitHub operations.

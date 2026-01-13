@@ -1,0 +1,250 @@
+name: NuGet Preview Diagnostic
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose-nuget-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      local_tags: ${{ steps.local-tags.outputs.result }}
+      nuget_versions: ${{ steps.nuget-api.outputs.result }}
+      parsing_analysis: ${{ steps.parsing.outputs.result }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Diagnose Local Tags
+        id: local-tags
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host "=== DIAGNOSTICO DE TAGS LOCALES ===" -ForegroundColor Cyan
+
+          $mainTags = git tag -l "main-v*" --sort=-version:refname 2>$null
+          $genTags = git tag -l "gen-v*" --sort=-version:refname 2>$null
+          $mainStable = git describe --tags --match 'main-v*' --abbrev=0 2>$null
+          $genStable = git describe --tags --match 'gen-v*' --abbrev=0 2>$null
+          $mainPreview = git tag -l "main-v*preview*" --sort=-version:refname 2>$null
+          $genPreview = git tag -l "gen-v*preview*" --sort=-version:refname 2>$null
+
+          Write-Host "Main Stable: $mainStable, Gen Stable: $genStable"
+          Write-Host "Main Previews: $($mainPreview.Count), Gen Previews: $($genPreview.Count)"
+
+          $result = @{
+            mainTags = $mainTags
+            genTags = $genTags
+            mainStableTag = $mainStable
+            genStableTag = $genStable
+            mainPreviewTags = $mainPreview
+            genPreviewTags = $genPreview
+            hasMainPreview = ($mainPreview.Count -gt 0)
+            hasGenPreview = ($genPreview.Count -gt 0)
+          }
+
+          Write-Host "--- JSON OUTPUT ---"
+          $result | ConvertTo-Json -Depth 5
+          Write-Host "result=$($result | ConvertTo-Json -Depth 5)" >> $env:GITHUB_OUTPUT
+
+      - name: Diagnose NuGet API Response
+        id: nuget-api
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host ""
+          Write-Host "=== DIAGNOSTICO DE NUGet API ===" -ForegroundColor Cyan
+
+          $packages = @{
+            "RandAMediaLabGroup.MauiPdfGenerator" = "main"
+            "RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators" = "gen"
+          }
+
+          $allResults = @{}
+
+          foreach ($pkg in $packages.GetEnumerator()) {
+            $pkgName = $pkg.Key
+            $prefix = $pkg.Value
+            Write-Host "Verificando: $pkgName (prefix: $prefix)"
+
+            try {
+              $apiUrl = "https://api.nuget.org/v3-flatcontainer/$pkgName/index.json"
+              $response = Invoke-RestMethod -Uri $apiUrl -TimeoutSec 30
+              $allVersions = $response.versions
+              $previewVersions = $allVersions | Where-Object { $_ -match '\d+\.\d+\.\d+-preview-\d+' }
+              $sortedPreviews = $previewVersions | Sort-Object -Descending
+              $latestPreview = $sortedPreviews[0]
+              $baseVersion = if ($latestPreview -match '(?<ver>\d+\.\d+\.\d+)-preview-\d+') { $matches.ver } else { $null }
+
+              $stableTag = git describe --tags --match "${prefix}-v*" --abbrev=0 2>$null
+              $stableVersion = $null
+              $shouldPromote = $false
+
+              if ($stableTag) {
+                $stableVerStr = $stableTag -replace "${prefix}-v", ""
+                try {
+                  $stableVersion = [version]$stableVerStr
+                  if ($baseVersion) {
+                    $baseVer = [version]$baseVersion
+                    $shouldPromote = $baseVer -gt $stableVersion
+                  }
+                } catch { Write-Host "  Parse error: $_" -ForegroundColor Red }
+              } else {
+                $shouldPromote = $true
+              }
+
+              Write-Host "  Latest Preview: $latestPreview (base: $baseVersion), Stable: $stableTag, ShouldPromote: $shouldPromote"
+
+              $allResults[$pkgName] = @{
+                packageId = $pkgName
+                prefix = $prefix
+                allVersions = $allVersions
+                previewVersions = $previewVersions
+                latestPreview = $latestPreview
+                baseVersion = $baseVersion
+                stableTag = $stableTag
+                stableVersion = if ($stableVersion) { $stableVersion.ToString() } else { $null }
+                shouldPromote = $shouldPromote
+                status = "Success"
+                error = $null
+              }
+            } catch {
+              Write-Host "  ERROR: $($_.Exception.Message)" -ForegroundColor Red
+              $allResults[$pkgName] = @{ packageId = $pkgName; prefix = $prefix; status = "Failed"; error = $_.Exception.Message; shouldPromote = $false }
+            }
+          }
+
+          Write-Host "--- JSON OUTPUT ---"
+          $allResults | ConvertTo-Json -Depth 10
+          Write-Host "result=$($allResults | ConvertTo-Json -Depth 10)" >> $env:GITHUB_OUTPUT
+
+      - name: Version Parsing Analysis
+        id: parsing
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host ""
+          Write-Host "=== ANALISIS DE PARSING DE VERSIONES ===" -ForegroundColor Cyan
+
+          $testVersions = @("1.5.12-preview-52", "1.3.4-preview-0", "1.5.11", "1.3.3")
+          $parsingResults = @()
+
+          foreach ($ver in $testVersions) {
+            $isPreview = $ver -match '(?<ver>\d+\.\d+\.\d+)-preview-\d+'
+            $base = if ($isPreview) { $matches.ver } else { $ver }
+            $parsedVer = try { if ($base) { ([version]$base).ToString() } else { null } } catch { "ERROR" }
+            Write-Host "$ver -> Preview: $isPreview, Base: $base, Parsed: $parsedVer"
+            $parsingResults += @{ original = $ver; isPreview = $isPreview; baseVersion = $base; parsedVersion = $parsedVer }
+          }
+
+          Write-Host "--- JSON OUTPUT ---"
+          $parsingResults | ConvertTo-Json -Depth 5
+          Write-Host "result=$($parsingResults | ConvertTo-Json -Depth 5)" >> $env:GITHUB_OUTPUT
+
+      - name: Generate Diagnostic Report
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host ""
+          Write-Host "=== GENERANDO REPORTE ===" -ForegroundColor Cyan
+
+          $localTags = Get-Content -Path "$env:GITHUB_OUTPUT/local_tags.json" -Raw | ConvertFrom-Json
+          $nugetVersions = Get-Content -Path "$env:GITHUB_OUTPUT/nuget_versions.json" -Raw | ConvertFrom-Json
+          $parsing = Get-Content -Path "$env:GITHUB_OUTPUT/parsing.json" -Raw | ConvertFrom-Json
+
+          $hasPendingMain = $nugetVersions."RandAMediaLabGroup.MauiPdfGenerator".shouldPromote
+          $hasPendingGen = $nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators".shouldPromote
+
+          $mainStable = $localTags.mainStableTag
+          $genStable = $localTags.genStableTag
+
+          $report = "# Diagnostico de NuGet Preview Fallback`n`n"
+          $report += "## Fecha: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n`n"
+
+          $report += "## Tags Locales`n"
+          $report += "- Main Stable: $mainStable`n"
+          $report += "- Gen Stable: $genStable`n`n"
+
+          $report += "## NuGet API Results`n"
+          $report += "### MauiPdfGenerator`n"
+          $report += "- Status: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator".status)`n"
+          $report += "- Latest Preview: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator".latestPreview)`n"
+          $report += "- Base Version: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator".baseVersion)`n"
+          $report += "- Stable Version: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator".stableVersion)`n"
+          $report += "- Should Promote: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator".shouldPromote)`n`n"
+
+          $report += "### SourceGenerators`n"
+          $report += "- Status: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators".status)`n"
+          $report += "- Latest Preview: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators".latestPreview)`n"
+          $report += "- Base Version: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators".baseVersion)`n"
+          $report += "- Stable Version: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators".stableVersion)`n"
+          $report += "- Should Promote: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators".shouldPromote)`n`n"
+
+          $report += "## Parsing Analysis`n"
+          $parsing | ForEach-Object { $report += "- $($_.original): Preview=$($_.isPreview), Base=$($_.baseVersion), Parsed=$($_.parsedVersion)`n" }
+          $report += "`n"
+
+          $report += "## Conclusion`n"
+          $report += "- MauiPdfGenerator Should Promote: $hasPendingMain`n"
+          $report += "- SourceGenerators Should Promote: $hasPendingGen`n`n"
+
+          if ($hasPendingMain -or $hasPendingGen) {
+            $report += "### PREVIEWS PENDIENTES DETECTADAS!`n`n"
+            if ($hasPendingMain) {
+              $report += "- MauiPdfGenerator: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator".latestPreview)`n"
+            }
+            if ($hasPendingGen) {
+              $report += "- SourceGenerators: $($nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators".latestPreview)`n"
+            }
+            $report += "`n### Accion Recomendada`n"
+            $report += "Ejecutar Production Release manualmente: https://github.com/cl2raul66/MauiPdfGenerator/actions/workflows/prod-release.yml`n"
+          } else {
+            $report += "### NO HAY PREVIEWS PENDIENTES`n"
+          }
+
+          $report | Out-File -FilePath "DIAGNOSTIC_REPORT.md" -Encoding UTF8
+          Write-Host "Reporte generado: DIAGNOSTIC_REPORT.md"
+          Write-Host $report
+
+      - name: Upload Diagnostic Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic-report
+          path: DIAGNOSTIC_REPORT.md
+          retention-days: 7
+
+      - name: Summary
+        shell: pwsh
+        run: |
+          $nugetVersions = Get-Content -Path "$env:GITHUB_OUTPUT/nuget_versions.json" -Raw | ConvertFrom-Json
+          $main = $nugetVersions."RandAMediaLabGroup.MauiPdfGenerator"
+          $gen = $nugetVersions."RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators"
+
+          Write-Host ""
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host "RESUMEN DEL DIAGNOSTICO" -ForegroundColor Cyan
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "MauiPdfGenerator:"
+          Write-Host "  Latest Preview: $($main.latestPreview)"
+          Write-Host "  Stable: $($main.stableVersion)"
+          Write-Host "  Should Promote: $($main.shouldPromote)"
+          Write-Host ""
+          Write-Host "SourceGenerators:"
+          Write-Host "  Latest Preview: $($gen.latestPreview)"
+          Write-Host "  Stable: $($gen.stableVersion)"
+          Write-Host "  Should Promote: $($gen.shouldPromote)"
+          Write-Host ""
+
+          if ($main.shouldPromote -or $gen.shouldPromote) {
+            Write-Host "========================================" -ForegroundColor Yellow
+            Write-Host "HAY PREVIEWS PENDIENTES - EJECUTA PRODUCTION RELEASE" -ForegroundColor Yellow
+            Write-Host "========================================" -ForegroundColor Yellow
+          } else {
+            Write-Host "========================================" -ForegroundColor Green
+            Write-Host "NO HAY PREVIEWS PENDIENTES" -ForegroundColor Green
+            Write-Host "========================================" -ForegroundColor Green
+          }

@@ -251,3 +251,124 @@ R: Sí. `1.6.0-preview-8` → `1.6.0` → `1.7.0-preview-1`
 
 **P: ¿Qué pasa si solo hay commits de docs/chore?**
 R: No se publica nada. Sin bump = sin release.
+
+---
+
+## 5. Troubleshooting de CI/CD
+
+Esta sección describe los errores más comunes en los workflows de CI/CD y cómo resolverlos.
+
+### 5.1 Errores en Development Release (Preview)
+
+| Error | Causa | Solución |
+| --- | --- | --- |
+| `has_sourcegen_changes = false` pero se publicó preview | Análisis de commits no detectó cambios | Verificar que los commits tengan el scope correcto: `feat(sourcegen)` o `fix(sourcegen)` |
+| `publish-nuget` skipeado | No se generó paquete en build-main/build-sourcegen | Revisar logs del job anterior para ver por qué falló el build |
+| Preview no se convierte a estable en Production Release | No hay commits nuevos en sourcegen | Este es comportamiento normal. El Production Release promociona previews automáticamente |
+
+### 5.2 Errores en Production Release (Stable)
+
+| Error | Causa | Solución |
+| --- | --- | --- |
+| `build-sourcegen` skipeado con preview pendiente | `has_sourcegen_changes = false` y no se detectó preview | Verificar que exista una tag preview: `git tag -l "gen-v*preview*"` |
+| `publish-nuget` falla con "401 Unauthorized" | API key de NuGet incorrecta o expirada | Actualizar el secreto `NUGET_API_KEY` en GitHub Settings |
+| `Verify NuGet Publication` timeout | Servicio de NuGet.org no responde | El workflow continúa con advertencia. Verificar manualmente más tarde |
+| Multiple preview tags found | Se publicaron varias previews sin promocionar | Eliminar manualmente las tags más antiguas: `git tag -d gen-v1.3.4-preview-1 && git push origin :refs/tags/gen-v1.3.4-preview-1` |
+
+### 5.3 Verificación de Publicación en NuGet
+
+El workflow de Production Release crea automáticamente una issue con el label `status:preview-pending` cuando publica una versión preview. Para cerrarla:
+
+1. Visita https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator
+2. Verifica que la versión esté disponible
+3. Confirma que la versión es la correcta
+4. Elimina la tag de preview:
+   ```bash
+   git tag -d gen-v1.3.4-preview-1
+   git push origin :refs/tags/gen-v1.3.4-preview-1
+   ```
+5. Cierra la issue de tracking
+
+### 5.4 Previews Inferiores a Versión Estable
+
+El workflow ignora versiones preview que sean menores que la última versión estable (ej: `gen-v1.3.3-preview-1` cuando existe `gen-v1.3.3`). Emite un warning en los logs.
+
+**Ejemplo de warning:**
+```
+⚠ Preview más antigua que stable: gen-v1.3.3-preview-1 < gen-v1.3.3 (ignorando)
+```
+
+Para solucionar este problema:
+
+1. Identificar la versión incorrecta:
+   ```bash
+   git tag -l "gen-v*preview*"
+   ```
+2. Eliminar las tags inválidas:
+   ```bash
+   git tag -d <tag-inválida>
+   git push origin :refs/tags/<tag-inválida>
+   ```
+3. Volver a publicar la versión correcta (si es necesario)
+
+### 5.5 Labels de Issues Tracking
+
+| Label | Uso |
+| --- | --- |
+| `status:preview-pending` | Issue creada automáticamente al publicar una preview, cierra tras verificar en NuGet |
+
+### 5.6 Mensajes de Error del Workflow
+
+#### Error: "No se pudo determinar la versión"
+
+**Causa:** El job de build no pudo obtener ni la versión calculada ni la pendiente de preview.
+
+**Solución:**
+1. Revisar los logs del job `analyze-commits`
+2. Revisar los logs del job `check-pending-previews`
+3. Verificar que existan tags estables: `git tag -l "main-v*" | git tag -l "gen-v*"`
+
+#### Error: "Preview más antigua que stable (ignorando)"
+
+**Causa:** Existe una tag preview con versión menor a la última versión estable. El workflow la ignora por seguridad.
+
+**Solución:**
+1. Identificar la tag inválida: `git tag -l "*preview*"`
+2. Eliminarla: `git tag -d <tag> && git push origin :refs/tags/<tag>`
+3. Volver a ejecutar el Production Release
+
+#### Error: "ADVERTENCIA CRÍTICA: no pudo verificarse después de 3 intentos"
+
+**Causa:** El paquete no está disponible en NuGet después de 30 minutos (3 intentos de 10 minutos).
+
+**Solución:**
+1. Verificar manualmente en NuGet: https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator
+2. Revisar los logs del job `Publish to NuGet`
+3. Si el paquete está en NuGet, cerrar la issue de tracking manualmente
+4. Si no está, verificar el secreto `NUGET_API_KEY`
+
+### 5.7 Comandos Útiles para Debug
+
+```bash
+# Listar todas las tags
+git tag -l
+
+# Listar solo tags de preview
+git tag -l "*preview*"
+
+# Listar tags estables
+git tag -l "main-v*"
+git tag -l "gen-v*"
+
+# Ver commits desde última tag
+git log main-v1.5.11..HEAD --oneline
+
+# Verificar última tag
+git describe --tags --abbrev=0
+
+# Eliminar tag localmente
+git tag -d <nombre-tag>
+
+# Eliminar tag remotamente
+git push origin :refs/tags/<nombre-tag>
+```

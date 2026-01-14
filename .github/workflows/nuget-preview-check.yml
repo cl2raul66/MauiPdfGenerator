@@ -33,11 +33,14 @@ jobs:
           CORE_STABLE=$(git describe --tags --match 'main-v*' --abbrev=0 2>/dev/null | sed 's/main-v//')
           echo "Local stable: $CORE_STABLE"
 
-          CORE_LATEST=$(curl -s "https://api.nuget.org/v3-flatcontainer/$CORE_PKG/index.json" | grep -o '"[^"]*"' | tr -d '"' | grep '^1\.' | tail -1)
+          CORE_LATEST=$(curl -s "https://api.nuget.org/v3-flatcontainer/$CORE_PKG/index.json" | \
+            grep -o '"[^"]*"' | tr -d '"' | \
+            grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+-[0-9]+)?$' | \
+            sort -V | tail -1)
           echo "Latest NuGet: $CORE_LATEST"
 
           if [[ "$CORE_LATEST" == *"preview"* ]]; then
-            CORE_BASE=$(echo "$CORE_LATEST" | sed 's/-preview-[0-9]*//')
+            CORE_BASE=$(echo "$CORE_LATEST" | sed 's/-preview-[0-9]*$//' | sed 's/-[a-z]*-[0-9]*$//')
             echo "Base version: $CORE_BASE"
 
             if [[ -z "$CORE_STABLE" ]] || [[ "$(printf '%s\n' "$CORE_BASE" "$CORE_STABLE" | sort -V | tail -n1)" == "$CORE_BASE" && "$CORE_BASE" != "$CORE_STABLE" ]]; then
@@ -61,11 +64,14 @@ jobs:
           GEN_STABLE=$(git describe --tags --match 'gen-v*' --abbrev=0 2>/dev/null | sed 's/gen-v//')
           echo "Local stable: $GEN_STABLE"
 
-          GEN_LATEST=$(curl -s "https://api.nuget.org/v3-flatcontainer/$GEN_PKG/index.json" | grep -o '"[^"]*"' | tr -d '"' | grep '^1\.' | tail -1)
+          GEN_LATEST=$(curl -s "https://api.nuget.org/v3-flatcontainer/$GEN_PKG/index.json" | \
+            grep -o '"[^"]*"' | tr -d '"' | \
+            grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+-[0-9]+)?$' | \
+            sort -V | tail -1)
           echo "Latest NuGet: $GEN_LATEST"
 
           if [[ "$GEN_LATEST" == *"preview"* ]]; then
-            GEN_BASE=$(echo "$GEN_LATEST" | sed 's/-preview-[0-9]*//')
+            GEN_BASE=$(echo "$GEN_LATEST" | sed 's/-preview-[0-9]*$//' | sed 's/-[a-z]*-[0-9]*$//')
             echo "Base version: $GEN_BASE"
 
             if [[ -z "$GEN_STABLE" ]] || [[ "$(printf '%s\n' "$GEN_BASE" "$GEN_STABLE" | sort -V | tail -n1)" == "$GEN_BASE" && "$GEN_BASE" != "$GEN_STABLE" ]]; then

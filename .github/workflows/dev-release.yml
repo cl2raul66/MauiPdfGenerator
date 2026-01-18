@@ -45,26 +45,71 @@ jobs:
           $commitList = $commits.Split(',', [StringSplitOptions]::RemoveEmptyEntries)
           
           foreach ($commit in $commitList) {
-            # Buscar patrones como: feat(core), fix(core), feat!, fix!, etc.
-            if ($commit -match '(feat|fix)(!|\(core\)|\(sourcegen\))?:') {
-              if ($commit -match '\(core\)' -or $commit -match 'feat\(sourcegen\)|fix\(sourcegen\)') {
-                # Es feat! o fix! sin scope específico - afecta a ambos
+            $commit = $commit.Trim()
+            Write-Host "Analizando commit: $commit"
+            
+            # Buscar patrones como: feat(core), fix(core), feat(core)!, fix(sourcegen)!, etc.
+            if ($commit -match '^(feat|fix)(\((core|sourcegen)\))?!:') {
+              # Breaking change con scope explícito
+              $scope = $matches[3]
+              if ($scope -eq 'core') {
                 $hasCore = $true
+                Write-Host "  ✓ Breaking change detected en scope: core"
+              }
+              elseif ($scope -eq 'sourcegen') {
                 $hasSourcegen = $true
+                Write-Host "  ✓ Breaking change detected en scope: sourcegen"
               }
-              elseif ($commit -match '\(core\)') {
-                $hasCore = $true
-              }
-              elseif ($commit -match '\(sourcegen\)') {
-                $hasSourcegen = $true
-              }
+            }
+            elseif ($commit -match '^feat\(core\):') {
+              $hasCore = $true
+              Write-Host "  ✓ Feature en scope: core"
+            }
+            elseif ($commit -match '^fix\(core\):') {
+              $hasCore = $true
+              Write-Host "  ✓ Fix en scope: core"
+            }
+            elseif ($commit -match '^feat\(sourcegen\):') {
+              $hasSourcegen = $true
+              Write-Host "  ✓ Feature en scope: sourcegen"
+            }
+            elseif ($commit -match '^fix\(sourcegen\):') {
+              $hasSourcegen = $true
+              Write-Host "  ✓ Fix en scope: sourcegen"
+            }
+            elseif ($commit -match '^(feat|fix)!:') {
+              # ❌ Breaking change SIN scope - FAIL FAST
+              Write-Host ""
+              Write-Host "╔════════════════════════════════════════════════════════════════════╗"
+              Write-Host "║  ❌ ERROR: Breaking change sin scope especificado                  ║"
+              Write-Host "╚════════════════════════════════════════════════════════════════════╝"
+              Write-Host ""
+              Write-Host "Commit inválido: $commit"
+              Write-Host ""
+              Write-Host "Los commits de breaking change DEBEN especificar el scope:"
+              Write-Host ""
+              Write-Host "  Para Core (MauiPdfGenerator):"
+              Write-Host "    feat!(core): breaking change en core"
+              Write-Host "    fix!(core):  breaking fix en core"
+              Write-Host ""
+              Write-Host "  Para SourceGenerators:"
+              Write-Host "    feat!(sourcegen): breaking change en sourcegen"
+              Write-Host "    fix!(sourcegen):  breaking fix en sourcegen"
+              Write-Host ""
+              Write-Host "Por favor, actualiza el mensaje del commit para especificar el scope."
+              Write-Host ""
+              exit 1
             }
           }
 
           "has_core_changes=$hasCore" >> $env:GITHUB_OUTPUT
           "has_sourcegen_changes=$hasSourcegen" >> $env:GITHUB_OUTPUT
-          Write-Host "Core changes: $hasCore"
-          Write-Host "Sourcegen changes: $hasSourcegen"
+          Write-Host ""
+          Write-Host "════════════════════════════════════════════════════════════════════"
+          Write-Host "Resumen de cambios:"
+          Write-Host "  Core changes: $hasCore"
+          Write-Host "  Sourcegen changes: $hasSourcegen"
+          Write-Host "════════════════════════════════════════════════════════════════════"
 
       - name: Calculate Core Version
         id: core_version

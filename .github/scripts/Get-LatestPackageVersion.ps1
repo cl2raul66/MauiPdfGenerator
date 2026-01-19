@@ -9,6 +9,11 @@
     3. Cuenta PRs mergeados a development para el increment de preview
     4. Retorna la nueva versión calculada
 
+    En modo promoción (-PromotionMode):
+    1. Lee la versión preview desde artifact/NuGet
+    2. Extrae la versión base (sin sufijo preview)
+    3. Retorna la versión estable para publicar
+
 .PARAMETER PackageName
     Nombre del paquete en NuGet (ej: "RandAMediaLabGroup.MauiPdfGenerator")
 
@@ -18,14 +23,22 @@
 .PARAMETER Commits
     Lista de mensajes de commits separados por coma
 
-.PARAMETER PublishedAt
-    Fecha de publicación de la versión actual (del artifact)
+.PARAMETER PromotionMode
+    Si se especifica, promociona la versión preview a estable
 
 .EXAMPLE
+    # Modo preview (desarrollo)
     $result = & .github/scripts/Get-LatestPackageVersion.ps1 `
         -PackageName "RandAMediaLabGroup.MauiPdfGenerator" `
         -Scope "core" `
         -Commits "feat(core): add new feature"
+
+.EXAMPLE
+    # Modo promoción (producción)
+    $result = & .github/scripts/Get-LatestPackageVersion.ps1 `
+        -PackageName "RandAMediaLabGroup.MauiPdfGenerator" `
+        -Scope "core" `
+        -PromotionMode
 #>
 
 param(
@@ -40,7 +53,7 @@ param(
     [string]$Commits = "",
 
     [Parameter(Mandatory=$false)]
-    [string]$PublishedAt = ""
+    [switch]$PromotionMode = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -388,6 +401,115 @@ function Apply-VersionBump {
     return $newVersion
 }
 
+function Get-PromotedVersion {
+    <#
+    .SYNOPSIS
+        Promociona una versión preview a estable extrayendo la versión base.
+    #>
+
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$PackageName
+    )
+
+    Write-Log -Message "============================================" -Level "INFO"
+    Write-Log -Message "MODO PROMOCIÓN: Intentando promocionar $PackageName" -Level "INFO"
+    Write-Log -Message "============================================" -Level "INFO"
+
+    # 1. Obtener versión actual (preview)
+    Write-Log -Message "[PASO 1] Obteniendo versión preview actual..." -Level "INFO"
+
+    $currentVersion = Get-GitHubArtifactVersion -PackageName $PackageName
+
+    if (-not $currentVersion) {
+        Write-Log -Message "Artifact no disponible, consultando NuGet..." -Level "WARN"
+        $currentVersion = Get-LatestNuGetVersion -PackageName $PackageName
+    }
+
+    if (-not $currentVersion) {
+        Write-Log -Message "No se encontró ninguna versión para $PackageName" -Level "ERROR"
+        return @{
+            Version = $null
+            PublishedAt = $null
+            Source = $null
+            ShouldPublish = $false
+            Message = "No hay versión para promocionar"
+        }
+    }
+
+    Write-Log -Message "Versión actual: $($currentVersion.Version) (source: $($currentVersion.Source))" -Level "INFO"
+
+    # 2. Verificar que es una versión preview
+    Write-Log -Message "[PASO 2] Verificando que es versión preview..." -Level "INFO"
+
+    if ($currentVersion.Version -notmatch '(?<ver>\d+\.\d+\.\d+)-preview-(?<inc>\d+)') {
+        Write-Log -Message "La versión $($currentVersion.Version) NO es preview. Verificando si es estable..." -Level "WARN"
+
+        # Si ya es estable, retornarla como está
+        if ($currentVersion.Version -match '^\d+\.\d+\.\d+$') {
+            Write-Log -Message "Versión ya es estable: $($currentVersion.Version)" -Level "INFO"
+            return @{
+                Version = $currentVersion.Version
+                PublishedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+                Source = $currentVersion.Source
+                ShouldPublish = $true
+                Message = "Versión estable promocionada"
+            }
+        }
+
+        Write-Log -Message "Formato de versión no reconocido: $($currentVersion.Version)" -Level "ERROR"
+        return @{
+            Version = $null
+            PublishedAt = $null
+            Source = $null
+            ShouldPublish = $false
+            Message = "Formato de versión no reconocido"
+        }
+    }
+
+    # 3. Extraer versión base (sin sufijo preview)
+    $stableVersion = $matches.ver
+    $previewIncrement = $matches.inc
+
+    Write-Log -Message "[PASO 3] Extrayendo versión estable..." -Level "INFO"
+    Write-Log -Message "  Preview: $($currentVersion.Version)" -Level "INFO"
+    Write-Log -Message "  Estable: $stableVersion" -Level "INFO"
+    Write-Log -Message "  Increment original: $previewIncrement" -Level "INFO"
+
+    # 4. Verificar que la versión base es válida
+    Write-Log -Message "[PASO 4] Verificando versión base..." -Level "INFO"
+
+    try {
+        $testVersion = [version]$stableVersion
+        Write-Log -Message "Versión base válida: $stableVersion" -Level "DEBUG"
+    } catch {
+        Write-Log -Message "Error: Versión base inválida: $stableVersion" -Level "ERROR"
+        return @{
+            Version = $null
+            PublishedAt = $null
+            Source = $null
+            ShouldPublish = $false
+            Message = "Versión base inválida"
+        }
+    }
+
+    # 5. Resultado final
+    Write-Log -Message "============================================" -Level "INFO"
+    Write-Log -Message "RESULTADO DE PROMOCIÓN" -Level "INFO"
+    Write-Log -Message "  Paquete: $PackageName" -Level "INFO"
+    Write-Log -Message "  Versión preview: $($currentVersion.Version)" -Level "INFO"
+    Write-Log -Message "  Versión estable: $stableVersion" -Level "INFO"
+    Write-Log -Message "============================================" -Level "INFO"
+
+    return @{
+        Version = $stableVersion
+        PublishedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        Source = $currentVersion.Source
+        ShouldPublish = $true
+        Message = "Versión preview promocionada a estable"
+    }
+}
+
 function Get-LatestPackageVersion {
     <#
     .SYNOPSIS
@@ -496,22 +618,31 @@ function Get-LatestPackageVersion {
 # ============================================================================
 
 try {
-    $result = Get-LatestPackageVersion `
-        -PackageName $PackageName `
-        -Scope $Scope `
-        -Commits $Commits
+    if ($PromotionMode) {
+        # Modo promoción: promocionar preview a estable
+        $result = Get-PromotedVersion -PackageName $PackageName
+    } else {
+        # Modo normal: calcular nueva versión preview
+        $result = Get-LatestPackageVersion `
+            -PackageName $PackageName `
+            -Scope $Scope `
+            -Commits $Commits
+    }
 
     # Escribir outputs para GitHub Actions
     Write-Output "version=$($result.Version)"
     Write-Output "published_at=$($result.PublishedAt)"
-    Write-Output "bump_type=$($result.BumpType)"
-    Write-Output "increment=$($result.Increment)"
     Write-Output "source=$($result.Source)"
     Write-Output "should_publish=$($result.ShouldPublish)"
 
+    # Si hay mensaje adicional, mostrarlo
+    if ($result.Message) {
+        Write-Log -Message $result.Message -Level "INFO"
+    }
+
     # Si no debe publicar, escribir mensaje y salir
     if (-not $result.ShouldPublish) {
-        Write-Log -Message "No hay cambios que requieran publicación. Saliendo." -Level "INFO"
+        Write-Log -Message "No se publicará nueva versión." -Level "INFO"
         exit 0
     }
 

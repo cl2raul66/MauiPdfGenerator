@@ -1,4 +1,4 @@
-﻿using MauiPdfGenerator.Common;
+using MauiPdfGenerator.Common;
 using MauiPdfGenerator.Core;
 using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Integration;
@@ -105,4 +105,6 @@ public static class MauiPdfGeneratorExtensions
 
         return builder;
     }
+
+    // Test comment for workflow
 }

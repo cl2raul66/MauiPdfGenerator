@@ -321,9 +321,7 @@ function Calculate-PreviewIncrement {
 
         # Contar PRs mergeados a development desde la fecha
         $prs = gh pr list `
-            --base development `
-            --state merged `
-            --merged "gte=$sinceStr" `
+            --search "is:merged base:development merged:>$sinceStr" `
             --json number 2>&1
 
         if ($LASTEXITCODE -ne 0) {

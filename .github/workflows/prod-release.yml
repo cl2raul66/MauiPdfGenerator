@@ -243,6 +243,8 @@ jobs:
     needs: [analyze-commits, build-main, build-sourcegen]
     if: needs.build-main.outputs.version != '' || needs.build-sourcegen.outputs.version != ''
     runs-on: windows-latest
+    permissions:
+      actions: write
     steps:
       - uses: actions/checkout@v4
 

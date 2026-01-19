@@ -83,6 +83,53 @@ Cada plantilla tiene un campo **"Plan de Implementación"** para desglosar el tr
 > - Puedes pausar y retomar cuando quieras
 > - Solo al hacer merge a `development` se evalúa el versionado
 
+### 1.5 Reglas de Branch Protection Strict
+
+El proyecto usa **Branch Protection Strict** para garantizar la integridad del flujo DevOps y asegurar que el versionamiento sea determinista. Estas reglas deben configurarse en GitHub Settings → Branches → Add rule.
+
+#### Reglas para `development`
+
+| Configuración | Requisito | Explicación |
+|---------------|-----------|-------------|
+| **Require pull request before merging** | ✅ Obligatorio | Solo se permite merge vía PR |
+| **Require approvals** | 1+ revisor | Al menos una aprobación antes del merge |
+| **Dismiss stale PR approvals when new commits are pushed** | ✅ Habilitado | Si hay cambios nuevos, se requieren nuevas aprobaciones |
+| **Require branches to be up to date before merging** | ✅ Habilitado | Debe estar actualizado con `development` antes de hacer merge |
+| **Do not allow bypassing the above settings** | ✅ Habilitado | Incluyendo administradores |
+| **Require status checks to pass before merging** | ✅ Obligatorio | CI debe pasar antes del merge |
+| **Require branches to be up to date before merging** | ✅ Habilitado | Branch debe estar sincronizado |
+| **Restrict who can push to matching branches** | ✅ Obligatorio | Solo bots y administradores |
+
+#### Reglas para `master`
+
+| Configuración | Requisito | Explicación |
+|---------------|-----------|-------------|
+| **Require pull request before merging** | ✅ Obligatorio | Solo se permite merge vía PR |
+| **Require approvals** | 2+ revisores | Al menos dos aprobaciones antes del merge |
+| **Dismiss stale PR approvals when new commits are pushed** | ✅ Habilitado | Si hay cambios nuevos, se requieren nuevas aprobaciones |
+| **Require branches to be up to date before merging** | ✅ Habilitado | Debe estar actualizado con `master` antes de hacer merge |
+| **Do not allow bypassing the above settings** | ✅ Habilitado | Incluyendo administradores |
+| **Require status checks to pass before merging** | ✅ Obligatorio | CI debe pasar antes del merge |
+| **Require branches to be up to date before merging** | ✅ Habilitado | Branch debe estar sincronizado |
+| **Restrict who can push to matching branches** | ✅ Obligatorio | Solo bots y administradores |
+
+> [!WARNING]
+> **No puedes hacer push directo** a `development` o `master`. Todos los cambios deben pasar por el flujo de PRs con aprobaciones y validación de CI.
+
+#### Status Checks Requeridos
+
+Los siguientes checks deben pasar antes de permitir el merge:
+
+| Check | Rama | Workflow |
+|-------|------|----------|
+| `validate-solution` | `development`, `master` | `PR Validation` |
+
+#### Workflow Trigger Automático
+
+- **Development Release (Preview)**: Se ejecuta automáticamente solo en push a `development`
+- **Production Release (Stable)**: Se ejecuta automáticamente solo en push a `master`
+- **No hay workflow manual**: Los workflows no soportan `workflow_dispatch` para garantizar la determinística del versionamiento basado en commits.
+
 ---
 
 ## 2. Desarrollo (Commits)

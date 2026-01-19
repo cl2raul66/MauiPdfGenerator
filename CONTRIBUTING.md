@@ -167,7 +167,88 @@ git commit -m "feat(sourcegen): update generator for tables"
 
 ## 3. Publicación (Versionado)
 
-### 3.1 Regla de Prioridad
+### 3.1 Arquitectura de Versionamiento
+
+El sistema de versionamiento de MauiPdfGenerator usa una arquitectura de **fallback en cascada** para determinar la versión actual de cada paquete:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    FUENTES DE VERSIÓN                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. GitHub Artifact (MÁS RÁPIDO)                                 │
+│     └─ Archivo: current-version.json                             │
+│     └─ Contenido: { core: { version, publishedAt }, ... }       │
+│     └─ Retención: 90 días                                        │
+│                                                                 │
+│  2. NuGet API REST (FALLBACK)                                    │
+│     └─ Endpoint: api.nuget.org/v3/registration5-gz-semver2/     │
+│     └─ Obtiene la versión más reciente (stable o preview)       │
+│     └─ Ordena por fecha de publicación                           │
+│                                                                 │
+│  3. Versión Base (SI NO EXISTE NINGUNA)                          │
+│     └─ Valor: 1.0.0                                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Flujo de Cálculo de Versión
+
+#### Development Release (Preview)
+
+```
+Merge a development
+        ↓
+┌─────────────────────────────────────────┐
+│  1. Analizar commits                     │
+│     └─ Detectar feat/fix con scope      │
+│     └─ Detectar breaking changes        │
+└─────────────────┬───────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│  2. Para cada paquete con cambios:       │
+│     └─ Obtener versión actual           │
+│        (Artifact → NuGet API → 1.0.0)   │
+│     └─ Determinar bump type             │
+│        (MAJOR/MINOR/PATCH)              │
+│     └─ Calcular increment               │
+│        (PRs mergeados desde publish)    │
+└─────────────────┬───────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│  3. Generar nueva versión               │
+│     └─ Formato: X.Y.Z-preview-N         │
+│     └─ Publicar a NuGet                 │
+│     └─ Actualizar artifact              │
+└─────────────────────────────────────────┘
+```
+
+#### Production Release (Promoción)
+
+```
+Merge development → master
+        ↓
+┌─────────────────────────────────────────┐
+│  1. Analizar commits                     │
+│     └─ Detectar cambios en master           │
+│     └─ Determinar paquetes a promocionar │
+└─────────────────┬───────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│  2. Promocionar preview → stable          │
+│     └─ Leer versión preview desde artifact │
+│     └─ Extraer versión base (X.Y.Z)       │
+│     └─ Publicar como estable              │
+└─────────────────┬───────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│  3. Actualizar artifact con versión estable │
+│     └─ Subir current-version.json          │
+│     └─ Limpiar artifacts anteriores        │
+└─────────────────────────────────────────┘
+```
+
+### 3.3 Regla de Prioridad de Bump
 
 El bump se determina por el cambio **más significativo**:
 
@@ -177,30 +258,135 @@ Breaking (!) > Feature (feat) > Fix (fix) > Otros
    MAJOR          MINOR          PATCH    Sin bump
 ```
 
-### 3.2 Ejemplos de Versionado
+### 3.4 Fuentes de Datos para Cálculo
 
-| Commits en el PR | Versión resultante |
-|------------------|-------------------|
-| 3 fixes | 1.5.11 → 1.5.12-preview |
-| 5 fixes + 1 feat | 1.5.11 → 1.6.0-preview |
-| fixes + feats + 1 breaking | 1.5.11 → 2.0.0-preview |
-| solo docs/chore/test | ❌ Sin release |
+| Dato | Fuente | Descripción |
+|------|--------|-------------|
+| **Versión actual** | Artifact → NuGet API | Versión más reciente del paquete |
+| **Fecha de publicación** | Artifact/NuGet | Fecha de la versión actual |
+| **Bump type** | Análisis de commits | feat→MINOR, fix→PATCH, feat!/fix!→MAJOR |
+| **Increment** | GitHub API (PRs) | PRs mergeados a development desde publishedAt |
 
-### 3.3 Sufijo Preview
+### 3.5 Formato de Artifact `current-version.json`
 
-El `-preview-X` indica cuántos commits relevantes hay desde el último stable:
+```json
+{
+  "core": {
+    "version": "1.5.12-preview-52",
+    "publishedAt": "2026-01-18T10:30:00Z"
+  },
+  "sourcegen": {
+    "version": "1.3.4-preview-0",
+    "publishedAt": "2026-01-16T10:30:00Z"
+  }
+}
+```
+
+### 3.6 Cálculo del Increment
+
+El número `N` en el sufijo `-preview-N` representa la cantidad de **PRs mergeados** a la rama `development` desde la fecha de publicación de la versión actual.
 
 ```
 1.6.0-preview-3
-      └─────┘ └─ 3 commits (feat/fix) desde último stable
+      └─────┘ └─ 3 PRs mergeados desde última versión
          └─ MINOR bump por "feat"
 ```
 
-### 3.4 Versionado Independiente
+### 3.7 Ejemplos de Versionado
 
-Ahora que Diagnostics es parte de `core`, cada paquete se versiona por separado:
-- `MauiPdfGenerator` → versión basada en commits `(core)` (incluye Diagnostics)
-- `SourceGenerators` → versión basada en commits `(sourcegen)`
+| Commits en el PR | Versión Resultante |
+|------------------|-------------------|
+| 3 fixes | 1.5.11 → 1.5.12-preview-N |
+| 5 fixes + 1 feat | 1.5.11 → 1.6.0-preview-N |
+| fixes + feats + 1 breaking | 1.5.11 → 2.0.0-preview-N |
+| solo docs/chore/test | ❌ Sin release |
+
+### 3.8 Versionado Independiente
+
+Cada paquete se versiona por separado según sus commits:
+
+| Paquete | Scope de Commits | Artifact |
+|---------|-----------------|----------|
+| `MauiPdfGenerator` | `feat(core)`, `fix(core)`, etc. | `core.version` |
+| `SourceGenerators` | `feat(sourcegen)`, `fix(sourcegen)`, etc. | `sourcegen.version` |
+
+### 3.9 Scripts de Versionamiento
+
+El script principal de versionamiento se encuentra en:
+
+```
+.github/scripts/Get-LatestPackageVersion.ps1
+```
+
+**Funciones del script:**
+
+| Función | Descripción |
+|---------|-------------|
+| `Get-GitHubArtifactVersion` | Descarga `current-version.json` y extrae la versión del paquete |
+| `Get-LatestNuGetVersion` | Consulta NuGet API REST para obtener la versión más reciente |
+| `Calculate-VersionBump` | Analiza commits para determinar MAJOR/MINOR/PATCH |
+| `Calculate-PreviewIncrement` | Cuenta PRs mergeados a development desde publishedAt |
+| `Get-PromotedVersion` | Promociona versión preview a estable (producción) |
+| `Get-LatestPackageVersion` | Función principal que orquesta todo |
+
+**Modos de ejecución:**
+
+| Modo | Parámetro | Uso |
+| ---- | --------- | ---- |
+| Preview | (default) | `dev-release.yml` - Calcula nuevas versiones preview |
+| Promoción | `-PromotionMode` | `prod-release.yml` - Promociona preview a estable |
+
+### 3.10 Logs de Versionamiento
+
+El script genera logs estructurados para facilitar el debugging:
+
+**Modo Preview (Development):**
+```powershell
+[2026-01-18T10:30:00.000Z] [INFO] Iniciando cálculo de versión para: RandAMediaLabGroup.MauiPdfGenerator
+[2026-01-18T10:30:00.001Z] [DEBUG] Intentando obtener versión desde GitHub Artifact...
+[2026-01-18T10:30:00.002Z] [DEBUG] Versión obtenida desde artifact: 1.5.12-preview-52
+[2026-01-18T10:30:00.003Z] [INFO] Analizando commits para bump...
+[2026-01-18T10:30:00.004Z] [DEBUG] Feature detectado: feat(core): add PDF table rendering support
+[2026-01-18T10:30:00.005Z] [INFO] Tipo de bump determinado: minor
+[2026-01-18T10:30:00.006Z] [INFO] Calculando increment...
+[2026-01-18T10:30:00.007Z] [DEBUG] PRs mergeados desde última versión: 3
+[2026-01-18T10:30:00.008Z] [INFO] RESULTADO FINAL
+[2026-01-18T10:30:00.009Z] [INFO]   Paquete: RandAMediaLabGroup.MauiPdfGenerator
+[2026-01-18T10:30:00.010Z] [INFO]   Versión actual: 1.5.12-preview-52
+[2026-01-18T10:30:00.011Z] [INFO]   Bump: minor
+[2026-01-18T10:30:00.012Z] [INFO]   Increment: 3
+[2026-01-18T10:30:00.013Z] [INFO]   Nueva versión: 1.6.0-preview-3
+```
+
+**Modo Promoción (Production):**
+```powershell
+[2026-01-18T10:30:00.000Z] [INFO] MODO PROMOCIÓN: Intentando promocionar RandAMediaLabGroup.MauiPdfGenerator
+[2026-01-18T10:30:00.001Z] [INFO] =============================================
+[2026-01-18T10:30:00.002Z] [INFO] [PASO 1] Obteniendo versión preview actual...
+[2026-01-18T10:30:00.003Z] [DEBUG] Versión obtenida desde artifact: 1.5.12-preview-52
+[2026-01-18T10:30:00.004Z] [INFO] [PASO 2] Verificando que es versión preview...
+[2026-01-18T10:30:00.005Z] [INFO] [PASO 3] Extrayendo versión estable...
+[2026-01-18T10:30:00.006Z] [INFO]   Preview: 1.5.12-preview-52
+[2026-01-18T10:30:00.007Z] [INFO]   Estable: 1.5.12
+[2026-01-18T10:30:00.008Z] [INFO] [PASO 4] Verificando versión base...
+[2026-01-18T10:30:00.009Z] [INFO] Versión base válida: 1.5.12
+[2026-01-18T10:30:00.010Z] [INFO] RESULTADO DE PROMOCIÓN
+[2026-01-18T10:30:00.011Z] [INFO]   Paquete: RandAMediaLabGroup.MauiPdfGenerator
+[2026-01-18T10:30:00.012Z] [INFO]   Versión preview: 1.5.12-preview-52
+[2026-01-18T10:30:00.013Z] [INFO]   Versión estable: 1.5.12
+[2026-01-18T10:30:00.014Z] [INFO] =============================================
+```
+
+Los logs se muestran en la consola de GitHub Actions y también se escriben al archivo `$env:GITHUB_ENV` en caso de errores críticos.
+
+### 3.11 Troubleshooting de Versionamiento
+
+| Problema | Causa | Solución |
+|----------|-------|----------|
+| Error consultando NuGet | Problemas de red/API | Verificar conectividad; el workflow usará fallback |
+| Artifact expirado (90 días) | Retención expirada | El workflow detectará y consultará NuGet |
+| No se encuentran PRs | gh CLI no autenticado | Verificar que `GITHUB_TOKEN` esté disponible |
+| Error crítico en script | Fallo en lógica | Revisar logs de GitHub Actions |
 
 ---
 
@@ -266,109 +452,50 @@ Esta sección describe los errores más comunes en los workflows de CI/CD y cóm
 | `publish-nuget` skipeado | No se generó paquete en build-main/build-sourcegen | Revisar logs del job anterior para ver por qué falló el build |
 | Preview no se convierte a estable en Production Release | No hay commits nuevos en sourcegen | Este es comportamiento normal. El Production Release promociona previews automáticamente |
 
-### 5.2 Errores en Production Release (Stable)
+### 5.2 Errores en Production Release (Promoción)
 
 | Error | Causa | Solución |
 | --- | --- | --- |
-| `build-sourcegen` skipeado con preview pendiente | `has_sourcegen_changes = false` y no se detectó preview | Verificar que exista una tag preview: `git tag -l "gen-v*preview*"` |
-| `publish-nuget` falla con "401 Unauthorized" | API key de NuGet incorrecta o expirada | Actualizar el secreto `NUGET_API_KEY` en GitHub Settings |
-| `Verify NuGet Publication` timeout | Servicio de NuGet.org no responde | El workflow continúa con advertencia. Verificar manualmente más tarde |
-| Multiple preview tags found | Se publicaron varias previews sin promocionar | Eliminar manualmente las tags más antiguas: `git tag -d gen-v1.3.4-preview-1 && git push origin :refs/tags/gen-v1.3.4-preview-1` |
+| `No hay versión para promocionar` | No existe preview en artifact/NuGet | Verificar que se haya ejecutado `dev-release.yml` exitosamente |
+| `La versión NO es preview` | La versión actual ya es estable | Verificar artifact `current-version.json` |
+| `build-sourcegen` skipeado | `has_sourcegen_changes = false` | Verificar que el paquete tenga preview pendiente |
 
-### 5.3 Verificación de Publicación en NuGet
+### 5.3 Troubleshooting de Promoción
 
-El workflow de Production Release crea automáticamente una issue con el label `status:preview-pending` cuando publica una versión preview. Para cerrarla:
+#### Error: "No hay versión para promocionar"
 
-1. Visita https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator
-2. Verifica que la versión esté disponible
-3. Confirma que la versión es la correcta
-4. Elimina la tag de preview:
-   ```bash
-   git tag -d gen-v1.3.4-preview-1
-   git push origin :refs/tags/gen-v1.3.4-preview-1
-   ```
-5. Cierra la issue de tracking
-
-### 5.4 Previews Inferiores a Versión Estable
-
-El workflow ignora versiones preview que sean menores que la última versión estable (ej: `gen-v1.3.3-preview-1` cuando existe `gen-v1.3.3`). Emite un warning en los logs.
-
-**Ejemplo de warning:**
-```
-⚠ Preview más antigua que stable: gen-v1.3.3-preview-1 < gen-v1.3.3 (ignorando)
-```
-
-Para solucionar este problema:
-
-1. Identificar la versión incorrecta:
-   ```bash
-   git tag -l "gen-v*preview*"
-   ```
-2. Eliminar las tags inválidas:
-   ```bash
-   git tag -d <tag-inválida>
-   git push origin :refs/tags/<tag-inválida>
-   ```
-3. Volver a publicar la versión correcta (si es necesario)
-
-### 5.5 Labels de Issues Tracking
-
-| Label | Uso |
-| --- | --- |
-| `status:preview-pending` | Issue creada automáticamente al publicar una preview, cierra tras verificar en NuGet |
-
-### 5.6 Mensajes de Error del Workflow
-
-#### Error: "No se pudo determinar la versión"
-
-**Causa:** El job de build no pudo obtener ni la versión calculada ni la pendiente de preview.
+**Causa:** No existe ninguna versión preview del paquete en el artifact ni en NuGet.
 
 **Solución:**
-1. Revisar los logs del job `analyze-commits`
-2. Revisar los logs del job `check-pending-previews`
-3. Verificar que existan tags estables: `git tag -l "main-v*" | git tag -l "gen-v*"`
+1. Verificar que se haya ejecutado `dev-release.yml` exitosamente
+2. Revisar artifact en GitHub Actions
+3. Consultar NuGet directamente
 
-#### Error: "Preview más antigua que stable (ignorando)"
+#### Error: "La versión NO es preview"
 
-**Causa:** Existe una tag preview con versión menor a la última versión estable. El workflow la ignora por seguridad.
-
-**Solución:**
-1. Identificar la tag inválida: `git tag -l "*preview*"`
-2. Eliminarla: `git tag -d <tag> && git push origin :refs/tags/<tag>`
-3. Volver a ejecutar el Production Release
-
-#### Error: "ADVERTENCIA CRÍTICA: no pudo verificarse después de 3 intentos"
-
-**Causa:** El paquete no está disponible en NuGet después de 30 minutos (3 intentos de 10 minutos).
+**Causa:** El artifact contiene una versión estable, no preview.
 
 **Solución:**
-1. Verificar manualmente en NuGet: https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator
-2. Revisar los logs del job `Publish to NuGet`
-3. Si el paquete está en NuGet, cerrar la issue de tracking manualmente
-4. Si no está, verificar el secreto `NUGET_API_KEY`
+1. Verificar el contenido del artifact `current-version.json`
+2. Si ya está estable, no hay nada que promocionar
 
-### 5.7 Comandos Útiles para Debug
+#### Error: "Versión base inválida"
+
+**Causa:** La versión extraída no tiene formato X.Y.Z válido.
+
+**Solución:**
+1. Revisar el formato de la versión en el artifact
+2. Verificar que sea una versión semántica válida
+
+### 5.4 Comandos Útiles para Debug
 
 ```bash
-# Listar todas las tags
-git tag -l
+# Verificar contenido del artifact actual
+gh artifact download current-version --pattern "current-version.json" --path ./debug
 
-# Listar solo tags de preview
-git tag -l "*preview*"
+# Consultar NuGet API para verificar versiones
+curl -s "https://api.nuget.org/v3-flatcontainer/RandAMediaLabGroup.MauiPdfGenerator/index.json"
 
-# Listar tags estables
-git tag -l "main-v*"
-git tag -l "gen-v*"
-
-# Ver commits desde última tag
-git log main-v1.5.11..HEAD --oneline
-
-# Verificar última tag
-git describe --tags --abbrev=0
-
-# Eliminar tag localmente
-git tag -d <nombre-tag>
-
-# Eliminar tag remotamente
-git push origin :refs/tags/<nombre-tag>
+# Verificar logs del workflow en GitHub Actions
+# (Ir a Actions tab del repo)
 ```

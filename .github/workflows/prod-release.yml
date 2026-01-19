@@ -12,26 +12,18 @@ on:
       - 'MauiPdfGenerator/**'
       - 'MauiPdfGenerator.SourceGenerators/**'
 
-jobs:
-  integration-check:
-    name: Pre-Release Checks
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - name: Install MAUI Workloads
-        run: dotnet workload install maui --ignore-failed-sources
-      - name: Run Integration Tests
-        run: dotnet test MauiPdfGenerator.IntegrationTests/MauiPdfGenerator.IntegrationTests.csproj --configuration Release --verbosity normal
+env:
+  DOTNET_VERSION: '10.0.x'
+  CORE_PACKAGE: 'RandAMediaLabGroup.MauiPdfGenerator'
+  SOURCEGEN_PACKAGE: 'RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators'
 
+jobs:
   analyze-commits:
+    name: Analyze Commits & Promote Versions
     runs-on: ubuntu-latest
     outputs:
-      has_core_changes: ${{ steps.analyze.outputs.has_core_changes }}
-      has_sourcegen_changes: ${{ steps.analyze.outputs.has_sourcegen_changes }}
+      has_core_changes: ${{ steps.core_version.outputs.should_publish }}
+      has_sourcegen_changes: ${{ steps.sourcegen_version.outputs.should_publish }}
       core_version: ${{ steps.core_version.outputs.version }}
       sourcegen_version: ${{ steps.sourcegen_version.outputs.version }}
     steps:
@@ -41,45 +33,10 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Get commits since last tags
+      - name: Get commit messages
         id: commits
         run: |
-          # Obtener último tag de cada paquete
-          mainTag=$(git describe --tags --match 'main-v*' --abbrev=0 2>/dev/null || echo '')
-          genTag=$(git describe --tags --match 'gen-v*' --abbrev=0 2>/dev/null || echo '')
-          
-          echo "Main tag: $mainTag"
-          echo "Gen tag: $genTag"
-          
-          # Obtener commits desde el tag más reciente (o desde el inicio si no hay tags)
-          if [ -n "$mainTag" ] && [ -n "$genTag" ]; then
-            # Usar el tag más reciente de ambos
-            if git rev-list "$mainTag..HEAD | grep -q ."; then
-              if git rev-list "$genTag..HEAD | grep -q ."; then
-                # Ambos tienen commits, usar el más antiguo
-                newerTag=$(git rev-list --date-order "$mainTag" "$genTag" | head -1)
-                echo "Using newer tag: $newerTag"
-                echo "commits=$(git log $newerTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
-              else
-                # Solo main tiene commits
-                echo "Using main tag: $mainTag"
-                echo "commits=$(git log $mainTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
-              fi
-            else
-              # Solo gen tiene commits
-              echo "Using gen tag: $genTag"
-              echo "commits=$(git log $genTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
-            fi
-          elif [ -n "$mainTag" ]; then
-            echo "Using main tag: $mainTag"
-            echo "commits=$(git log $mainTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
-          elif [ -n "$genTag" ]; then
-            echo "Using gen tag: $genTag"
-            echo "commits=$(git log $genTag..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
-          else
-            echo "No tags found, using all commits"
-            echo "commits=$(git log --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
-          fi
+          echo "commits=$(git log ${{ github.event.before }}..HEAD --oneline --format='%s' | tr '\n' ',')" >> $GITHUB_OUTPUT
 
       - name: Analyze commits for version bumps
         id: analyze
@@ -91,205 +48,118 @@ jobs:
 
           # Tipos que disparan version bump: feat, fix, feat!, fix!
           # Scopes: core (MauiPdfGenerator), sourcegen (SourceGenerators)
-          
+
           $commitList = $commits.Split(',', [StringSplitOptions]::RemoveEmptyEntries)
-          
+
           foreach ($commit in $commitList) {
-            Write-Host "Analyzing commit: $commit"
-            # Buscar patrones como: feat(core), fix(core), feat!, fix!, etc.
-            if ($commit -match '(feat|fix)(!|\(core\)|\(sourcegen\))?:') {
-              if ($commit -match 'feat!|fix!') {
-                # feat! o fix! sin scope específico - afecta a ambos
-                Write-Host "  -> Breaking change detected (no scope)"
+            $commit = $commit.Trim()
+            Write-Host "Analizando commit: $commit"
+
+            # Buscar patrones como: feat(core), fix(core), feat(core)!, fix(sourcegen)!, etc.
+            if ($commit -match '^(feat|fix)(\((core|sourcegen)\))?!:') {
+              # Breaking change con scope explícito
+              $scope = $matches[3]
+              if ($scope -eq 'core') {
                 $hasCore = $true
+                Write-Host "  ✓ Breaking change detected en scope: core"
+              }
+              elseif ($scope -eq 'sourcegen') {
                 $hasSourcegen = $true
+                Write-Host "  ✓ Breaking change detected en scope: sourcegen"
               }
-              elseif ($commit -match '\(core\)') {
-                Write-Host "  -> Core change detected"
-                $hasCore = $true
-              }
-              elseif ($commit -match '\(sourcegen\)') {
-                Write-Host "  -> SourceGen change detected"
-                $hasSourcegen = $true
-              }
-              else {
-                # feat o fix sin scope específico - por defecto afecta a core
-                Write-Host "  -> Default to core change (no scope)"
-                $hasCore = $true
-              }
+            }
+            elseif ($commit -match '^feat\(core\):') {
+              $hasCore = $true
+              Write-Host "  ✓ Feature en scope: core"
+            }
+            elseif ($commit -match '^fix\(core\):') {
+              $hasCore = $true
+              Write-Host "  ✓ Fix en scope: core"
+            }
+            elseif ($commit -match '^feat\(sourcegen\):') {
+              $hasSourcegen = $true
+              Write-Host "  ✓ Feature en scope: sourcegen"
+            }
+            elseif ($commit -match '^fix\(sourcegen\):') {
+              $hasSourcegen = $true
+              Write-Host "  ✓ Fix en scope: sourcegen"
+            }
+            elseif ($commit -match '^(feat|fix)!:') {
+              # ❌ Breaking change SIN scope - FAIL FAST
+              Write-Host ""
+              Write-Host "╔════════════════════════════════════════════════════════════════════╗"
+              Write-Host "║  ❌ ERROR: Breaking change sin scope especificado                  ║"
+              Write-Host "╚════════════════════════════════════════════════════════════════════╝"
+              Write-Host ""
+              Write-Host "Commit inválido: $commit"
+              Write-Host ""
+              Write-Host "Los commits de breaking change DEBEN especificar el scope:"
+              Write-Host ""
+              Write-Host "  Para Core (MauiPdfGenerator):"
+              Write-Host "    feat!(core): breaking change en core"
+              Write-Host "    fix!(core):  breaking fix en core"
+              Write-Host ""
+              Write-Host "  Para SourceGenerators:"
+              Write-Host "    feat!(sourcegen): breaking change en sourcegen"
+              Write-Host "    fix!(sourcegen):  breaking fix en sourcegen"
+              Write-Host ""
+              Write-Host "Por favor, actualiza el mensaje del commit para especificar el scope."
+              Write-Host ""
+              exit 1
             }
           }
 
           "has_core_changes=$hasCore" >> $env:GITHUB_OUTPUT
           "has_sourcegen_changes=$hasSourcegen" >> $env:GITHUB_OUTPUT
-          Write-Host "Core changes: $hasCore"
-          Write-Host "Sourcegen changes: $hasSourcegen"
+          Write-Host ""
+          Write-Host "════════════════════════════════════════════════════════════════════"
+          Write-Host "Resumen de cambios:"
+          Write-Host "  Core changes: $hasCore"
+          Write-Host "  Sourcegen changes: $hasSourcegen"
+          Write-Host "════════════════════════════════════════════════════════════════════"
 
-      - name: Calculate Core Version
+      - name: Promote Core Version to Stable
         id: core_version
-        if: steps.analyze.outputs.has_core_changes == 'true'
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "main-v"
-          major_pattern: "!:|BREAKING CHANGE:"
-          minor_pattern: "^feat"
-          version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator"
-          user_format_type: "json"
-
-      - name: Calculate SourceGen Version
-        id: sourcegen_version
-        if: steps.analyze.outputs.has_sourcegen_changes == 'true'
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "gen-v"
-          major_pattern: "!:|BREAKING CHANGE:"
-          minor_pattern: "^feat"
-          version_format: "${major}.${minor}.${patch}"
-          change_path: "MauiPdfGenerator.SourceGenerators"
-          user_format_type: "json"
-
-  check-pending-previews:
-    runs-on: ubuntu-latest
-    outputs:
-      has_pending_core_preview: ${{ steps.check.outputs.has_pending_core_preview }}
-      has_pending_sourcegen_preview: ${{ steps.check.outputs.has_pending_sourcegen_preview }}
-      pending_core_version: ${{ steps.check.outputs.pending_core_version }}
-      pending_sourcegen_version: ${{ steps.check.outputs.pending_sourcegen_version }}
-      pending_core_preview_tag: ${{ steps.check.outputs.pending_core_preview_tag }}
-      pending_sourcegen_preview_tag: ${{ steps.check.outputs.pending_sourcegen_preview_tag }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Check for pending previews
-        id: check
         shell: pwsh
         run: |
-          function Get-PendingPreview {
-            param($tagPattern, $stablePrefix, $pkgId)
+          $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
+            -PackageName "${{ env.CORE_PACKAGE }}" `
+            -Scope "core" `
+            -PromotionMode
 
-            # Buscar última tag stable
-            $latestStable = git describe --tags --match "$stablePrefix*" --abbrev=0 2>$null
-            if (-not $latestStable) {
-              Write-Host "No stable tag found for $stablePrefix"
-              return @{ HasPending = $false; Version = ""; Tag = "" }
-            }
+          echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
+          echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
+          echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
 
-            # Parsear versión stable
-            $stableVerStr = $latestStable -replace $stablePrefix, ''
-            try {
-              $stableVer = [version]$stableVerStr
-              Write-Host "Stable version: $stableVer"
-            } catch {
-              Write-Host "⚠ Error parseando stable version: $stableVerStr"
-              return @{ HasPending = $false; Version = ""; Tag = "" }
-            }
-
-            # Buscar tags preview más recientes
-            $previewTags = git tag -l "$tagPattern*" --sort=-version:refname
-
-            if ($previewTags) {
-              $latestPreview = $previewTags[0]
-
-              # Extraer versión de preview
-              if ($latestPreview -match '(?<ver>\d+\.\d+\.\d+)-preview-(?<inc>\d+)') {
-                $previewVer = [version]$matches.ver
-
-                # Verificar que preview es más reciente que stable
-                if ($previewVer -gt $stableVer) {
-                  Write-Host "✓ Preview pendiente encontrada: $latestPreview"
-                  return @{
-                    HasPending = $true
-                    Version = $matches.ver
-                    Tag = $latestPreview
-                  }
-                } else {
-                  Write-Host "⚠ Preview más antigua que stable: $latestPreview < $latestStable (ignorando)"
-                  return @{ HasPending = $false; Version = ""; Tag = "" }
-                }
-              }
-            }
-
-            # No hay preview tags, verificar en NuGet API
-            Write-Host "No hay tags preview para $pkgId, consultando NuGet API..."
-
-            try {
-              $nugetVersions = Invoke-RestMethod -Uri "https://api.nuget.org/v3-flatcontainer/$pkgId/index.json" -TimeoutSec 30
-
-              if ($nugetVersions.versions -and $nugetVersions.versions.Count -gt 0) {
-                # Ordenar versiones en orden descendente
-                $sortedVersions = $nugetVersions.versions | Sort-Object -Descending
-
-                # Buscar la versión preview más reciente
-                $previewVersions = $sortedVersions | Where-Object { $_ -match '\d+\.\d+\.\d+-preview-\d+' }
-
-                if ($previewVersions -and $previewVersions.Count -gt 0) {
-                  $latestNugetVersion = $previewVersions[0]
-
-                  if ($latestNugetVersion -match '(?<ver>\d+\.\d+\.\d+)-preview-(?<inc>\d+)') {
-                    $baseVersion = $matches.ver
-                    Write-Host "Preview encontrada en NuGet: $latestNugetVersion (base: $baseVersion)"
-
-                    # Verificar que la versión base es más reciente que la stable
-                    if ($stableVer -and $baseVersion) {
-                      try {
-                        $baseVer = [version]$baseVersion
-                        if ($baseVer -gt $stableVer) {
-                          Write-Host "✓ Preview más reciente que stable: $baseVer > $stableVer"
-                          return @{
-                            HasPending = $true
-                            Version = $baseVersion
-                            Tag = ""
-                          }
-                        } else {
-                          Write-Host "⚠ Preview no más reciente que stable: $baseVer <= $stableVer (ignorando)"
-                        }
-                      } catch {
-                        Write-Host "⚠ Error comparando versiones: $($_)"
-                      }
-                    } else {
-                      # No hay stable local, promote
-                      Write-Host "✓ No hay stable local, promoviendo preview"
-                      return @{
-                        HasPending = $true
-                        Version = $baseVersion
-                        Tag = ""
-                      }
-                    }
-                  } else {
-                    Write-Host "⚠ No se pudo extraer versión base de $latestNugetVersion"
-                  }
-                } else {
-                  Write-Host "No se encontraron versiones preview en NuGet"
-                }
-              }
-            } catch {
-              Write-Host "⚠ No se pudo consultar NuGet API: $($_.Exception.Message)"
-            }
-
-            return @{ HasPending = $false; Version = ""; Tag = "" }
+          if ($result.should_publish -eq "True") {
+            Write-Host "Core version promoted: $($result.version)"
+          } else {
+            Write-Host "No Core version to promote: $($result.message)"
           }
 
-          $coreResult = Get-PendingPreview "main-v.*preview-" "main-v" "RandAMediaLabGroup.MauiPdfGenerator"
-          $genResult = Get-PendingPreview "gen-v.*preview-" "gen-v" "RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators"
+      - name: Promote SourceGen Version to Stable
+        id: sourcegen_version
+        shell: pwsh
+        run: |
+          $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
+            -PackageName "${{ env.SOURCEGEN_PACKAGE }}" `
+            -Scope "sourcegen" `
+            -PromotionMode
 
-          "has_pending_core_preview=$($coreResult.HasPending)" >> $env:GITHUB_OUTPUT
-          "has_pending_sourcegen_preview=$($genResult.HasPending)" >> $env:GITHUB_OUTPUT
-          "pending_core_version=$($coreResult.Version)" >> $env:GITHUB_OUTPUT
-          "pending_sourcegen_version=$($genResult.Version)" >> $env:GITHUB_OUTPUT
-          "pending_core_preview_tag=$($coreResult.Tag)" >> $env:GITHUB_OUTPUT
-          "pending_sourcegen_preview_tag=$($genResult.Tag)" >> $env:GITHUB_OUTPUT
+          echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
+          echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
+          echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
 
-          Write-Host "Core pending: $($coreResult.HasPending), Version: $($coreResult.Version)"
-          Write-Host "SourceGen pending: $($genResult.HasPending), Version: $($genResult.Version)"
+          if ($result.should_publish -eq "True") {
+            Write-Host "SourceGen version promoted: $($result.version)"
+          } else {
+            Write-Host "No SourceGen version to promote: $($result.message)"
+          }
 
   build-sourcegen:
-    needs: [analyze-commits, check-pending-previews]
-    if: needs.analyze-commits.outputs.has_sourcegen_changes == 'true' || needs.check-pending-previews.outputs.has_pending_sourcegen_preview == 'true'
+    name: Build SourceGen Package
+    needs: analyze-commits
+    if: needs.analyze-commits.outputs.has_sourcegen_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -302,29 +172,15 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Determine Version String
         id: final_version
         shell: pwsh
         run: |
-          # Usar versión pendiente de preview si existe, si no usar versión calculada
-          $pendingVer = "${{ needs.check-pending-previews.outputs.pending_sourcegen_version }}"
-          $calcVer = "${{ needs.analyze-commits.outputs.sourcegen_version }}"
-
-          if (-not [string]::IsNullOrEmpty($pendingVer)) {
-            $ver = $pendingVer
-            Write-Host "Usando versión pendiente de preview: $ver"
-          } elseif (-not [string]::IsNullOrEmpty($calcVer)) {
-            $ver = $calcVer
-            Write-Host "Usando versión calculada: $ver"
-          } else {
-            Write-Host "ERROR: No se pudo determinar la versión"
-            exit 1
-          }
-
+          $ver = "${{ needs.analyze-commits.outputs.sourcegen_version }}"
           echo "VAL=$ver" >> $env:GITHUB_OUTPUT
-          Write-Host "SourceGen Version: $ver (stable)"
+          Write-Host "SourceGen Version (Stable): $ver"
 
       - name: Build & Pack
         run: |
@@ -335,16 +191,17 @@ jobs:
           dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
           dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./output /p:Version=$ver
 
-      - name: Upload Artifact
+      - name: Upload SourceGen Package
         uses: actions/upload-artifact@v4
         with:
           name: sourcegen-package
           path: ./output/*.nupkg
-          retention-days: 1
+          retention-days: 90
 
   build-main:
-    needs: [analyze-commits, check-pending-previews]
-    if: needs.analyze-commits.outputs.has_core_changes == 'true' || needs.check-pending-previews.outputs.has_pending_core_preview == 'true'
+    name: Build Core Package
+    needs: analyze-commits
+    if: needs.analyze-commits.outputs.has_core_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -357,7 +214,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
@@ -366,52 +223,39 @@ jobs:
         id: final_version
         shell: pwsh
         run: |
-          # Usar versión pendiente de preview si existe, si no usar versión calculada
-          $pendingVer = "${{ needs.check-pending-previews.outputs.pending_core_version }}"
-          $calcVer = "${{ needs.analyze-commits.outputs.core_version }}"
-
-          if (-not [string]::IsNullOrEmpty($pendingVer)) {
-            $ver = $pendingVer
-            Write-Host "Usando versión pendiente de preview: $ver"
-          } elseif (-not [string]::IsNullOrEmpty($calcVer)) {
-            $ver = $calcVer
-            Write-Host "Usando versión calculada: $ver"
-          } else {
-            Write-Host "ERROR: No se pudo determinar la versión"
-            exit 1
-          }
-
+          $ver = "${{ needs.analyze-commits.outputs.core_version }}"
           echo "VAL=$ver" >> $env:GITHUB_OUTPUT
-          Write-Host "Core Version: $ver (stable)"
+          Write-Host "Core Version (Stable): $ver"
 
       - name: Build & Pack Main
         run: |
           $mainVer = "${{ steps.final_version.outputs.VAL }}"
 
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer     
-          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer      
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release /p:Version=$mainVer
+          dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore /p:Version=$mainVer
           dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./output /p:Version=$mainVer
 
-      - name: Upload Main Artifact
+      - name: Upload Core Package
         uses: actions/upload-artifact@v4
         with:
           name: main-package
           path: ./output/*.nupkg
-          retention-days: 1
+          retention-days: 90
 
   publish-nuget:
-    needs: [analyze-commits, build-main, build-sourcegen, check-pending-previews]
+    name: Publish to NuGet & Update Artifact
+    needs: [analyze-commits, build-main, build-sourcegen]
     if: needs.build-main.outputs.version != '' || needs.build-sourcegen.outputs.version != ''
     runs-on: windows-latest
     permissions:
-      contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -419,7 +263,7 @@ jobs:
           path: ./packages
           merge-multiple: true
 
-      - name: Publish to NuGet
+      - name: Publish to NuGet (Stable)
         shell: pwsh
         run: |
           $packages = Get-ChildItem ./packages/*.nupkg
@@ -429,157 +273,70 @@ jobs:
           }
           foreach ($pkg in $packages) {
             Write-Host "Publicando Stable: $($pkg.Name)"
-            dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+            dotnet nuget push $pkg.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
           }
 
-      - name: Verify NuGet Publication
+      - name: Prepare Version Artifact (Stable)
+        if: success()
         shell: pwsh
         run: |
-          $packages = Get-ChildItem ./packages/*.nupkg
-          $maxAttempts = 3
-          $waitTime = 600
+          $coreVer = "${{ needs.build-main.outputs.version }}"
+          $genVer = "${{ needs.build-sourcegen.outputs.version }}"
+          $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
-          foreach ($pkg in $packages) {
-            $pkgName = $pkg.BaseName
-            $attempt = 0
-            $verified = $false
-
-            Write-Host "============================================"
-            Write-Host "Verificando publicación de $pkgName"
-            Write-Host "============================================"
-
-            while ($attempt -lt $maxAttempts -and -not $verified) {
-              $attempt++
-
-              if ($attempt -gt 1) {
-                Write-Host "⏳ Esperando $waitTime segundos antes del intento #$attempt..."
-                Start-Sleep -Seconds $waitTime
-              }
-
-              Write-Host "🔍 Consultando NuGet API (intento $attempt de $maxAttempts)..."
-
-              try {
-                $apiUrl = "https://api.nuget.org/v3-flatcontainer/$pkgName/index.json"
-                $response = Invoke-RestMethod -Uri $apiUrl -TimeoutSec 60
-
-                if ($response -and $response.versions) {
-                  $publishedVer = $pkg.Name -replace '\.nupkg', ''
-
-                  if ($response.versions -contains $publishedVer) {
-                    Write-Host "✅ VERIFICADO: $pkgName versión $publishedVer está disponible en NuGet"
-                    Write-Host "   URL: https://www.nuget.org/packages/$pkgName"
-                    $verified = $true
-                  } else {
-                    Write-Host "⚠  No encontrada: versión $publishedVer no encontrada en NuGet"
-                    Write-Host "   Versiones disponibles: $($response.versions -join ', ')"
-                  }
-                } else {
-                  Write-Host "⚠  Sin datos: No se obtuvieron versiones desde NuGet"
-                }
-              } catch {
-                Write-Host "⚠  Error en API: $($_.Exception.Message)"
-              }
+          $json = @{
+            core = @{
+              version = if ($coreVer) { $coreVer } else { $null }
+              publishedAt = if ($coreVer) { $timestamp } else { $null }
             }
-
-            if (-not $verified) {
-              Write-Host ""
-              Write-Host "⚠  ADVERTENCIA CRÍTICA"
-              Write-Host "============================================"
-              Write-Host "$pkgName versión $publishedVer NO pudo verificarse"
-              Write-Host "después de $maxAttempts intentos ($($maxAttempts * 10) minutos)"
-              Write-Host ""
-              Write-Host "ACCIONES REQUERIDAS:"
-              Write-Host "1. Verificar manualmente en: https://www.nuget.org/packages/$pkgName"
-              Write-Host "2. Revisar logs completos del workflow"
-              Write-Host "3. Consultar el soporte de NuGet si el problema persiste"
-              Write-Host "============================================"
-              Write-Host ""
+            sourcegen = @{
+              version = if ($genVer) { $genVer } else { $null }
+              publishedAt = if ($genVer) { $timestamp } else { $null }
             }
           }
 
-      - name: Create Tracking Issues
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $pendingCoreTag = "${{ needs.check-pending-previews.outputs.pending_core_preview_tag }}"
-          $pendingGenTag = "${{ needs.check-pending-previews.outputs.pending_sourcegen_preview_tag }}"
-          $workflowUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $json | ConvertTo-Json -Depth 3 | Out-File -FilePath "current-version.json" -Encoding utf8
+          Write-Host "Contenido de current-version.json:"
+          Get-Content "current-version.json"
 
-          function Create-TrackingIssue {
-            param($tag, $pkgName, $pkgId)
-
-            if ([string]::IsNullOrEmpty($tag)) { return }
-
-            $title = "[Preview Pending] Verificar publicación de $pkgName ($tag)"
-
-            $existingIssuesJson = gh issue list --state open --label "status:preview-pending" --json number,title
-            $existingIssues = $existingIssuesJson | ConvertFrom-Json
-
-            $existingIssue = $existingIssues | Where-Object { $_.title -match [regex]::Escape($tag) }
-
-            if ($existingIssue) {
-              Write-Host "✓ Issue ya existe para $tag: #$($existingIssue.number)"
-              return
-            }
-
-            $body = "## Descripcion`n`nSe publico una version preview de **$pkgName** con la tag **$tag**.`n`n## Tareas`n`n- [ ] Verificar que el paquete esta disponible en: https://www.nuget.org/packages/$pkgId`n- [ ] Comprobar que la version sea la correcta`n- [ ] Eliminar la tag localmente: `git tag -d $tag``n- [ ] Eliminar la tag remota: `git push origin :refs/tags/$tag``n- [ ] Cerrar esta issue`n`n## Informacion`n`n- **Tag:** $tag`n- **Paquete:** $pkgName`n- **Package ID:** $pkgId`n- **Fecha de publicacion:** $(Get-Date -Format 'yyyy-MM-dd HH:mm')`n- **Workflow:** $workflowUrl`n- **Run:** #${{ github.run_number }}`n`n---`n`n> [!NOTE]`n> Esta issue se crea automaticamente por el workflow de Production Release. Cierrala solo despues de verificar manualmente la publicacion en NuGet.`n`n> [!TIP]`n> Si el paquete ya esta publicado como version estable, puedes eliminar la tag de preview y cerrar esta issue."
-
-            gh issue create --title $title --body $body --label "status:preview-pending"
-            Write-Host "✓ Issue creada para $tag"
-          }
-
-          Create-TrackingIssue $pendingCoreTag "MauiPdfGenerator" "RandAMediaLabGroup.MauiPdfGenerator"
-          Create-TrackingIssue $pendingGenTag "SourceGenerators" "RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators"
-
-      - name: Create Git Tags
-        uses: actions/github-script@v7
+      - name: Upload Version Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const mainVer = "${{ needs.build-main.outputs.version }}";
-            const genVer = "${{ needs.build-sourcegen.outputs.version }}";
-            const pendingCoreTag = "${{ needs.check-pending-previews.outputs.pending_core_preview_tag }}";
-            const pendingGenTag = "${{ needs.check-pending-previews.outputs.pending_sourcegen_preview_tag }}";
+          name: current-version
+          path: ./current-version.json
+          retention-days: 90
 
-            async function tryCreateTag(tagName) {
-              try {
-                await github.rest.git.createRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: `refs/tags/${tagName}`,
-                  sha: context.sha
-                });
-                console.log(`✓ Tag creado: ${tagName}`);
-              } catch (e) {
-                if (e.status === 422) {
-                  console.log(`✓ Tag ${tagName} ya existe`);
-                } else {
-                  console.log(`⚠ Error creando tag ${tagName}: ${e.message}`);
-                }
+      - name: Cleanup Old Version Artifacts
+        if: always() && success()
+        shell: pwsh
+        run: |
+          Write-Host "Buscando artifacts anteriores con nombre 'current-version'..."
+
+          $artifacts = gh api repos/:owner/:repo/actions/artifacts `
+            --jq '.artifacts[] | select(.name == "current-version") | .id' 2>$null
+
+          if ([string]::IsNullOrWhiteSpace($artifacts)) {
+            Write-Host "No se encontraron artifacts anteriores para eliminar."
+          } else {
+            $artifactIds = $artifacts | Out-String | Write-Output -NoNewline
+            foreach ($id in $artifactIds.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries)) {
+              if ($id.Trim()) {
+                Write-Host "Eliminando artifact: $id"
+                gh api --method DELETE repos/:owner/:repo/actions/artifacts/$id 2>$null | Out-Null
+                Write-Host "✓ Artifact $id eliminado"
               }
             }
+          }
 
-            async function deletePreviewTag(tagName) {
-              if (!tagName) return;
-              try {
-                const ref = await github.rest.git.getRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: `tags/${tagName}`
-                });
-                await github.rest.git.deleteRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: `tags/${tagName}`
-                });
-                console.log(`✓ Tag preview eliminada: ${tagName}`);
-              } catch (e) {
-                console.log(`⚠ No se pudo eliminar tag ${tagName}: ${e.message}`);
-              }
-            }
-
-            if (mainVer) await tryCreateTag(`main-v${mainVer}`);
-            if (genVer) await tryCreateTag(`gen-v${genVer}`);
-
-            await deletePreviewTag(pendingCoreTag);
-            await deletePreviewTag(pendingGenTag);
+      - name: Report Summary
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "════════════════════════════════════════════════════════════════════"
+          Write-Host "RESUMEN DE PRODUCTION RELEASE"
+          Write-Host "════════════════════════════════════════════════════════════════════"
+          Write-Host "Core Version:       ${{ needs.build-main.outputs.version }}"
+          Write-Host "SourceGen Version:  ${{ needs.build-sourcegen.outputs.version }}"
+          Write-Host "════════════════════════════════════════════════════════════════════"

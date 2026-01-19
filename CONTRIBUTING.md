@@ -167,7 +167,61 @@ git commit -m "feat(sourcegen): update generator for tables"
 
 ## 3. Publicación (Versionado)
 
-### 3.1 Regla de Prioridad
+### 3.1 Arquitectura de Versionamiento
+
+El sistema de versionamiento de MauiPdfGenerator usa una arquitectura de **fallback en cascada** para determinar la versión actual de cada paquete:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    FUENTES DE VERSIÓN                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. GitHub Artifact (MÁS RÁPIDO)                                 │
+│     └─ Archivo: current-version.json                             │
+│     └─ Contenido: { core: { version, publishedAt }, ... }       │
+│     └─ Retención: 90 días                                        │
+│                                                                 │
+│  2. NuGet API REST (FALLBACK)                                    │
+│     └─ Endpoint: api.nuget.org/v3/registration5-gz-semver2/     │
+│     └─ Obtiene la versión más reciente (stable o preview)       │
+│     └─ Ordena por fecha de publicación                           │
+│                                                                 │
+│  3. Versión Base (SI NO EXISTE NINGUNA)                          │
+│     └─ Valor: 1.0.0                                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Flujo de Cálculo de Versión
+
+```
+Merge a development
+        ↓
+┌─────────────────────────────────────────┐
+│  1. Analizar commits                     │
+│     └─ Detectar feat/fix con scope      │
+│     └─ Detectar breaking changes        │
+└─────────────────┬───────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│  2. Para cada paquete con cambios:       │
+│     └─ Obtener versión actual           │
+│        (Artifact → NuGet API → 1.0.0)   │
+│     └─ Determinar bump type             │
+│        (MAJOR/MINOR/PATCH)              │
+│     └─ Calcular increment               │
+│        (PRs mergeados desde publish)    │
+└─────────────────┬───────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│  3. Generar nueva versión               │
+│     └─ Formato: X.Y.Z-preview-N         │
+│     └─ Publicar a NuGet                 │
+│     └─ Actualizar artifact              │
+└─────────────────────────────────────────┘
+```
+
+### 3.3 Regla de Prioridad de Bump
 
 El bump se determina por el cambio **más significativo**:
 
@@ -177,30 +231,107 @@ Breaking (!) > Feature (feat) > Fix (fix) > Otros
    MAJOR          MINOR          PATCH    Sin bump
 ```
 
-### 3.2 Ejemplos de Versionado
+### 3.4 Fuentes de Datos para Cálculo
 
-| Commits en el PR | Versión resultante |
-|------------------|-------------------|
-| 3 fixes | 1.5.11 → 1.5.12-preview |
-| 5 fixes + 1 feat | 1.5.11 → 1.6.0-preview |
-| fixes + feats + 1 breaking | 1.5.11 → 2.0.0-preview |
-| solo docs/chore/test | ❌ Sin release |
+| Dato | Fuente | Descripción |
+|------|--------|-------------|
+| **Versión actual** | Artifact → NuGet API | Versión más reciente del paquete |
+| **Fecha de publicación** | Artifact/NuGet | Fecha de la versión actual |
+| **Bump type** | Análisis de commits | feat→MINOR, fix→PATCH, feat!/fix!→MAJOR |
+| **Increment** | GitHub API (PRs) | PRs mergeados a development desde publishedAt |
 
-### 3.3 Sufijo Preview
+### 3.5 Formato de Artifact `current-version.json`
 
-El `-preview-X` indica cuántos commits relevantes hay desde el último stable:
+```json
+{
+  "core": {
+    "version": "1.5.12-preview-52",
+    "publishedAt": "2026-01-18T10:30:00Z"
+  },
+  "sourcegen": {
+    "version": "1.3.4-preview-0",
+    "publishedAt": "2026-01-16T10:30:00Z"
+  }
+}
+```
+
+### 3.6 Cálculo del Increment
+
+El número `N` en el sufijo `-preview-N` representa la cantidad de **PRs mergeados** a la rama `development` desde la fecha de publicación de la versión actual.
 
 ```
 1.6.0-preview-3
-      └─────┘ └─ 3 commits (feat/fix) desde último stable
+      └─────┘ └─ 3 PRs mergeados desde última versión
          └─ MINOR bump por "feat"
 ```
 
-### 3.4 Versionado Independiente
+### 3.7 Ejemplos de Versionado
 
-Ahora que Diagnostics es parte de `core`, cada paquete se versiona por separado:
-- `MauiPdfGenerator` → versión basada en commits `(core)` (incluye Diagnostics)
-- `SourceGenerators` → versión basada en commits `(sourcegen)`
+| Commits en el PR | Versión Resultante |
+|------------------|-------------------|
+| 3 fixes | 1.5.11 → 1.5.12-preview-N |
+| 5 fixes + 1 feat | 1.5.11 → 1.6.0-preview-N |
+| fixes + feats + 1 breaking | 1.5.11 → 2.0.0-preview-N |
+| solo docs/chore/test | ❌ Sin release |
+
+### 3.8 Versionado Independiente
+
+Cada paquete se versiona por separado según sus commits:
+
+| Paquete | Scope de Commits | Artifact |
+|---------|-----------------|----------|
+| `MauiPdfGenerator` | `feat(core)`, `fix(core)`, etc. | `core.version` |
+| `SourceGenerators` | `feat(sourcegen)`, `fix(sourcegen)`, etc. | `sourcegen.version` |
+
+### 3.9 Scripts de Versionamiento
+
+El script principal de versionamiento se encuentra en:
+
+```
+.github/scripts/Get-LatestPackageVersion.ps1
+```
+
+**Funciones del script:**
+
+| Función | Descripción |
+|---------|-------------|
+| `Get-GitHubArtifactVersion` | Descarga `current-version.json` y extrae la versión del paquete |
+| `Get-LatestNuGetVersion` | Consulta NuGet API REST para obtener la versión más reciente |
+| `Calculate-VersionBump` | Analiza commits para determinar MAJOR/MINOR/PATCH |
+| `Calculate-PreviewIncrement` | Cuenta PRs mergeados a development desde publishedAt |
+| `Get-LatestPackageVersion` | Función principal que orquesta todo |
+
+### 3.10 Logs de Versionamiento
+
+El script genera logs estructurados para facilitar el debugging:
+
+```powershell
+[2026-01-18T10:30:00.000Z] [INFO] Iniciando cálculo de versión para: RandAMediaLabGroup.MauiPdfGenerator
+[2026-01-18T10:30:00.001Z] [DEBUG] Intentando obtener versión desde GitHub Artifact...
+[2026-01-18T10:30:00.002Z] [DEBUG] Versión obtenida desde artifact: 1.5.12-preview-52
+[2026-01-18T10:30:00.003Z] [INFO] Analizando commits para bump...
+[2026-01-18T10:30:00.004Z] [DEBUG] Feature detectado: feat(core): add PDF table rendering support
+[2026-01-18T10:30:00.005Z] [INFO] Tipo de bump determinado: minor
+[2026-01-18T10:30:00.006Z] [INFO] Calculando increment...
+[2026-01-18T10:30:00.007Z] [DEBUG] PRs mergeados desde última versión: 3
+[2026-01-18T10:30:00.008Z] [INFO] RESULTADO FINAL
+[2026-01-18T10:30:00.009Z] [INFO]   Paquete: RandAMediaLabGroup.MauiPdfGenerator
+[2026-01-18T10:30:00.010Z] [INFO]   Versión actual: 1.5.12-preview-52
+[2026-01-18T10:30:00.011Z] [INFO]   Bump: minor
+[2026-01-18T10:30:00.012Z] [INFO]   Increment: 3
+[2026-01-18T10:30:00.013Z] [INFO]   Nueva versión: 1.6.0-preview-3
+```
+
+Los logs se muestran en la consola de GitHub Actions y también se escriben al archivo `$env:GITHUB_ENV` en caso de errores críticos.
+
+### 3.11 Troubleshooting de Versionamiento
+
+| Problema | Causa | Solución |
+|----------|-------|----------|
+| Error consultando NuGet | Problemas de red/API | Verificar conectividad; el workflow usará fallback |
+| Artifact expirado (90 días) | Retención expirada | El workflow detectará y consultará NuGet |
+| No se encuentran PRs | gh CLI no autenticado | Verificar que `GITHUB_TOKEN` esté disponible |
+| Error crítico en script | Fallo en lógica | Revisar logs de GitHub Actions |
 
 ---
 

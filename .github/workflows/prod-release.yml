@@ -22,8 +22,8 @@ jobs:
     name: Analyze Commits & Promote Versions
     runs-on: ubuntu-latest
     outputs:
-      has_core_changes: ${{ steps.core_version.outputs.should_publish }}
-      has_sourcegen_changes: ${{ steps.sourcegen_version.outputs.should_publish }}
+      has_core_changes: ${{ steps.analyze.outputs.has_core_changes }}
+      has_sourcegen_changes: ${{ steps.analyze.outputs.has_sourcegen_changes }}
       core_version: ${{ steps.core_version.outputs.version }}
       sourcegen_version: ${{ steps.sourcegen_version.outputs.version }}
     steps:

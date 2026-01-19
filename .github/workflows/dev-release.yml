@@ -123,55 +123,37 @@ jobs:
 
       - name: Get Next Core Version
         id: core_version
+        if: steps.analyze.outputs.has_core_changes == 'true'
         shell: pwsh
         run: |
-          $hasChanges = "${{ steps.analyze.outputs.has_core_changes }}"
-          if ($hasChanges -eq "true") {
-            $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
-              -PackageName "${{ env.CORE_PACKAGE }}" `
-              -Scope "core" `
-              -Commits "${{ steps.commits.outputs.commits }}"
+          $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
+            -PackageName "${{ env.CORE_PACKAGE }}" `
+            -Scope "core" `
+            -Commits "${{ steps.commits.outputs.commits }}"
 
-            echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
-            echo "published_at=$($result.published_at)" >> $env:GITHUB_OUTPUT
-            echo "bump_type=$($result.bump_type)" >> $env:GITHUB_OUTPUT
-            echo "increment=$($result.increment)" >> $env:GITHUB_OUTPUT
-            echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
-            echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "version=" >> $env:GITHUB_OUTPUT
-            echo "published_at=" >> $env:GITHUB_OUTPUT
-            echo "bump_type=none" >> $env:GITHUB_OUTPUT
-            echo "increment=0" >> $env:GITHUB_OUTPUT
-            echo "source=" >> $env:GITHUB_OUTPUT
-            echo "should_publish=False" >> $env:GITHUB_OUTPUT
-          }
+          echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
+          echo "published_at=$($result.published_at)" >> $env:GITHUB_OUTPUT
+          echo "bump_type=$($result.bump_type)" >> $env:GITHUB_OUTPUT
+          echo "increment=$($result.increment)" >> $env:GITHUB_OUTPUT
+          echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
+          echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
 
       - name: Get Next SourceGen Version
         id: sourcegen_version
+        if: steps.analyze.outputs.has_sourcegen_changes == 'true'
         shell: pwsh
         run: |
-          $hasChanges = "${{ steps.analyze.outputs.has_sourcegen_changes }}"
-          if ($hasChanges -eq "true") {
-            $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
-              -PackageName "${{ env.SOURCEGEN_PACKAGE }}" `
-              -Scope "sourcegen" `
-              -Commits "${{ steps.commits.outputs.commits }}"
+          $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
+            -PackageName "${{ env.SOURCEGEN_PACKAGE }}" `
+            -Scope "sourcegen" `
+            -Commits "${{ steps.commits.outputs.commits }}"
 
-            echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
-            echo "published_at=$($result.published_at)" >> $env:GITHUB_OUTPUT
-            echo "bump_type=$($result.bump_type)" >> $env:GITHUB_OUTPUT
-            echo "increment=$($result.increment)" >> $env:GITHUB_OUTPUT
-            echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
-            echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "version=" >> $env:GITHUB_OUTPUT
-            echo "published_at=" >> $env:GITHUB_OUTPUT
-            echo "bump_type=none" >> $env:GITHUB_OUTPUT
-            echo "increment=0" >> $env:GITHUB_OUTPUT
-            echo "source=" >> $env:GITHUB_OUTPUT
-            echo "should_publish=False" >> $env:GITHUB_OUTPUT
-          }
+          echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
+          echo "published_at=$($result.published_at)" >> $env:GITHUB_OUTPUT
+          echo "bump_type=$($result.bump_type)" >> $env:GITHUB_OUTPUT
+          echo "increment=$($result.increment)" >> $env:GITHUB_OUTPUT
+          echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
+          echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
 
   build-sourcegen:
     name: Build SourceGen Package

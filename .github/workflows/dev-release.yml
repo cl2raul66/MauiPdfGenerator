@@ -336,3 +336,35 @@ jobs:
           Write-Host "Core Version:       ${{ needs.build-main.outputs.version }}"
           Write-Host "SourceGen Version:  ${{ needs.build-sourcegen.outputs.version }}"
           Write-Host "════════════════════════════════════════════════════════════════════"
+
+      - name: Format Commits for Release
+        if: success() && needs.build-main.outputs.version != ''
+        id: commits_formatted
+        shell: pwsh
+        run: |
+          $commits = "${{ needs.analyze-commits.outputs.commits }}"
+          $formatted = $commits -split ',' | ForEach-Object { "- $_" }
+          $formattedString = $formatted -join "`n"
+          echo "commits_formatted=$formattedString" >> $env:GITHUB_OUTPUT
+
+      - name: Get Timestamp
+        if: success() && needs.build-main.outputs.version != ''
+        id: timestamp
+        run: |
+          echo "value=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release (Preview)
+        if: success() && needs.build-main.outputs.version != ''
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.build-main.outputs.version }}
+          name: Release ${{ needs.build-main.outputs.version }} (Preview)
+          body: |
+            ## Commits Incluidos
+            ${{ steps.commits_formatted.outputs.commits_formatted }}
+
+            **Published at:** ${{ steps.timestamp.outputs.value }}
+          draft: false
+          prerelease: true

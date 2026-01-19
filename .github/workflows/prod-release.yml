@@ -339,3 +339,34 @@ jobs:
           Write-Host "Core Version:       ${{ needs.build-main.outputs.version }}"
           Write-Host "SourceGen Version:  ${{ needs.build-sourcegen.outputs.version }}"
           Write-Host "════════════════════════════════════════════════════════════════════"
+
+      - name: Get Preview Version
+        if: success() && needs.build-main.outputs.version != ''
+        id: preview_version
+        shell: pwsh
+        run: |
+          $json = Get-Content ./current-version.json | ConvertFrom-Json
+          $previewVer = $json.core.version
+          echo "value=$previewVer" >> $env:GITHUB_OUTPUT
+
+      - name: Get Timestamp
+        if: success() && needs.build-main.outputs.version != ''
+        id: timestamp
+        run: |
+          echo "value=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release (Stable)
+        if: success() && needs.build-main.outputs.version != ''
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.build-main.outputs.version }}
+          name: Release ${{ needs.build-main.outputs.version }} (Stable)
+          body: |
+            ## Promoción de Preview
+            Promocionado desde: ${{ steps.preview_version.outputs.value }}
+
+            **Published at:** ${{ steps.timestamp.outputs.value }}
+          draft: false
+          prerelease: false

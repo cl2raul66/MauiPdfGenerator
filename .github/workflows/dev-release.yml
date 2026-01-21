@@ -4,7 +4,6 @@ permissions:
   contents: write
 
 on:
-  workflow_dispatch:
   push:
     branches: [ "development" ]
     paths:
@@ -337,3 +336,65 @@ jobs:
           Write-Host "Core Version:       ${{ needs.build-main.outputs.version }}"
           Write-Host "SourceGen Version:  ${{ needs.build-sourcegen.outputs.version }}"
           Write-Host "════════════════════════════════════════════════════════════════════"
+
+      - name: Format Core Commits for Release
+        if: success() && needs.build-main.outputs.version != ''
+        id: commits_core
+        shell: pwsh
+        run: |
+          $commits = "${{ needs.analyze-commits.outputs.commits }}"
+          $coreCommits = $commits -split ',' | Where-Object { $_ -match '\(core\)(\)!)?:' } | ForEach-Object { "- $_" }
+          $formattedString = $coreCommits -join "`n"
+          echo "commits_formatted=$formattedString" >> $env:GITHUB_OUTPUT
+
+      - name: Format SourceGen Commits for Release
+        if: success() && needs.build-sourcegen.outputs.version != ''
+        id: commits_sourcegen
+        shell: pwsh
+        run: |
+          $commits = "${{ needs.analyze-commits.outputs.commits }}"
+          $sgCommits = $commits -split ',' | Where-Object { $_ -match '\(sourcegen\)(\)!)?:' } | ForEach-Object { "- $_" }
+          $formattedString = $sgCommits -join "`n"
+          echo "commits_formatted=$formattedString" >> $env:GITHUB_OUTPUT
+
+      - name: Get Timestamp
+        if: success() && (needs.build-main.outputs.version != '' || needs.build-sourcegen.outputs.version != '')
+        id: timestamp
+        shell: pwsh
+        run: |
+          $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          echo "value=$timestamp" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release - Core
+        if: success() && needs.build-main.outputs.version != ''
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.build-main.outputs.version }}
+          name: Release ${{ needs.build-main.outputs.version }} (Preview - Core)
+          body: |
+            ## Commits Incluidos (Core)
+            ${{ steps.commits_core.outputs.commits_formatted }}
+
+            **Published at:** ${{ steps.timestamp.outputs.value }}
+          draft: false
+          prerelease: true
+          update_existing: true
+
+      - name: Create GitHub Release - SourceGen
+        if: success() && needs.build-sourcegen.outputs.version != ''
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.build-sourcegen.outputs.version }}
+          name: Release ${{ needs.build-sourcegen.outputs.version }} (Preview - SourceGen)
+          body: |
+            ## Commits Incluidos (SourceGen)
+            ${{ steps.commits_sourcegen.outputs.commits_formatted }}
+
+            **Published at:** ${{ steps.timestamp.outputs.value }}
+          draft: false
+          prerelease: true
+          update_existing: true

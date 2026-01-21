@@ -8,11 +8,115 @@ Esta guía organiza todo lo que necesitas saber para trabajar en el proyecto, de
 
 | ¿Qué quiero hacer? | Ir a sección |
 |--------------------|--------------|
+| Configurar Branch Protection | [0. Branch Protection](#0-branch-protection--reglas-estrictas) |
 | Planificar una nueva funcionalidad | [1. Planificación](#1-planificación-roadmap-e-issues) |
 | Crear un Issue | [1.2 Crear Issues](#12-crear-issues) |
 | Hacer un commit | [2. Desarrollo](#2-desarrollo-commits) |
 | Entender el versionado | [3. Publicación](#3-publicación-versionado) |
 | Ver comandos útiles | [4. Referencia Rápida](#4-referencia-rápida) |
+
+---
+
+## 0. Branch Protection & Reglas Estrictas
+
+Esta sección define las reglas de Branch Protection que garantizan el flujo DevOps determinista y sin ambigüedades.
+
+### 0.1 Ramas Protegidas
+
+| Rama | Propósito | Protección |
+|------|-----------|------------|
+| `development` | Desarrollo principal | ✅ Branch Protection Strict |
+| `master` | Producción | ✅ Branch Protection Strict |
+
+### 0.2 Reglas de Branch Protection Strict
+
+Para garantizar el flujo ideal `anyBranch → development → master`, las siguientes reglas están **ACTIVAS**:
+
+#### 0.2.1 Restricciones de Merge
+
+| Regla | Descripción |
+|-------|-------------|
+| **Solo merges vía PR** | Los cambios a `development` y `master` solo pueden hacerse mediante Pull Requests |
+| **Bloquear push directo** | No se permite `git push` directo a estas ramas |
+| **Solo 1 PR pendiente** | Solo puede haber un PR abierto por rama protegida a la vez |
+
+> [!IMPORTANT]
+> **¿Por qué estas reglas?**
+> - Garantizan que `git log ${{ github.event.before }}..HEAD` capture solo los commits del PR
+> - Eliminan ambigüedades en el cálculo de versiones
+> - Aseguran que el versionamiento sea determinista
+
+#### 0.2.2 Requisitos de PR
+
+| Requisito | Configuración |
+|-----------|---------------|
+| **Require PR reviews** | Mínimo 1 aprobación |
+| **Require status checks** | `PR Validation` debe pasar |
+| **Require branches up to date** | La rama debe estar actualizada con `development`/`master` antes de merge |
+| **Dismiss stale reviews** | Re-aprobación requerida si hay cambios |
+
+#### 0.2.3 Workflows Automáticos
+
+| Workflow | Trigger | Ejecución Manual |
+|----------|---------|------------------|
+| `dev-release.yml` | Push a `development` | ❌ No disponible |
+| `prod-release.yml` | Push a `master` | ❌ No disponible |
+| `pr-validation.yml` | Pull Request a `development`/`master` | ✅ Disponible |
+
+> [!WARNING]
+> **Los workflows de release NO se pueden ejecutar manualmente.**
+> Esto garantiza que:
+> - Solo se publiquen versiones basadas en commits reales
+> - No haya versiones inconsistentes o duplicadas
+> - El cálculo de versiones sea siempre determinista
+
+### 0.3 Variantes Prohibidas
+
+| Variante | Por qué está prohibida | Qué hacer en su lugar |
+|----------|------------------------|----------------------|
+| Push directo a `development` | Rompe el flujo PR → CI → Release | Crear PR desde feature branch |
+| Push directo a `master` | Rompe el flujo development → master → Production Release | Crear PR desde development a master |
+| Múltiples PRs simultáneos a `development` | Commits pueden capturarse incorrectamente | Esperar a que se mergee el PR actual |
+| Cherry-pick de `development` a `master` | Duplica commits en workflows | Usar el flujo PR development → master |
+| Commits antes de crear PR | Branch Protection ya no aplica | Crear PR primero, luego hacer commits |
+
+### 0.4 Flujo Ideal Garantizado
+
+Con Branch Protection Strict activo, el flujo ideal SIEMPRE se cumple:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Issue      │ ──▶ │  Branch     │ ──▶ │  Commits    │ ──▶ │  PR         │ ──▶ │  Merge      │
+│  planificar │     │  desde dev  │     │  (varios)   │     │  validar CI │     │  cierra todo│
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                       │                                       │
+                       ▼                                       ▼
+                   feature/new-feature                     development
+                                                                │
+                                                                ▼
+                                                       ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+                                                       │  PR         │ ──▶ │  Merge      │ ──▶ │  Release    │
+                                                       │  dev→master │     │  cierra     │     │  Stable     │
+                                                       └─────────────┘     └─────────────┘     └─────────────┘
+                                                                                              │
+                                                                                              ▼
+                                                                                          master
+```
+
+### 0.5 Verificación de Branch Protection
+
+Para verificar que Branch Protection está activo:
+
+```bash
+# Usar GitHub CLI
+gh repo view --json branchProtectionRules
+
+# Ver reglas específicas de development
+gh api repos/:owner/:repo/branches/development/protection
+
+# Ver reglas específicas de master
+gh api repos/:owner/:repo/branches/master/protection
+```
 
 ---
 
@@ -64,24 +168,25 @@ Cada plantilla tiene un campo **"Plan de Implementación"** para desglosar el tr
 
 1. **Selecciona Issue** del Roadmap → Muévelo a "In Progress"
 2. **Crea branch** desde `development`:
-   ```bash
-   git checkout development
-   git pull origin development
-   git checkout -b feature/42-soporte-tablas
-   ```
-3. **Trabaja con commits** libres (no cierran nada todavía)
-4. **Crea PR** hacia `development` — en la descripción escribe:
-   ```markdown
-   Closes #42
-   ```
+    ```bash
+    git checkout development
+    git pull origin development
+    git checkout -b feature/42-soporte-tablas
+    ```
+3. **Crea PR inmediatamente** hacia `development` — antes de hacer commits
+    ```markdown
+    Closes #42
+    ```
+4. **Trabaja con commits** (todos los commits pertenecerán al PR)
 5. **CI valida** — si falla, haz más commits en el mismo branch
-6. **Merge** — el Issue se cierra automáticamente
+6. **Merge** — el Issue se cierra automáticamente y se ejecuta `dev-release.yml`
 
 > [!IMPORTANT]
-> **¿Por qué branch por Issue?**
-> - Los commits en tu branch NO disparan releases preview
-> - Puedes pausar y retomar cuando quieras
-> - Solo al hacer merge a `development` se evalúa el versionado
+> **¿Por qué PR antes de commits?**
+> - Garantiza que todos los commits pertenezcan al PR
+> - Asegura que `git log ${{ github.event.before }}..HEAD` capture solo los commits del PR
+> - Elimina ambigüedades en el cálculo de versiones
+> - Branch Protection Strict bloquea múltiples PRs simultáneos
 
 ---
 
@@ -197,12 +302,13 @@ El sistema de versionamiento de MauiPdfGenerator usa una arquitectura de **fallb
 #### Development Release (Preview)
 
 ```
-Merge a development
+Merge a development (automático vía PR)
         ↓
 ┌─────────────────────────────────────────┐
 │  1. Analizar commits                     │
 │     └─ Detectar feat/fix con scope      │
 │     └─ Detectar breaking changes        │
+│     └─ git log ${{ github.event.before }}..HEAD │
 └─────────────────┬───────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
@@ -223,10 +329,14 @@ Merge a development
 └─────────────────────────────────────────┘
 ```
 
+> [!NOTE]
+> **Este workflow se ejecuta AUTOMÁTICAMENTE** cuando se hace merge a `development`.
+> No se puede ejecutar manualmente. Esto garantiza que el versionamiento sea determinista.
+
 #### Production Release (Promoción)
 
 ```
-Merge development → master
+Merge development → master (automático vía PR)
         ↓
 ┌─────────────────────────────────────────┐
 │  1. Analizar commits                     │
@@ -247,6 +357,12 @@ Merge development → master
 │     └─ Limpiar artifacts anteriores        │
 └─────────────────────────────────────────┘
 ```
+
+> [!NOTE]
+> **Este workflow se ejecuta AUTOMÁTICAMENTE** cuando se hace merge a `master`.
+> No se puede ejecutar manualmente. Esto garantiza que la promoción de versiones sea determinista.
+
+---
 
 ### 3.3 Regla de Prioridad de Bump
 
@@ -444,7 +560,19 @@ R: No se publica nada. Sin bump = sin release.
 
 Esta sección describe los errores más comunes en los workflows de CI/CD y cómo resolverlos.
 
-### 5.1 Errores en Development Release (Preview)
+### 5.1 Nota Importante sobre Workflows Automáticos
+
+> [!WARNING]
+> **Los workflows de release NO se pueden ejecutar manualmente.**
+>
+> Si necesitas reintentar un workflow fallido:
+> - Ve a la ejecución fallida en GitHub Actions
+> - Haz clic en "Re-run failed jobs"
+> - NO intentes ejecutar manualmente el workflow
+>
+> Los workflows `dev-release.yml` y `prod-release.yml` **NO tienen** `workflow_dispatch` activado por diseño.
+
+### 5.2 Errores en Development Release (Preview)
 
 | Error | Causa | Solución |
 | --- | --- | --- |
@@ -452,7 +580,7 @@ Esta sección describe los errores más comunes en los workflows de CI/CD y cóm
 | `publish-nuget` skipeado | No se generó paquete en build-main/build-sourcegen | Revisar logs del job anterior para ver por qué falló el build |
 | Preview no se convierte a estable en Production Release | No hay commits nuevos en sourcegen | Este es comportamiento normal. El Production Release promociona previews automáticamente |
 
-### 5.2 Errores en Production Release (Promoción)
+### 5.3 Errores en Production Release (Promoción)
 
 | Error | Causa | Solución |
 | --- | --- | --- |
@@ -460,7 +588,7 @@ Esta sección describe los errores más comunes en los workflows de CI/CD y cóm
 | `La versión NO es preview` | La versión actual ya es estable | Verificar artifact `current-version.json` |
 | `build-sourcegen` skipeado | `has_sourcegen_changes = false` | Verificar que el paquete tenga preview pendiente |
 
-### 5.3 Troubleshooting de Promoción
+### 5.4 Troubleshooting de Promoción
 
 #### Error: "No hay versión para promocionar"
 
@@ -487,7 +615,7 @@ Esta sección describe los errores más comunes en los workflows de CI/CD y cóm
 1. Revisar el formato de la versión en el artifact
 2. Verificar que sea una versión semántica válida
 
-### 5.4 Comandos Útiles para Debug
+### 5.5 Comandos Útiles para Debug
 
 ```bash
 # Verificar contenido del artifact actual

@@ -340,33 +340,62 @@ jobs:
           Write-Host "SourceGen Version:  ${{ needs.build-sourcegen.outputs.version }}"
           Write-Host "════════════════════════════════════════════════════════════════════"
 
-      - name: Get Preview Version
+      - name: Get Preview Version - Core
         if: success() && needs.build-main.outputs.version != ''
-        id: preview_version
+        id: preview_version_core
         shell: pwsh
         run: |
           $json = Get-Content ./current-version.json | ConvertFrom-Json
           $previewVer = $json.core.version
           echo "value=$previewVer" >> $env:GITHUB_OUTPUT
 
-      - name: Get Timestamp
-        if: success() && needs.build-main.outputs.version != ''
-        id: timestamp
+      - name: Get Preview Version - SourceGen
+        if: success() && needs.build-sourcegen.outputs.version != ''
+        id: preview_version_sourcegen
+        shell: pwsh
         run: |
-          echo "value=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+          $json = Get-Content ./current-version.json | ConvertFrom-Json
+          $previewVer = $json.sourcegen.version
+          echo "value=$previewVer" >> $env:GITHUB_OUTPUT
 
-      - name: Create GitHub Release (Stable)
+      - name: Get Timestamp
+        if: success() && (needs.build-main.outputs.version != '' || needs.build-sourcegen.outputs.version != '')
+        id: timestamp
+        shell: pwsh
+        run: |
+          $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          echo "value=$timestamp" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release - Core
         if: success() && needs.build-main.outputs.version != ''
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ needs.build-main.outputs.version }}
-          name: Release ${{ needs.build-main.outputs.version }} (Stable)
+          name: Release ${{ needs.build-main.outputs.version }} (Stable - Core)
           body: |
             ## Promoción de Preview
-            Promocionado desde: ${{ steps.preview_version.outputs.value }}
+            Promocionado desde: ${{ steps.preview_version_core.outputs.value }}
 
             **Published at:** ${{ steps.timestamp.outputs.value }}
           draft: false
           prerelease: false
+          update_existing: true
+
+      - name: Create GitHub Release - SourceGen
+        if: success() && needs.build-sourcegen.outputs.version != ''
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.build-sourcegen.outputs.version }}
+          name: Release ${{ needs.build-sourcegen.outputs.version }} (Stable - SourceGen)
+          body: |
+            ## Promoción de Preview
+            Promocionado desde: ${{ steps.preview_version_sourcegen.outputs.value }}
+
+            **Published at:** ${{ steps.timestamp.outputs.value }}
+          draft: false
+          prerelease: false
+          update_existing: true

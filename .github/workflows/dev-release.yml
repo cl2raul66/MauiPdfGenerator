@@ -158,7 +158,7 @@ jobs:
   build-sourcegen:
     name: Build SourceGen Package
     needs: analyze-commits
-    if: needs.analyze-commits.outputs.sourcegen_should_publish == 'true'
+    if: needs.analyze-commits.outputs.has_sourcegen_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}
@@ -200,7 +200,7 @@ jobs:
   build-main:
     name: Build Core Package
     needs: analyze-commits
-    if: needs.analyze-commits.outputs.core_should_publish == 'true'
+    if: needs.analyze-commits.outputs.has_core_changes == 'true'
     runs-on: windows-latest
     outputs:
       version: ${{ steps.final_version.outputs.VAL }}

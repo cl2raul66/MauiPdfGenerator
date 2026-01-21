@@ -20,9 +20,8 @@ For a complete guide, examples, and advanced patterns, **[visit our official Wik
 
 This is more than just a PDF library; it's a complete ecosystem designed to maximize your productivity and minimize frustration.
 
--   **`MauiPdfGenerator`**: The core engine, featuring a powerful layout system that emulates .NET MAUI's behavior for predictable results.
+-   **`MauiPdfGenerator`**: The core engine, featuring a powerful layout system that emulates .NET MAUI's behavior for predictable results. Includes integrated diagnostics for effective debugging.
 -   **`MauiPdfGenerator.SourceGenerators`**: A smart code generator that eliminates "magic strings" for fonts, providing compile-time safety and IntelliSense for all your registered fonts.
--   **`MauiPdfGenerator.Diagnostics`**: A first-class diagnostics library that transforms layout debugging from a guessing game into a science, providing clear, actionable feedback directly in your console and optionally as a visual overlay on the PDF itself. Now integrated into the Core library.
 
 Together, they provide a seamless and robust solution for creating professional PDFs, allowing you to focus on your application's logic, not on fighting with a new API.
 
@@ -36,6 +35,8 @@ Together, they provide a seamless and robust solution for creating professional 
 -   **Automatic Pagination**: Divisible elements like `Paragraph` and `Grid` flow across pages automatically, while atomic elements like `Image` and `StackLayout` maintain their integrity.
 -   **Rich Styling**: Customize fonts, colors, sizes, and text styles using the same `Microsoft.Maui` types you already use.
 -   **Full Document Control**: Define metadata, page size, orientation, and global styles with ease.
+-   **Integrated Diagnostics**: Get automatic, detailed feedback on common issues directly in your debug console and application logs by default.
+-   **Optional Visual Debugger**: Enable a powerful visual overlay that draws layout bounds, highlights overflow errors, and displays diagnostic codes directly on the generated PDF.
 
 ### Source Generators (`MauiPdfGenerator.SourceGenerators`)
 
@@ -43,25 +44,15 @@ Together, they provide a seamless and robust solution for creating professional 
 -   **Eliminate Typos**: `PdfFonts.OpenSansBold` will compile. `"OpenSans-Bold"` might not. The generator ensures correctness at compile time.
 -   **Effortless Workflow**: Just configure your fonts once and let the generator do the rest.
 
-### Diagnostics (`MauiPdfGenerator.Diagnostics`)
-
--   **Actionable Feedback**: Get automatic, detailed feedback on common issues directly in your debug console and application logs by default.
--   **Visual Debugging**: Optionally enable a powerful visual overlay that draws layout bounds, highlights overflow errors, and displays diagnostic codes directly on the generated PDF.
--   **Accelerate Development**: Dramatically speed up the process of debugging complex layouts by seeing exactly what went wrong and where.
-
 ## NuGet Packages
 
-**MauiPdfGenerator**
+**MauiPdfGenerator** (includes integrated diagnostics)
 
 [![NuGet Version](https://img.shields.io/nuget/v/RandAMediaLabGroup.MauiPdfGenerator.svg?style=flat-square)](https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator)
 
 **MauiPdfGenerator.SourceGenerators**
 
 [![NuGet Version](https://img.shields.io/nuget/v/RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators.svg?style=flat-square)](https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators)
-
-**MauiPdfGenerator.Diagnostics**
-
-[![NuGet Version](https://img.shields.io/nuget/v/RandAMediaLabGroup.MauiPdfGenerator.Diagnostics.svg?style=flat-square)](https://www.nuget.org/packages/RandAMediaLabGroup.MauiPdfGenerator.Diagnostics)
 
 ## Project Status
 

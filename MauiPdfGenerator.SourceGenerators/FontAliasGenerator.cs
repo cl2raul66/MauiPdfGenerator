@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -223,9 +223,11 @@ namespace {GeneratedClassNamespace}
                         {
                             sb.Append('_');
                             lastCharWasUnderscore = true;
-                        }
-                    }
-                }
+        }
+    }
+
+    // Test comment for workflow
+}
             }
 
             string candidate = sb.ToString();

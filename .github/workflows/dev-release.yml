@@ -122,9 +122,18 @@ jobs:
 
       - name: Get Next Core Version
         id: core_version
-        if: steps.analyze.outputs.has_core_changes == 'true'
         shell: pwsh
         run: |
+          $hasChanges = "${{ steps.analyze.outputs.has_core_changes }}"
+          if ($hasChanges -ne 'true') {
+            echo "version=" >> $env:GITHUB_OUTPUT
+            echo "published_at=" >> $env:GITHUB_OUTPUT
+            echo "bump_type=" >> $env:GITHUB_OUTPUT
+            echo "increment=" >> $env:GITHUB_OUTPUT
+            echo "source=" >> $env:GITHUB_OUTPUT
+            echo "should_publish=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
           $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
             -PackageName "${{ env.CORE_PACKAGE }}" `
             -Scope "core" `
@@ -139,9 +148,18 @@ jobs:
 
       - name: Get Next SourceGen Version
         id: sourcegen_version
-        if: steps.analyze.outputs.has_sourcegen_changes == 'true'
         shell: pwsh
         run: |
+          $hasChanges = "${{ steps.analyze.outputs.has_sourcegen_changes }}"
+          if ($hasChanges -ne 'true') {
+            echo "version=" >> $env:GITHUB_OUTPUT
+            echo "published_at=" >> $env:GITHUB_OUTPUT
+            echo "bump_type=" >> $env:GITHUB_OUTPUT
+            echo "increment=" >> $env:GITHUB_OUTPUT
+            echo "source=" >> $env:GITHUB_OUTPUT
+            echo "should_publish=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
           $result = & ./.github/scripts/Get-LatestPackageVersion.ps1 `
             -PackageName "${{ env.SOURCEGEN_PACKAGE }}" `
             -Scope "sourcegen" `

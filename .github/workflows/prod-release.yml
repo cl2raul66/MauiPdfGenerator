@@ -126,15 +126,18 @@ jobs:
             -Scope "core" `
             -PromotionMode
 
+          if ($result.should_publish -ne "True") {
+            echo "version=" >> $env:GITHUB_OUTPUT
+            echo "should_publish=false" >> $env:GITHUB_OUTPUT
+            echo "source=" >> $env:GITHUB_OUTPUT
+            Write-Host "No Core version to promote: $($result.message)"
+            exit 0
+          }
+
           echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
           echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
           echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
-
-          if ($result.should_publish -eq "True") {
-            Write-Host "Core version promoted: $($result.version)"
-          } else {
-            Write-Host "No Core version to promote: $($result.message)"
-          }
+          Write-Host "Core version promoted: $($result.version)"
 
       - name: Promote SourceGen Version to Stable
         id: sourcegen_version
@@ -145,15 +148,18 @@ jobs:
             -Scope "sourcegen" `
             -PromotionMode
 
+          if ($result.should_publish -ne "True") {
+            echo "version=" >> $env:GITHUB_OUTPUT
+            echo "should_publish=false" >> $env:GITHUB_OUTPUT
+            echo "source=" >> $env:GITHUB_OUTPUT
+            Write-Host "No SourceGen version to promote: $($result.message)"
+            exit 0
+          }
+
           echo "version=$($result.version)" >> $env:GITHUB_OUTPUT
           echo "should_publish=$($result.should_publish)" >> $env:GITHUB_OUTPUT
           echo "source=$($result.source)" >> $env:GITHUB_OUTPUT
-
-          if ($result.should_publish -eq "True") {
-            Write-Host "SourceGen version promoted: $($result.version)"
-          } else {
-            Write-Host "No SourceGen version to promote: $($result.message)"
-          }
+          Write-Host "SourceGen version promoted: $($result.version)"
 
   build-sourcegen:
     name: Build SourceGen Package

@@ -3,7 +3,7 @@ name: Production Release (Stable)
 on:
   pull_request:
     types: [closed]
-    branches: 
+    branches:
       - master
 
 permissions:
@@ -14,7 +14,7 @@ jobs:
   publish-stable:
     if: github.event.pull_request.merged == true
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,11 +28,11 @@ jobs:
           $prBody = @'
           ${{ github.event.pull_request.body }}
           '@
-          
+
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           Write-Host "📋 Analizando cuerpo del PR para promoción a STABLE"
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          
+
           # Buscar ver(main): x.x.x-preview
           $mainPreview = $null
           $mainStable = $null
@@ -45,7 +45,7 @@ jobs:
           } else {
             Write-Host "⚠️  ver(main) no encontrado - se omitirá paquete Core"
           }
-          
+
           # Buscar ver(sourceGenerators): x.x.x-preview
           $sourceGenPreview = $null
           $sourceGenStable = $null
@@ -58,7 +58,7 @@ jobs:
           } else {
             Write-Host "⚠️  ver(sourceGenerators) no encontrado - se omitirá paquete SourceGenerators"
           }
-          
+
           # Validar que al menos uno fue encontrado
           if (-not $mainStable -and -not $sourceGenStable) {
             Write-Host ""
@@ -68,7 +68,7 @@ jobs:
             Write-Host "   ver(sourceGenerators): 1.3.5-preview"
             exit 1
           }
-          
+
           # Exportar variables
           echo "MAIN_PREVIEW=$mainPreview" >> $env:GITHUB_OUTPUT
           echo "MAIN_STABLE=$mainStable" >> $env:GITHUB_OUTPUT
@@ -76,7 +76,7 @@ jobs:
           echo "SOURCEGEN_STABLE=$sourceGenStable" >> $env:GITHUB_OUTPUT
           echo "HAS_MAIN=$($null -ne $mainStable)" >> $env:GITHUB_OUTPUT
           echo "HAS_SOURCEGEN=$($null -ne $sourceGenStable)" >> $env:GITHUB_OUTPUT
-          
+
           Write-Host ""
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -86,7 +86,7 @@ jobs:
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           Write-Host "🔧 Actualizando versiones a STABLE"
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          
+
           # Actualizar MauiPdfGenerator
           if ("${{ steps.extract_version.outputs.HAS_MAIN }}" -eq "True") {
             $version = "${{ steps.extract_version.outputs.MAIN_STABLE }}"
@@ -96,7 +96,7 @@ jobs:
           } else {
             Write-Host "⏭️  Core omitido (no hay versión)"
           }
-          
+
           # Actualizar SourceGenerators
           if ("${{ steps.extract_version.outputs.HAS_SOURCEGEN }}" -eq "True") {
             $version = "${{ steps.extract_version.outputs.SOURCEGEN_STABLE }}"
@@ -106,7 +106,7 @@ jobs:
           } else {
             Write-Host "⏭️  SourceGenerators omitido (no hay versión)"
           }
-          
+
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Setup .NET 10
@@ -116,6 +116,7 @@ jobs:
 
       - name: Install MAUI Workloads
         run: dotnet workload install maui --ignore-failed-sources
+        timeout-minutes: 15
 
       - name: Restore dependencies
         run: dotnet restore MauiPdfGenerator.sln
@@ -155,28 +156,28 @@ jobs:
             Write-Host "⚠️  No hay paquetes para publicar"
             exit 0
           }
-          
+
           $packages = Get-ChildItem ./nupkgs/*.nupkg
           $publishedCount = 0
           $skippedCount = 0
-          
+
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           Write-Host "📤 Publicando paquetes STABLE a NuGet"
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          
+
           foreach ($package in $packages) {
             Write-Host ""
             Write-Host "Procesando: $($package.Name)"
-            
+
             try {
               $output = dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate 2>&1
-              
+
               if ($LASTEXITCODE -eq 0) {
                 if ($output -match "already exists") {
                   Write-Host "⏭️  Ya existe en NuGet - omitido"
                   $skippedCount++
                 } else {
-                  Write-Host "✅ Publicado exitosamente"
+                  Write-Host "✅Publicado exitosamente"
                   $publishedCount++
                 }
               } else {
@@ -188,7 +189,7 @@ jobs:
               $skippedCount++
             }
           }
-          
+
           Write-Host ""
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           Write-Host "📊 Resumen:"
@@ -205,17 +206,17 @@ jobs:
           prerelease: false
           body: |
             ## 🎉 Stable Release
-            
+
             Esta es una versión estable promocionada desde preview.
-            
+
             ### 📦 Paquetes publicados
             ${{ steps.extract_version.outputs.HAS_MAIN == 'True' && format('- RandAMediaLabGroup.MauiPdfGenerator {0} (desde {1})', steps.extract_version.outputs.MAIN_STABLE, steps.extract_version.outputs.MAIN_PREVIEW) || '' }}
             ${{ steps.extract_version.outputs.HAS_SOURCEGEN == 'True' && format('- RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators {0} (desde {1})', steps.extract_version.outputs.SOURCEGEN_STABLE, steps.extract_version.outputs.SOURCEGEN_PREVIEW) || '' }}
-            
+
             ### 🔗 PR Original
             ${{ github.event.pull_request.html_url }}
-            
+
             ### ✨ Cambios
-             Ver el Pull Request para detalles completos de los cambios incluidos en esta versión.
-         env:
-           GITHUB_TOKEN: ${{ secrets.INTERNAL_GITHUB_TOKEN }}
+            Ver el Pull Request para detalles completos de los cambios incluidos en esta versión.
+        env:
+          GITHUB_TOKEN: ${{ secrets.INTERNAL_GITHUB_TOKEN }}

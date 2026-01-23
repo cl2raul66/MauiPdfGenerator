@@ -116,6 +116,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Install MAUI Workloads
+        if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true'
         run: dotnet workload install maui --ignore-failed-sources
         timeout-minutes: 15
 

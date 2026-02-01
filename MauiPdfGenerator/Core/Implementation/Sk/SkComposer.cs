@@ -1,6 +1,5 @@
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Core.Exceptions;
-using MauiPdfGenerator.Core.Implementation.Sk.Views;
 using MauiPdfGenerator.Core.Implementation.Sk.Pages;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics.Interfaces;
@@ -8,6 +7,7 @@ using MauiPdfGenerator.Diagnostics.Listeners;
 using MauiPdfGenerator.Fluent.Builders;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk;
 

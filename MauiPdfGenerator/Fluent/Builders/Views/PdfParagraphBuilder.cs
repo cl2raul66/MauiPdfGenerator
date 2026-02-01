@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Styling;
@@ -48,9 +47,7 @@ internal class PdfParagraphBuilder :
 
     public PdfElementData GetModel() => _model;
 
-    // =========================================================================
-    // API PÚBLICA (Fluent API General)
-    // =========================================================================
+    
 
     public IPdfGridChildParagraph Style(PdfStyleIdentifier key)
     {
@@ -100,9 +97,7 @@ internal class PdfParagraphBuilder :
     public IPdfGridChildParagraph RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildParagraph ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
 
-    // =========================================================================
-    // IMPLEMENTACIÓN EXPLÍCITA: IPdfParagraph (Contexto: Recursos)
-    // =========================================================================
+
 
     IPdfParagraph IPdfParagraph<IPdfParagraph>.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
     IPdfParagraph IPdfParagraph<IPdfParagraph>.FontSize(float s) { FontSize(s); return this; }
@@ -127,9 +122,7 @@ internal class PdfParagraphBuilder :
     IPdfParagraph IPdfElement<IPdfParagraph>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfParagraph IPdfElement<IPdfParagraph>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // =========================================================================
-    // IMPLEMENTACIÓN EXPLÍCITA: IPdfPageChildParagraph (Contexto: Content)
-    // =========================================================================
+
 
     IPdfPageChildParagraph IPdfStylableElement<IPdfPageChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
 
@@ -156,9 +149,7 @@ internal class PdfParagraphBuilder :
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // =========================================================================
-    // IMPLEMENTACIÓN EXPLÍCITA: IPdfLayoutChildParagraph (Contexto: StackLayout)
-    // =========================================================================
+    
 
     IPdfLayoutChildParagraph IPdfStylableElement<IPdfLayoutChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
 
@@ -187,9 +178,7 @@ internal class PdfParagraphBuilder :
     IPdfLayoutChildParagraph IPdfLayoutChild<IPdfLayoutChildParagraph>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildParagraph IPdfLayoutChild<IPdfLayoutChildParagraph>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    // =========================================================================
-    // IMPLEMENTACIÓN EXPLÍCITA: IPdfGridChildParagraph (Contexto: Grid)
-    // =========================================================================
+    
 
     IPdfGridChildParagraph IPdfStylableElement<IPdfGridChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
 

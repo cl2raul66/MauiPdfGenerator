@@ -1,6 +1,6 @@
 using SkiaSharp;
 
-namespace MauiPdfGenerator.Core.Models;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Models;
 
 internal record SpanRun(
     int StartIndex,

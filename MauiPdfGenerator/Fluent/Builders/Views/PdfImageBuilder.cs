@@ -40,15 +40,11 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     public IPdfGridChildImage RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildImage ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
 
-    // Style público SÍ existe
     public IPdfGridChildImage Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
-
-    // 1. IPdfImage (Recursos) -> NO TIENE STYLE
     IPdfImage IPdfImage<IPdfImage>.Aspect(Aspect a) { Aspect(a); return this; }
-    // IPdfElement<IPdfImage>.Style(...) -> ELIMINADO (Correcto)
     IPdfImage IPdfElement<IPdfImage>.Margin(double u) { Margin(u); return this; }
     IPdfImage IPdfElement<IPdfImage>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfImage IPdfElement<IPdfImage>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -59,7 +55,6 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfImage IPdfElement<IPdfImage>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfImage IPdfElement<IPdfImage>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // 2. IPdfPageChildImage (Content) -> SÍ TIENE STYLE
     IPdfPageChildImage IPdfStylableElement<IPdfPageChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
 
     IPdfPageChildImage IPdfImage<IPdfPageChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
@@ -73,7 +68,6 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // 3. IPdfLayoutChildImage (Content) -> SÍ TIENE STYLE
     IPdfLayoutChildImage IPdfStylableElement<IPdfLayoutChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
 
     IPdfLayoutChildImage IPdfImage<IPdfLayoutChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
@@ -88,8 +82,6 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
     IPdfLayoutChildImage IPdfLayoutChild<IPdfLayoutChildImage>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildImage IPdfLayoutChild<IPdfLayoutChildImage>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
-
-    // 4. IPdfGridChildImage (Content) -> SÍ TIENE STYLE
     IPdfGridChildImage IPdfStylableElement<IPdfGridChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
 
     IPdfGridChildImage IPdfImage<IPdfGridChildImage>.Aspect(Aspect a) { Aspect(a); return this; }

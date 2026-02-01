@@ -8,9 +8,9 @@ using MauiPdfGenerator.Fluent.Models;
 namespace MauiPdfGenerator.Fluent.Builders.Views;
 
 internal class PdfSpanBuilder :
-    IPdfBuildableSpan,  // Contexto: Content (Tiene Style, Margin, etc.)
-    IPdfSpan,           // Contexto: Recursos (NO Tiene Style)
-    IPdfTextStyles      // Interno
+    IPdfBuildableSpan,  
+    IPdfSpan, 
+    IPdfTextStyles 
 {
     private readonly PdfSpanData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
@@ -25,10 +25,6 @@ internal class PdfSpanBuilder :
 
     internal PdfSpanData GetModel() => _model;
 
-    // =========================================================================
-    // API PÚBLICA (Fluent API - IPdfBuildableSpan)
-    // =========================================================================
-
     public IPdfBuildableSpan Style(PdfStyleIdentifier key)
     {
         ((IPdfTextStyles)this).ApplyStyle(key);
@@ -37,7 +33,8 @@ internal class PdfSpanBuilder :
 
     public IPdfBuildableSpan Text(string text) => this;
 
-    // Propiedades de Texto
+
+
     public IPdfBuildableSpan FontFamily(PdfFontIdentifier? family) { ((IPdfTextStyles)this).ApplyFontFamily(family); return this; }
     public IPdfBuildableSpan FontSize(float size) { ((IPdfTextStyles)this).ApplyFontSize(size); return this; }
     public IPdfBuildableSpan TextColor(Color color) { ((IPdfTextStyles)this).ApplyTextColor(color); return this; }
@@ -45,8 +42,8 @@ internal class PdfSpanBuilder :
     public IPdfBuildableSpan TextDecorations(TextDecorations decorations) { ((IPdfTextStyles)this).ApplyTextDecorations(decorations); return this; }
     public IPdfBuildableSpan TextTransform(TextTransform transform) { ((IPdfTextStyles)this).ApplyTextTransform(transform); return this; }
 
-    // Propiedades de Elemento (Aunque los Spans suelen ignorar Margin/Padding, la interfaz lo requiere)
-    // Devolvemos 'this' para mantener la cadena, pero no aplicamos nada al modelo porque PdfSpanData no soporta caja.
+
+
     public IPdfBuildableSpan Margin(double u) => this;
     public IPdfBuildableSpan Margin(double h, double v) => this;
     public IPdfBuildableSpan Margin(double l, double t, double r, double b) => this;
@@ -57,17 +54,12 @@ internal class PdfSpanBuilder :
     public IPdfBuildableSpan HeightRequest(double h) => this;
     public IPdfBuildableSpan BackgroundColor(Color? c) => this;
 
-    // Sobrecarga de conveniencia
     public IPdfBuildableSpan Style(string key) => Style(new PdfStyleIdentifier(key));
 
 
-    // =========================================================================
-    // IMPLEMENTACIÓN EXPLÍCITA: IPdfBuildableSpan (Para resolver conflictos)
-    // =========================================================================
 
     IPdfBuildableSpan IPdfStylableElement<IPdfBuildableSpan>.Style(PdfStyleIdentifier k) => Style(k);
 
-    // Implementación explícita de IPdfElement<IPdfBuildableSpan> (Lo que daba error antes)
     IPdfBuildableSpan IPdfElement<IPdfBuildableSpan>.Margin(double u) => this;
     IPdfBuildableSpan IPdfElement<IPdfBuildableSpan>.Margin(double h, double v) => this;
     IPdfBuildableSpan IPdfElement<IPdfBuildableSpan>.Margin(double l, double t, double r, double b) => this;
@@ -79,11 +71,7 @@ internal class PdfSpanBuilder :
     IPdfBuildableSpan IPdfElement<IPdfBuildableSpan>.BackgroundColor(Color? c) => this;
 
 
-    // =========================================================================
-    // IMPLEMENTACIÓN EXPLÍCITA: IPdfSpan (Contexto: Recursos)
-    // NO tiene Style()
-    // =========================================================================
-
+    
     IPdfSpan IPdfSpan.Text(string text) => this;
 
     IPdfSpan IPdfSpanStyles.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
@@ -93,7 +81,6 @@ internal class PdfSpanBuilder :
     IPdfSpan IPdfSpanStyles.TextDecorations(TextDecorations d) { TextDecorations(d); return this; }
     IPdfSpan IPdfSpanStyles.TextTransform(TextTransform t) { TextTransform(t); return this; }
 
-    // Implementación de IPdfElement<IPdfSpan>
     IPdfSpan IPdfElement<IPdfSpan>.Margin(double u) => this;
     IPdfSpan IPdfElement<IPdfSpan>.Margin(double h, double v) => this;
     IPdfSpan IPdfElement<IPdfSpan>.Margin(double l, double t, double r, double b) => this;
@@ -104,10 +91,7 @@ internal class PdfSpanBuilder :
     IPdfSpan IPdfElement<IPdfSpan>.HeightRequest(double h) => this;
     IPdfSpan IPdfElement<IPdfSpan>.BackgroundColor(Color? c) => this;
 
-
-    // =========================================================================
-    // LÓGICA INTERNA (IPdfTextStyles)
-    // =========================================================================
+        
 
     void IPdfTextStyles.ApplyFontFamily(PdfFontIdentifier? family)
     {
@@ -131,10 +115,13 @@ internal class PdfSpanBuilder :
         var setter = _resourceDictionary.GetCombinedSetter(key);
         if (setter is null) return;
 
-        var tempSpan = new PdfSpanData();
-        setter(tempSpan);
+        var tempBuilder = new PdfSpanBuilder(0, _fontRegistry, _resourceDictionary);
 
-        MergeProperties(_model, tempSpan);
+        setter(tempBuilder);
+
+        var tempModel = tempBuilder.GetModel();
+
+        MergeProperties(_model, tempModel);
     }
 
     private void MergeProperties(PdfSpanData target, PdfSpanData source)

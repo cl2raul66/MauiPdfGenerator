@@ -36,14 +36,12 @@ public static class MauiPdfGeneratorExtensions
             )
         );
 
-        // Registro de la infraestructura de diagnóstico base
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDiagnosticListener, ConsoleDiagnosticListener>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDiagnosticListener, LoggingDiagnosticListener>(sp =>
             new LoggingDiagnosticListener(sp.GetRequiredService<ILoggerFactory>())
         ));
         builder.Services.TryAddSingleton<IDiagnosticSink, DiagnosticSink>();
 
-        // Registro del motor de renderizado
         builder.Services.TryAddSingleton<IPdfCoreGenerator, SkComposer>();
 
         return builder;
@@ -105,6 +103,4 @@ public static class MauiPdfGeneratorExtensions
 
         return builder;
     }
-
-    // Test comment for workflow
 }

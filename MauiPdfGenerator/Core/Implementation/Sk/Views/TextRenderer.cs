@@ -1,6 +1,8 @@
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Utils;
+using MauiPdfGenerator.Core.Implementation.Sk.Models;
+using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
@@ -859,7 +861,6 @@ internal class TextRenderer : IElementRenderer
     }
 
     #region Span Support
-
     private async Task<List<SpanRun>> ResolveSpanRunsAsync(
         PdfParagraphData paragraph,
         PdfGenerationContext context,

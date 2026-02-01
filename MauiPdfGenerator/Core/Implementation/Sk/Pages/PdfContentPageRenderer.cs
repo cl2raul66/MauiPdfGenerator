@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 using MauiPdfGenerator.Core.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;

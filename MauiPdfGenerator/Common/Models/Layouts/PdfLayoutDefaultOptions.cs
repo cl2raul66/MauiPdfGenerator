@@ -1,7 +1,4 @@
-using MauiPdfGenerator.Common.Models;
-using MauiPdfGenerator.Common.Models.Layouts;
-
-namespace MauiPdfGenerator.Fluent.Models;
+namespace MauiPdfGenerator.Common.Models.Layouts;
 
 public class PdfLayoutDefaultOptions
 {
@@ -15,11 +12,6 @@ public class PdfLayoutDefaultOptions
 
     private static readonly DefaultOptions ContentPageDefaults = new(
         HorizontalOptions: LayoutAlignment.Fill,
-        VerticalOptions: LayoutAlignment.Start
-    );
-
-    private static readonly DefaultOptions GridCellDefaults = new(
-        HorizontalOptions: LayoutAlignment.Start,
         VerticalOptions: LayoutAlignment.Start
     );
 

@@ -114,10 +114,7 @@ internal static class SkiaUtils
         typefaceFromExplicitFile?.Dispose();
         return finalTypeface;
     }
-    internal static string? GetMauiFontFilePath(string fontAlias)
-    {
-        return null;
-    }
+    
     public static SKColor ConvertToSkColor(Color? mauiColor)
     {
         if (mauiColor is null) return SKColors.Black;
@@ -127,6 +124,7 @@ internal static class SkiaUtils
         float a = Math.Clamp(mauiColor.Alpha, 0f, 1f);
         return new SKColor((byte)(r * 255), (byte)(g * 255), (byte)(b * 255), (byte)(a * 255));
     }
+
     public static SKSize GetSkPageSize(PageSizeType size, PageOrientationType orientation)
     {
         float width, height;

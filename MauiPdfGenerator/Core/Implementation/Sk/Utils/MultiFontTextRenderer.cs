@@ -1,7 +1,7 @@
-using MauiPdfGenerator.Core.Models;
+using MauiPdfGenerator.Core.Implementation.Sk.Models;
 using SkiaSharp;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 internal class MultiFontTextRenderer
 {
@@ -28,7 +28,7 @@ internal class MultiFontTextRenderer
         for (int i = 0; i < text.Length; i++)
         {
             int absoluteIndex = lineStartIndex + i;
-            totalWidth += GetCharWidth(absoluteIndex);
+            totalWidth += GetCharWidth(absoluteIndex, text[i]);
         }
 
         return totalWidth;
@@ -44,25 +44,24 @@ internal class MultiFontTextRenderer
 
     public float MeasureTextWidth(int absoluteIndex)
     {
-        return GetCharWidth(absoluteIndex);
-    }
-
-    private float GetCharWidth(int absoluteIndex)
-    {
         if (absoluteIndex < 0 || absoluteIndex >= _originalText.Length)
             return _defaultFont.MeasureText(" ");
 
-        char c = _originalText[absoluteIndex];
+        return GetCharWidth(absoluteIndex, _originalText[absoluteIndex]);
+    }
 
-        foreach (var run in _spanRuns)
+    private float GetCharWidth(int absoluteIndex, char character)
+    {
+        var run = GetRunAtAbsoluteIndex(absoluteIndex);
+        SKFont font = run?.Font ?? _defaultFont;
+
+        string textToMeasure = character.ToString();
+        if (run?.Transform is not null)
         {
-            if (absoluteIndex >= run.StartIndex && absoluteIndex < run.EndIndex)
-            {
-                return run.Font.MeasureText(c.ToString());
-            }
+            textToMeasure = ApplyTransform(textToMeasure, run.Transform.Value);
         }
 
-        return _defaultFont.MeasureText(c.ToString());
+        return font.MeasureText(textToMeasure);
     }
 
     private SpanRun? GetRunAtAbsoluteIndex(int absoluteIndex)
@@ -92,6 +91,12 @@ internal class MultiFontTextRenderer
             SKPaint paint = run?.Paint ?? _defaultPaint;
 
             string charText = text[i].ToString();
+
+            if (run?.Transform is not null)
+            {
+                charText = ApplyTransform(charText, run.Transform.Value);
+            }
+
             float charWidth = font.MeasureText(charText);
 
             canvas.DrawText(charText, currentX, y, font, paint);
@@ -105,28 +110,34 @@ internal class MultiFontTextRenderer
         if (string.IsNullOrEmpty(text))
             return;
 
-        DrawText(canvas, text, x, y, lineStartIndex);
-
         float currentX = x;
 
         for (int i = 0; i < text.Length; i++)
         {
             int absoluteIndex = lineStartIndex + i;
             var run = GetRunAtAbsoluteIndex(absoluteIndex);
+
+            SKFont font = run?.Font ?? _defaultFont;
+            SKPaint paint = run?.Paint ?? _defaultPaint;
             TextDecorations decorations = run?.Decorations ?? paragraphDecorations;
+
+            string charText = text[i].ToString();
+
+            if (run?.Transform is not null)
+            {
+                charText = ApplyTransform(charText, run.Transform.Value);
+            }
+
+            float charWidth = font.MeasureText(charText);
+
+            canvas.DrawText(charText, currentX, y, font, paint);
 
             if (decorations is not TextDecorations.None)
             {
-                SKFont font = run?.Font ?? _defaultFont;
-                SKPaint paint = run?.Paint ?? _defaultPaint;
-                string charText = text[i].ToString();
-                float charWidth = font.MeasureText(charText);
-
                 DrawTextDecorations(canvas, font, paint, decorations, currentX, y, charWidth);
             }
 
-            var charFont = run?.Font ?? _defaultFont;
-            currentX += charFont.MeasureText(text[i].ToString());
+            currentX += charWidth;
         }
     }
 
@@ -160,6 +171,16 @@ internal class MultiFontTextRenderer
             }
             canvas.DrawLine(x, strikeY, x + width, strikeY, decorationPaint);
         }
+    }
+
+    private string ApplyTransform(string text, TextTransform transform)
+    {
+        return transform switch
+        {
+            TextTransform.Uppercase => text.ToUpperInvariant(),
+            TextTransform.Lowercase => text.ToLowerInvariant(),
+            _ => text
+        };
     }
 
     public bool HasMultipleFonts => _spanRuns.Count > 1 ||

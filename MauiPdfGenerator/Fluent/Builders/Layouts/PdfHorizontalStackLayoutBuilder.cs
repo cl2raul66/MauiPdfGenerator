@@ -39,7 +39,6 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
 
     #region Public API
     public IPdfGridChildHorizontalStackLayout Spacing(float value) { _model.SetSpacing(value); return this; }
-
     public IPdfGridChildHorizontalStackLayout Margin(double u) { _model.SetMargin(u); return this; }
     public IPdfGridChildHorizontalStackLayout Margin(double h, double v) { _model.SetMargin(h, v); return this; }
     public IPdfGridChildHorizontalStackLayout Margin(double l, double t, double r, double b) { _model.SetMargin(l, t, r, b); return this; }
@@ -55,14 +54,16 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     public IPdfGridChildHorizontalStackLayout Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildHorizontalStackLayout RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildHorizontalStackLayout ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+
     public IPdfGridChildHorizontalStackLayout Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
-    // IPdfHorizontalStackLayout
+
+    // 1. IPdfHorizontalStackLayout (Recursos) -> NO TIENE STYLE
     IPdfHorizontalStackLayout IPdfHorizontalStackLayout<IPdfHorizontalStackLayout>.Spacing(float v) { Spacing(v); return this; }
     void IPdfHorizontalStackLayout<IPdfHorizontalStackLayout>.Children(Action<IPdfStackLayoutBuilder> s) { Children(s); }
-    IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Margin(double u) { Margin(u); return this; }
     IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfHorizontalStackLayout IPdfElement<IPdfHorizontalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -75,10 +76,11 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     IPdfHorizontalStackLayout IPdfLayoutChild<IPdfHorizontalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfHorizontalStackLayout IPdfLayoutChild<IPdfHorizontalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    // IPdfLayoutChildHorizontalStackLayout
+    // 2. IPdfLayoutChildHorizontalStackLayout (Content) -> SÍ TIENE STYLE
+    IPdfLayoutChildHorizontalStackLayout IPdfStylableElement<IPdfLayoutChildHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfLayoutChildHorizontalStackLayout IPdfHorizontalStackLayout<IPdfLayoutChildHorizontalStackLayout>.Spacing(float v) { Spacing(v); return this; }
     void IPdfHorizontalStackLayout<IPdfLayoutChildHorizontalStackLayout>.Children(Action<IPdfStackLayoutBuilder> s) { Children(s); }
-    IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfElement<IPdfLayoutChildHorizontalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -91,7 +93,7 @@ internal class PdfHorizontalStackLayoutBuilder : IBuildablePdfElement, IPdfHoriz
     IPdfLayoutChildHorizontalStackLayout IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildHorizontalStackLayout IPdfLayoutChild<IPdfLayoutChildHorizontalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    // IPdfGridChildHorizontalStackLayout
-    IPdfGridChildHorizontalStackLayout IPdfElement<IPdfGridChildHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+    // 3. IPdfGridChildHorizontalStackLayout (Content) -> SÍ TIENE STYLE
+    IPdfGridChildHorizontalStackLayout IPdfStylableElement<IPdfGridChildHorizontalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     #endregion
 }

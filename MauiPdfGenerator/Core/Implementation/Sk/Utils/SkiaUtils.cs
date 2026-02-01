@@ -1,7 +1,7 @@
 ﻿using MauiPdfGenerator.Fluent.Enums;
 using SkiaSharp;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 internal static class SkiaUtils
 {

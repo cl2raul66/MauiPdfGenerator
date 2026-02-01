@@ -122,7 +122,7 @@ internal class PdfGridBuilder : IPdfGrid, IPdfGridLayout, IBuildablePdfElement
     #endregion
 
     #region Explicit Interface Implementations (IPdfGrid)
-    IPdfGrid IPdfElement<IPdfGrid>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+    // IPdfElement<IPdfGrid>.Style(...) -> ELIMINADO
     IPdfGrid IPdfElement<IPdfGrid>.Margin(double u) { Margin(u); return this; }
     IPdfGrid IPdfElement<IPdfGrid>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfGrid IPdfElement<IPdfGrid>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }

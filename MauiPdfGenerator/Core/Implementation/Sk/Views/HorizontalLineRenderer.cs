@@ -2,6 +2,7 @@ using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Common.Models.Views;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 

@@ -1,12 +1,12 @@
 using MauiPdfGenerator.Common.Models;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Models.Layouts;
-using MauiPdfGenerator.Core.Implementation.Sk;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
 using SkiaSharp;
+using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 

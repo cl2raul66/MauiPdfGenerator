@@ -1,10 +1,6 @@
 # MauiPdfGenerator
 
-<div align="center">
-  <a href="https://www.youtube.com/watch?v=km1ibZJeInM">
-    <img src="https://img.youtube.com/vi/km1ibZJeInM/hqdefault.jpg" alt="Video" />
-  </a>
-</div>
+[![Getting Started - MauiPdfGenerator](https://img.youtube.com/vi/km1ibZJeInM/hqdefault.jpg)](https://www.youtube.com/watch?v=km1ibZJeInM)
 
 ## Create PDFs with the .NET MAUI API You Already Know
 

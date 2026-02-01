@@ -10,12 +10,3 @@ internal record SpanRun(
     TextDecorations? Decorations,
     TextTransform? Transform
 );
-
-internal record LineRunInfo(
-    string Line,
-    int LineStartIndex,
-    List<SpanRun> IntersectingRuns
-)
-{
-    public bool HasMultipleRuns => IntersectingRuns.Count > 1;
-}

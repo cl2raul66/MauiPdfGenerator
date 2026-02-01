@@ -1,8 +1,14 @@
 using MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Models.Layouts;
+using MauiPdfGenerator.Core.Implementation.Sk.Views;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Utils;
+
+internal interface IElementRendererFactory
+{
+    IElementRenderer GetRenderer(object element);
+}
 
 internal class ElementRendererFactory : IElementRendererFactory
 {

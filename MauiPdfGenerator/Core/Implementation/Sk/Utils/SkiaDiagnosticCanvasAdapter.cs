@@ -4,7 +4,7 @@ using MauiPdfGenerator.Diagnostics.Interfaces;
 using MauiPdfGenerator.Diagnostics.Models;
 using SkiaSharp;
 
-namespace MauiPdfGenerator.Core.Implementation.Sk;
+namespace MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 internal class SkiaDiagnosticCanvasAdapter : IDiagnosticCanvas
 {

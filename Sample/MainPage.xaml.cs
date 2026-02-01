@@ -35,7 +35,7 @@ public partial class MainPage : ContentPage
                     rd.Style<IPdfParagraph>("Title", s =>
                     {
                         s.FontSize(24);
-                        s.FontAttributes(FontAttributes.Bold);
+                        s.FontAttributes(FontAttributes.Bold); 
                         s.TextColor(Colors.DarkBlue);
                         s.HorizontalTextAlignment(TextAlignment.Center);
                     });
@@ -55,6 +55,7 @@ public partial class MainPage : ContentPage
                     {
                         s.FontSize(10);
                         s.FontAttributes(FontAttributes.Bold);
+                        s.TextTransform(TextTransform.Uppercase);
                         s.TextColor(Colors.Indigo);
                     });
                     rd.Style<IPdfSpan>("NoteMsg", s =>

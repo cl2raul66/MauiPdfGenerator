@@ -6,6 +6,7 @@ using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
 using System.Diagnostics;
+using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
 

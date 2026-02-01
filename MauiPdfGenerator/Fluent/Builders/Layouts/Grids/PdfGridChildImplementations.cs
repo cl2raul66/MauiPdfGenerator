@@ -19,7 +19,7 @@ internal class PdfGridChildParagraphBuilder : PdfGridChildBuilder<PdfParagraphBu
     public IPdfGridChildParagraph VerticalTextAlignment(TextAlignment alignment) { _internalBuilder.VerticalTextAlignment(alignment); return this; }
     public IPdfGridChildParagraph FontAttributes(FontAttributes attributes) { _internalBuilder.FontAttributes(attributes); return this; }
     public IPdfGridChildParagraph LineBreakMode(LineBreakMode mode) { _internalBuilder.LineBreakMode(mode); return this; }
-public IPdfGridChildParagraph TextDecorations(TextDecorations decorations) { _internalBuilder.TextDecorations(decorations); return this; }
+    public IPdfGridChildParagraph TextDecorations(TextDecorations decorations) { _internalBuilder.TextDecorations(decorations); return this; }
     public IPdfGridChildParagraph TextTransform(TextTransform transform) { _internalBuilder.TextTransform(transform); return this; }
     public IPdfGridChildParagraph CharacterSpacing(float spacing) { _internalBuilder.CharacterSpacing(spacing); return this; }
     public IPdfGridChildParagraph WordSpacing(float spacing) { _internalBuilder.WordSpacing(spacing); return this; }
@@ -81,12 +81,12 @@ internal class PdfGridChildImageBuilder : PdfGridChildBuilder<PdfImageBuilder, I
 
     IPdfGridChildImage IPdfGridChild<IPdfGridChildImage>.ColumnSpan(int span)
     {
-        _internalBuilder.ColumnSpan(span); return this; 
+        _internalBuilder.ColumnSpan(span); return this;
     }
 
     IPdfGridChildImage IPdfLayoutChild<IPdfGridChildImage>.HorizontalOptions(LayoutAlignment layoutAlignment)
     {
-           _internalBuilder.HorizontalOptions(layoutAlignment); return this;
+        _internalBuilder.HorizontalOptions(layoutAlignment); return this;
     }
 
     IPdfGridChildImage IPdfLayoutChild<IPdfGridChildImage>.VerticalOptions(LayoutAlignment layoutAlignment)
@@ -139,7 +139,8 @@ internal class PdfGridChildImageBuilder : PdfGridChildBuilder<PdfImageBuilder, I
         _internalBuilder.BackgroundColor(color); return this;
     }
 
-    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Style(PdfStyleIdentifier key)
+    // SÍ implementa Style porque IPdfGridChildImage hereda de IPdfStylableElement
+    IPdfGridChildImage IPdfStylableElement<IPdfGridChildImage>.Style(PdfStyleIdentifier key)
     {
         _internalBuilder.Style(key); return this;
     }
@@ -165,7 +166,7 @@ internal class PdfGridChildHorizontalLineBuilder : PdfGridChildBuilder<PdfHorizo
 
     public IPdfGridChildHorizontalLine Style(PdfStyleIdentifier key)
     {
-       _internalBuilder.Style(key); return this;
+        _internalBuilder.Style(key); return this;
     }
 }
 
@@ -185,11 +186,11 @@ internal class PdfGridChildVerticalStackLayoutBuilder : PdfGridChildBuilder<PdfV
     public IPdfGridChildVerticalStackLayout BackgroundColor(Color? color) { _internalBuilder.BackgroundColor(color); return this; }
     public IPdfGridChildVerticalStackLayout HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildVerticalStackLayout VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
-    public void Children(Action<IPdfStackLayoutBuilder> childrenSetup){ _internalBuilder.Children(childrenSetup); }
+    public void Children(Action<IPdfStackLayoutBuilder> childrenSetup) { _internalBuilder.Children(childrenSetup); }
 
     public IPdfGridChildVerticalStackLayout Style(PdfStyleIdentifier key)
     {
-       _internalBuilder.Style(key); return this;
+        _internalBuilder.Style(key); return this;
     }
 }
 
@@ -209,7 +210,7 @@ internal class PdfGridChildHorizontalStackLayoutBuilder : PdfGridChildBuilder<Pd
     public IPdfGridChildHorizontalStackLayout BackgroundColor(Color? color) { _internalBuilder.BackgroundColor(color); return this; }
     public IPdfGridChildHorizontalStackLayout HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildHorizontalStackLayout VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
-    public void Children(Action<IPdfStackLayoutBuilder> childrenSetup){ _internalBuilder.Children(childrenSetup); }
+    public void Children(Action<IPdfStackLayoutBuilder> childrenSetup) { _internalBuilder.Children(childrenSetup); }
 
     public IPdfGridChildHorizontalStackLayout Style(PdfStyleIdentifier key)
     {

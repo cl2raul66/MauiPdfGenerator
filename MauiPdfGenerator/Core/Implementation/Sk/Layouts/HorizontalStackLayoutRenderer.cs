@@ -6,6 +6,7 @@ using SkiaSharp;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
 using MauiPdfGenerator.Diagnostics.Models;
+using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Layouts;
 

@@ -17,7 +17,7 @@ internal interface IPdfContentPageBuilder : IPdfPageBuilder
     Color GetPageDefaultTextColor();
     FontAttributes GetPageDefaultFontAttributes();
     TextDecorations GetPageDefaultTextDecorations();
-TextTransform GetPageDefaultTextTransform();
+    TextTransform GetPageDefaultTextTransform();
     string GetEffectiveCulture();
     PdfResourceDictionary PageResources { get; }
 }

@@ -1,8 +1,214 @@
+El problema **no está en `PdfSpanBuilder.cs`** (ese código es correcto y está guardando las propiedades en el modelo), sino en cómo el motor de renderizado (`TextRenderer` y `MultiFontTextRenderer`) consume esas propiedades.
+
+Actualmente ocurren dos cosas:
+1.  **TextTransform (Uppercase):** El `MultiFontTextRenderer` dibuja el texto original del párrafo carácter por carácter, ignorando la propiedad `Transform` que guardaste en el `SpanRun`.
+2.  **FontAttributes (Bold/Italic):** SkiaSharp es estricto. Si solicitas "Comic Sans" + "Bold" y no tienes registrado el archivo de fuente específico (ej. `ComicSansBold.ttf`), Skia devuelve la fuente normal. A diferencia de MAUI (UI), Skia no aplica "falso negrita" (Fake Bold) o "falso itálica" (Skew) automáticamente; hay que configurarlo explícitamente en el `SKPaint`.
+
+Aquí tienes la solución completa implementando la lógica de renderizado faltante.
+
+### 1. Solución para TextTransform (`MultiFontTextRenderer.cs`)
+
+Este archivo necesita aplicar la transformación al texto antes de medirlo o dibujarlo.
+
+```csharp
+// Filename: MultiFontTextRenderer.cs
+using MauiPdfGenerator.Core.Models;
+using SkiaSharp;
+
+namespace MauiPdfGenerator.Core.Implementation.Sk.Views;
+
+internal class MultiFontTextRenderer
+{
+    private readonly List<SpanRun> _spanRuns;
+    private readonly SKFont _defaultFont;
+    private readonly SKPaint _defaultPaint;
+    private readonly string _originalText;
+
+    public MultiFontTextRenderer(List<SpanRun> spanRuns, SKFont defaultFont, SKPaint defaultPaint, string originalText)
+    {
+        _spanRuns = spanRuns;
+        _defaultFont = defaultFont;
+        _defaultPaint = defaultPaint;
+        _originalText = originalText;
+    }
+
+    public float MeasureTextWidth(string text, int lineStartIndex)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+
+        float totalWidth = 0;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            int absoluteIndex = lineStartIndex + i;
+            // Pasamos el caracter original para buscar el run, pero medimos el transformado
+            totalWidth += GetCharWidth(absoluteIndex, text[i]);
+        }
+
+        return totalWidth;
+    }
+
+    public float MeasureTextWidth(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+
+        return MeasureTextWidth(text, 0);
+    }
+
+    // Modificado para aceptar el char y aplicar transformación
+    private float GetCharWidth(int absoluteIndex, char originalChar)
+    {
+        var run = GetRunAtAbsoluteIndex(absoluteIndex);
+        SKFont font = run?.Font ?? _defaultFont;
+        
+        string textToMeasure = originalChar.ToString();
+        
+        // Aplicar transformación si existe en el run
+        if (run?.Transform.HasValue == true)
+        {
+            textToMeasure = ApplyTransform(textToMeasure, run.Transform.Value);
+        }
+
+        return font.MeasureText(textToMeasure);
+    }
+
+    private SpanRun? GetRunAtAbsoluteIndex(int absoluteIndex)
+    {
+        foreach (var run in _spanRuns)
+        {
+            if (absoluteIndex >= run.StartIndex && absoluteIndex < run.EndIndex)
+            {
+                return run;
+            }
+        }
+        return null;
+    }
+
+    public void DrawText(SKCanvas canvas, string text, float x, float y, int lineStartIndex)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        float currentX = x;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            int absoluteIndex = lineStartIndex + i;
+            var run = GetRunAtAbsoluteIndex(absoluteIndex);
+            SKFont font = run?.Font ?? _defaultFont;
+            SKPaint paint = run?.Paint ?? _defaultPaint;
+
+            string charText = text[i].ToString();
+
+            // ✅ FIX: Aplicar transformación antes de dibujar
+            if (run?.Transform.HasValue == true)
+            {
+                charText = ApplyTransform(charText, run.Transform.Value);
+            }
+
+            float charWidth = font.MeasureText(charText);
+
+            canvas.DrawText(charText, currentX, y, font, paint);
+
+            currentX += charWidth;
+        }
+    }
+
+    public void DrawTextWithDecorations(SKCanvas canvas, string text, float x, float y, int lineStartIndex, TextDecorations paragraphDecorations)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        // Dibujamos el texto base (que ya aplica transformaciones internamente en DrawText)
+        DrawText(canvas, text, x, y, lineStartIndex);
+
+        float currentX = x;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            int absoluteIndex = lineStartIndex + i;
+            var run = GetRunAtAbsoluteIndex(absoluteIndex);
+            TextDecorations decorations = run?.Decorations ?? paragraphDecorations;
+
+            string charText = text[i].ToString();
+            
+            // ✅ FIX: Necesitamos el texto transformado para medir correctamente el ancho de la decoración
+            if (run?.Transform.HasValue == true)
+            {
+                charText = ApplyTransform(charText, run.Transform.Value);
+            }
+
+            SKFont font = run?.Font ?? _defaultFont;
+            float charWidth = font.MeasureText(charText);
+
+            if (decorations is not TextDecorations.None)
+            {
+                SKPaint paint = run?.Paint ?? _defaultPaint;
+                DrawTextDecorations(canvas, font, paint, decorations, currentX, y, charWidth);
+            }
+
+            currentX += charWidth;
+        }
+    }
+
+    private void DrawTextDecorations(SKCanvas canvas, SKFont font, SKPaint paint, TextDecorations decorations, float x, float baselineY, float width)
+    {
+        float decorationThickness = Math.Max(1f, font.Size / 12f);
+        using var decorationPaint = new SKPaint
+        {
+            Color = paint.Color,
+            StrokeWidth = decorationThickness,
+            IsAntialias = true
+        };
+        SKFontMetrics fontMetrics = font.Metrics;
+
+        if ((decorations & TextDecorations.Underline) != 0)
+        {
+            float underlineY = baselineY + (fontMetrics.UnderlinePosition ?? decorationThickness * 2);
+            if (fontMetrics.UnderlineThickness.HasValue && fontMetrics.UnderlineThickness.Value > 0)
+            {
+                decorationPaint.StrokeWidth = fontMetrics.UnderlineThickness.Value;
+            }
+            canvas.DrawLine(x, underlineY, x + width, underlineY, decorationPaint);
+        }
+
+        if ((decorations & TextDecorations.Strikethrough) != 0)
+        {
+            float strikeY = baselineY + (fontMetrics.StrikeoutPosition ?? -fontMetrics.XHeight / 2f);
+            if (fontMetrics.StrikeoutThickness.HasValue && fontMetrics.StrikeoutThickness.Value > 0)
+            {
+                decorationPaint.StrokeWidth = fontMetrics.StrikeoutThickness.Value;
+            }
+            canvas.DrawLine(x, strikeY, x + width, strikeY, decorationPaint);
+        }
+    }
+
+    private string ApplyTransform(string text, TextTransform transform)
+    {
+        return transform switch
+        {
+            TextTransform.Uppercase => text.ToUpperInvariant(),
+            TextTransform.Lowercase => text.ToLowerInvariant(),
+            _ => text
+        };
+    }
+
+    public bool HasMultipleFonts => _spanRuns.Count > 1 ||
+        (_spanRuns.Count == 1 && _spanRuns[0].Font.Typeface != _defaultFont.Typeface);
+}
+```
+
+### 2. Solución para FontAttributes (`TextRenderer.cs`)
+
+Este archivo necesita activar `IsFakeBoldText` y `TextSkewX` (para itálica) cuando la fuente cargada no soporta nativamente el estilo solicitado.
+
+```csharp
+// Filename: TextRenderer.cs
 using MauiPdfGenerator.Common.Enums;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Common.Utils;
-using MauiPdfGenerator.Core.Implementation.Sk.Models;
-using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 using MauiPdfGenerator.Core.Models;
 using MauiPdfGenerator.Diagnostics;
 using MauiPdfGenerator.Diagnostics.Enums;
@@ -524,6 +730,17 @@ internal class TextRenderer : IElementRenderer
             Color = SkiaUtils.ConvertToSkColor(textColor),
             IsAntialias = true
         };
+
+        // ✅ FIX: Aplicar Fake Bold / Fake Italic si la fuente cargada no lo soporta nativamente
+        if ((fontAttributes & FontAttributes.Bold) != 0 && !typeface.IsBold)
+        {
+            paint.IsFakeBoldText = true;
+        }
+        if ((fontAttributes & FontAttributes.Italic) != 0 && !typeface.IsItalic)
+        {
+            paint.TextSkewX = -0.25f; // Valor estándar para simular itálica
+        }
+
         string originalText = paragraph.Text ?? string.Empty;
         string textToRender = textTransform switch
         {
@@ -765,7 +982,7 @@ internal class TextRenderer : IElementRenderer
         float currentWidth = 0;
         for (int i = 0; i < text.Length; i++)
         {
-            float charWidth = multiFontRenderer.MeasureTextWidth(text[i].ToString());
+            float charWidth = multiFontRenderer.MeasureTextWidth(i); // Usamos el índice relativo al string pasado
             if (currentWidth + charWidth > maxWidth)
             {
                 return i;
@@ -800,7 +1017,7 @@ internal class TextRenderer : IElementRenderer
 
             if (count == 0 && currentPosition < textLength)
             {
-                float charWidth = multiFontRenderer?.MeasureTextWidth(singleLine[currentPosition].ToString()) ?? font.MeasureText(singleLine[currentPosition].ToString());
+                float charWidth = multiFontRenderer?.MeasureTextWidth(currentPosition) ?? font.MeasureText(singleLine[currentPosition].ToString());
                 if (charWidth > maxWidth)
                 {
                     resultingLines.Add(singleLine.Substring(currentPosition, 1));
@@ -861,6 +1078,7 @@ internal class TextRenderer : IElementRenderer
     }
 
     #region Span Support
+
     private async Task<List<SpanRun>> ResolveSpanRunsAsync(
         PdfParagraphData paragraph,
         PdfGenerationContext context,
@@ -941,6 +1159,16 @@ internal class TextRenderer : IElementRenderer
                     IsAntialias = true
                 };
 
+                // ✅ FIX: Aplicar Fake Bold / Fake Italic para Spans
+                if ((fontAttributes & FontAttributes.Bold) != 0 && !typeface.IsBold)
+                {
+                    paint.IsFakeBoldText = true;
+                }
+                if ((fontAttributes & FontAttributes.Italic) != 0 && !typeface.IsItalic)
+                {
+                    paint.TextSkewX = -0.25f;
+                }
+
                 if (hasLocalDecorations)
                     decorations = span.CurrentTextDecorations;
 
@@ -973,3 +1201,4 @@ internal class TextRenderer : IElementRenderer
 
     #endregion
 }
+```

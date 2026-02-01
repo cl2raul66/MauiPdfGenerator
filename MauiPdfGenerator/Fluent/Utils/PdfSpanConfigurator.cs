@@ -2,9 +2,10 @@ using System.Text;
 using MauiPdfGenerator.Common.Models.Styling;
 using MauiPdfGenerator.Common.Models.Views;
 using MauiPdfGenerator.Fluent.Builders;
+using MauiPdfGenerator.Fluent.Builders.Views;
 using MauiPdfGenerator.Fluent.Interfaces.Views;
 
-namespace MauiPdfGenerator.Fluent.Builders.Views;
+namespace MauiPdfGenerator.Fluent.Utils;
 
 internal class PdfSpanConfigurator : IPdfSpanText
 {
@@ -24,7 +25,7 @@ internal class PdfSpanConfigurator : IPdfSpanText
         _resourceDictionary = resourceDictionary;
     }
 
-    public IPdfSpan Text(string text)
+    public IPdfBuildableSpan Text(string text)
     {
         var builder = new PdfSpanBuilder(text.Length, _fontRegistry, _resourceDictionary);
         _items.Add(new SpanItem { Text = text, Builder = builder });

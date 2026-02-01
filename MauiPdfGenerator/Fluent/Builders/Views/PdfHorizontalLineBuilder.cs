@@ -41,14 +41,16 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     public IPdfGridChildHorizontalLine Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildHorizontalLine RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildHorizontalLine ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+
     public IPdfGridChildHorizontalLine Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
-    // IPdfHorizontalLine
+
+    // 1. IPdfHorizontalLine (Recursos) -> NO TIENE STYLE
     IPdfHorizontalLine IPdfHorizontalLine<IPdfHorizontalLine>.Thickness(float v) { Thickness(v); return this; }
     IPdfHorizontalLine IPdfHorizontalLine<IPdfHorizontalLine>.Color(Color c) { Color(c); return this; }
-    IPdfHorizontalLine IPdfElement<IPdfHorizontalLine>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+    // IPdfElement<IPdfHorizontalLine>.Style(...) -> ELIMINADO
     IPdfHorizontalLine IPdfElement<IPdfHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfHorizontalLine IPdfElement<IPdfHorizontalLine>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfHorizontalLine IPdfElement<IPdfHorizontalLine>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -59,10 +61,11 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     IPdfHorizontalLine IPdfElement<IPdfHorizontalLine>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfHorizontalLine IPdfElement<IPdfHorizontalLine>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // IPdfPageChildHorizontalLine
+    // 2. IPdfPageChildHorizontalLine (Content) -> SÍ TIENE STYLE
+    IPdfPageChildHorizontalLine IPdfStylableElement<IPdfPageChildHorizontalLine>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfPageChildHorizontalLine IPdfHorizontalLine<IPdfPageChildHorizontalLine>.Thickness(float v) { Thickness(v); return this; }
     IPdfPageChildHorizontalLine IPdfHorizontalLine<IPdfPageChildHorizontalLine>.Color(Color c) { Color(c); return this; }
-    IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -73,10 +76,11 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfPageChildHorizontalLine IPdfElement<IPdfPageChildHorizontalLine>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // IPdfLayoutChildHorizontalLine
+    // 3. IPdfLayoutChildHorizontalLine (Content) -> SÍ TIENE STYLE
+    IPdfLayoutChildHorizontalLine IPdfStylableElement<IPdfLayoutChildHorizontalLine>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfLayoutChildHorizontalLine IPdfHorizontalLine<IPdfLayoutChildHorizontalLine>.Thickness(float v) { Thickness(v); return this; }
     IPdfLayoutChildHorizontalLine IPdfHorizontalLine<IPdfLayoutChildHorizontalLine>.Color(Color c) { Color(c); return this; }
-    IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfLayoutChildHorizontalLine IPdfElement<IPdfLayoutChildHorizontalLine>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -89,10 +93,11 @@ internal class PdfHorizontalLineBuilder : IBuildablePdfElement, IPdfPageChildHor
     IPdfLayoutChildHorizontalLine IPdfLayoutChild<IPdfLayoutChildHorizontalLine>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildHorizontalLine IPdfLayoutChild<IPdfLayoutChildHorizontalLine>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    // IPdfGridChildHorizontalLine
+    // 4. IPdfGridChildHorizontalLine (Content) -> SÍ TIENE STYLE
+    IPdfGridChildHorizontalLine IPdfStylableElement<IPdfGridChildHorizontalLine>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfGridChildHorizontalLine IPdfHorizontalLine<IPdfGridChildHorizontalLine>.Thickness(float v) { Thickness(v); return this; }
     IPdfGridChildHorizontalLine IPdfHorizontalLine<IPdfGridChildHorizontalLine>.Color(Color c) { Color(c); return this; }
-    IPdfGridChildHorizontalLine IPdfElement<IPdfGridChildHorizontalLine>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfGridChildHorizontalLine IPdfElement<IPdfGridChildHorizontalLine>.Margin(double u) { Margin(u); return this; }
     IPdfGridChildHorizontalLine IPdfElement<IPdfGridChildHorizontalLine>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfGridChildHorizontalLine IPdfElement<IPdfGridChildHorizontalLine>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }

@@ -55,14 +55,16 @@ internal class PdfVerticalStackLayoutBuilder : IBuildablePdfElement, IPdfVertica
     public IPdfGridChildVerticalStackLayout Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildVerticalStackLayout RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildVerticalStackLayout ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+
     public IPdfGridChildVerticalStackLayout Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
-    // IPdfVerticalStackLayout
+
+    // 1. IPdfVerticalStackLayout (Recursos) -> NO TIENE STYLE
     IPdfVerticalStackLayout IPdfVerticalStackLayout<IPdfVerticalStackLayout>.Spacing(float v) { Spacing(v); return this; }
     void IPdfVerticalStackLayout<IPdfVerticalStackLayout>.Children(Action<IPdfStackLayoutBuilder> s) { Children(s); }
-    IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+    // IPdfElement<IPdfVerticalStackLayout>.Style(...) -> ELIMINADO
     IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Margin(double u) { Margin(u); return this; }
     IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfVerticalStackLayout IPdfElement<IPdfVerticalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -75,10 +77,11 @@ internal class PdfVerticalStackLayoutBuilder : IBuildablePdfElement, IPdfVertica
     IPdfVerticalStackLayout IPdfLayoutChild<IPdfVerticalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfVerticalStackLayout IPdfLayoutChild<IPdfVerticalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    // IPdfLayoutChildVerticalStackLayout
+    // 2. IPdfLayoutChildVerticalStackLayout (Content) -> SÍ TIENE STYLE
+    IPdfLayoutChildVerticalStackLayout IPdfStylableElement<IPdfLayoutChildVerticalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfLayoutChildVerticalStackLayout IPdfVerticalStackLayout<IPdfLayoutChildVerticalStackLayout>.Spacing(float v) { Spacing(v); return this; }
     void IPdfVerticalStackLayout<IPdfLayoutChildVerticalStackLayout>.Children(Action<IPdfStackLayoutBuilder> s) { Children(s); }
-    IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfLayoutChildVerticalStackLayout IPdfElement<IPdfLayoutChildVerticalStackLayout>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -91,7 +94,7 @@ internal class PdfVerticalStackLayoutBuilder : IBuildablePdfElement, IPdfVertica
     IPdfLayoutChildVerticalStackLayout IPdfLayoutChild<IPdfLayoutChildVerticalStackLayout>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildVerticalStackLayout IPdfLayoutChild<IPdfLayoutChildVerticalStackLayout>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    // IPdfGridChildVerticalStackLayout
-    IPdfGridChildVerticalStackLayout IPdfElement<IPdfGridChildVerticalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+    // 3. IPdfGridChildVerticalStackLayout (Content) -> SÍ TIENE STYLE
+    IPdfGridChildVerticalStackLayout IPdfStylableElement<IPdfGridChildVerticalStackLayout>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     #endregion
 }

@@ -18,6 +18,7 @@
             <Image
                 Aspect="AspectFit"
                 HeightRequest="185"
+                HorizontalOptions="Center"
                 SemanticProperties.Description="dot net bot in a race car number eight"
                 Source="dotnet_bot.png" />
             <Label

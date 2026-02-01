@@ -22,9 +22,8 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
 
     public PdfElementData GetModel() => _model;
 
-    #region Public API
+    #region Public API (Fluent General)
     public IPdfGridChildImage Aspect(Aspect aspect) { _model.AspectProp.Set(aspect, PdfPropertyPriority.Local); return this; }
-
     public IPdfGridChildImage Margin(double u) { _model.SetMargin(u); return this; }
     public IPdfGridChildImage Margin(double h, double v) { _model.SetMargin(h, v); return this; }
     public IPdfGridChildImage Margin(double l, double t, double r, double b) { _model.SetMargin(l, t, r, b); return this; }
@@ -40,13 +39,16 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     public IPdfGridChildImage Column(int column) { _model.SetColumn(column); return this; }
     public IPdfGridChildImage RowSpan(int span) { _model.SetRowSpan(span); return this; }
     public IPdfGridChildImage ColumnSpan(int span) { _model.SetColumnSpan(span); return this; }
+
+    // Style público SÍ existe
     public IPdfGridChildImage Style(PdfStyleIdentifier key) { _model.Style(key); return this; }
     #endregion
 
     #region Explicit Interface Implementations
-    // IPdfImage
+
+    // 1. IPdfImage (Recursos) -> NO TIENE STYLE
     IPdfImage IPdfImage<IPdfImage>.Aspect(Aspect a) { Aspect(a); return this; }
-    IPdfImage IPdfElement<IPdfImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+    // IPdfElement<IPdfImage>.Style(...) -> ELIMINADO (Correcto)
     IPdfImage IPdfElement<IPdfImage>.Margin(double u) { Margin(u); return this; }
     IPdfImage IPdfElement<IPdfImage>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfImage IPdfElement<IPdfImage>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -57,9 +59,10 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfImage IPdfElement<IPdfImage>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfImage IPdfElement<IPdfImage>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // IPdfPageChildImage
+    // 2. IPdfPageChildImage (Content) -> SÍ TIENE STYLE
+    IPdfPageChildImage IPdfStylableElement<IPdfPageChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfPageChildImage IPdfImage<IPdfPageChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
-    IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -70,9 +73,10 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfPageChildImage IPdfElement<IPdfPageChildImage>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    // IPdfLayoutChildImage
+    // 3. IPdfLayoutChildImage (Content) -> SÍ TIENE STYLE
+    IPdfLayoutChildImage IPdfStylableElement<IPdfLayoutChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfLayoutChildImage IPdfImage<IPdfLayoutChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
-    IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfLayoutChildImage IPdfElement<IPdfLayoutChildImage>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }
@@ -85,9 +89,10 @@ internal class PdfImageBuilder : IBuildablePdfElement, IPdfPageChildImage, IPdfL
     IPdfLayoutChildImage IPdfLayoutChild<IPdfLayoutChildImage>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildImage IPdfLayoutChild<IPdfLayoutChildImage>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    // IPdfGridChildImage
+    // 4. IPdfGridChildImage (Content) -> SÍ TIENE STYLE
+    IPdfGridChildImage IPdfStylableElement<IPdfGridChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
+
     IPdfGridChildImage IPdfImage<IPdfGridChildImage>.Aspect(Aspect a) { Aspect(a); return this; }
-    IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Style(PdfStyleIdentifier k) { Style(k); return this; }
     IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double u) { Margin(u); return this; }
     IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double h, double v) { Margin(h, v); return this; }
     IPdfGridChildImage IPdfElement<IPdfGridChildImage>.Margin(double l, double t, double r, double b) { Margin(l, t, r, b); return this; }

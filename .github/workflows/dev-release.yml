@@ -161,8 +161,7 @@ jobs:
             try {
               dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate 2>&1
               
-              $publishedCount++              
-              }
+              $publishedCount++
             } catch {
               Write-Host "Error capturado: $($_.Exception.Message)"
             }

@@ -11,4 +11,6 @@ public interface IPdfSpanStyles : IPdfElement<IPdfSpan>, IPdfStylable
     IPdfSpan FontAttributes(FontAttributes attributes);
     IPdfSpan TextDecorations(TextDecorations decorations);
     IPdfSpan TextTransform(TextTransform transform);
+    
+    IPdfSpan Culture(string culture);
 }

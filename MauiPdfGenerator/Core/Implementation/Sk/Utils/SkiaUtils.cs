@@ -1,4 +1,5 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+﻿using System.Globalization;
+using MauiPdfGenerator.Fluent.Enums;
 using SkiaSharp;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Utils;
@@ -114,7 +115,7 @@ internal static class SkiaUtils
         typefaceFromExplicitFile?.Dispose();
         return finalTypeface;
     }
-    
+
     public static SKColor ConvertToSkColor(Color? mauiColor)
     {
         if (mauiColor is null) return SKColors.Black;
@@ -144,5 +145,19 @@ internal static class SkiaUtils
                 width = 595.28f; height = 841.89f; break;
         }
         return orientation == PageOrientationType.Landscape ? new SKSize(height, width) : new SKSize(width, height);
+    }
+
+    public static bool IsRtlCulture(string? cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName)) return false;
+        try
+        {
+            var cultureInfo = CultureInfo.GetCultureInfo(cultureName);
+            return cultureInfo.TextInfo.IsRightToLeft;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

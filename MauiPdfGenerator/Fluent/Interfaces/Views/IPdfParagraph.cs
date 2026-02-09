@@ -16,6 +16,8 @@ public interface IPdfParagraph<TSelf> : IPdfElement<TSelf>, IPdfStylable where T
     TSelf CharacterSpacing(float spacing);
     TSelf WordSpacing(float spacing);
     TSelf LineSpacing(float spacing);
+
+    TSelf Culture(string culture);
 }
 
 public interface IPdfParagraph : IPdfParagraph<IPdfParagraph>

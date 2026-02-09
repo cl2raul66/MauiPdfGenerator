@@ -8,7 +8,9 @@ using MauiPdfGenerator.Fluent.Models;
 
 namespace MauiPdfGenerator.Fluent.Builders.Layouts.Grids;
 
-internal class PdfGridChildParagraphBuilder : PdfGridChildBuilder<PdfParagraphBuilder, IPdfGridChildParagraph>, IPdfGridChildParagraph
+internal class PdfGridChildParagraphBuilder :
+    PdfGridChildBuilder<PdfParagraphBuilder, IPdfGridChildParagraph>,
+    IPdfGridChildParagraph
 {
     public PdfGridChildParagraphBuilder(PdfParagraphBuilder internalBuilder) : base(internalBuilder) { }
 
@@ -36,10 +38,9 @@ internal class PdfGridChildParagraphBuilder : PdfGridChildBuilder<PdfParagraphBu
     public IPdfGridChildParagraph HorizontalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.HorizontalOptions(layoutAlignment); return this; }
     public IPdfGridChildParagraph VerticalOptions(LayoutAlignment layoutAlignment) { _internalBuilder.VerticalOptions(layoutAlignment); return this; }
 
-    public IPdfGridChildParagraph Style(PdfStyleIdentifier key)
-    {
-        _internalBuilder.Style(key); return this;
-    }
+    public IPdfGridChildParagraph Style(PdfStyleIdentifier key) { _internalBuilder.Style(key); return this; }
+
+    public IPdfGridChildParagraph Culture(string culture) { _internalBuilder.Culture(culture); return this; }
 }
 
 internal class PdfGridChildImageBuilder : PdfGridChildBuilder<PdfImageBuilder, IPdfGridChildImage>, IPdfGridChildImage
@@ -139,7 +140,7 @@ internal class PdfGridChildImageBuilder : PdfGridChildBuilder<PdfImageBuilder, I
         _internalBuilder.BackgroundColor(color); return this;
     }
 
-    // SÍ implementa Style porque IPdfGridChildImage hereda de IPdfStylableElement
+
     IPdfGridChildImage IPdfStylableElement<IPdfGridChildImage>.Style(PdfStyleIdentifier key)
     {
         _internalBuilder.Style(key); return this;

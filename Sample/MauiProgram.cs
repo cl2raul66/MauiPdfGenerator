@@ -14,8 +14,12 @@ public static class MauiProgram
             {
                 fonts.AddFont("OpenSans.ttf", "OpenSans");
                 fonts.AddFont("comic.ttf", "Comic");
+
                 fonts.AddFont("NotoSansArabic.ttf", "NotoSansArabic");
+                fonts.AddFont("Harmattan.ttf", "Harmattan");
+
                 fonts.AddFont("NotoSansHebrew.ttf", "NotoSansHebrew");
+                fonts.AddFont("VarelaRound.ttf", "VarelaRound");
             });
 
 #if DEBUG

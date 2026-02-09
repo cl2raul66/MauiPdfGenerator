@@ -121,7 +121,7 @@ internal class StyleResolver
             _ => null
         };
 
-        if (typeName != null)
+        if (typeName is not null)
         {
             return new PdfStyleIdentifier(typeName);
         }

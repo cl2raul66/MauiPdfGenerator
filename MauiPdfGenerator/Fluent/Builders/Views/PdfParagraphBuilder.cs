@@ -47,7 +47,7 @@ internal class PdfParagraphBuilder :
 
     public PdfElementData GetModel() => _model;
 
-    
+    public IPdfGridChildParagraph Culture(string culture) { _model.Culture = culture; return this; }
 
     public IPdfGridChildParagraph Style(PdfStyleIdentifier key)
     {
@@ -122,6 +122,8 @@ internal class PdfParagraphBuilder :
     IPdfParagraph IPdfElement<IPdfParagraph>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfParagraph IPdfElement<IPdfParagraph>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
+    IPdfParagraph IPdfParagraph<IPdfParagraph>.Culture(string culture) { Culture(culture); return this; }
+
 
 
     IPdfPageChildParagraph IPdfStylableElement<IPdfPageChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
@@ -149,7 +151,7 @@ internal class PdfParagraphBuilder :
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.HeightRequest(double h) { HeightRequest(h); return this; }
     IPdfPageChildParagraph IPdfElement<IPdfPageChildParagraph>.BackgroundColor(Color? c) { BackgroundColor(c); return this; }
 
-    
+
 
     IPdfLayoutChildParagraph IPdfStylableElement<IPdfLayoutChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
 
@@ -178,10 +180,11 @@ internal class PdfParagraphBuilder :
     IPdfLayoutChildParagraph IPdfLayoutChild<IPdfLayoutChildParagraph>.HorizontalOptions(LayoutAlignment a) { HorizontalOptions(a); return this; }
     IPdfLayoutChildParagraph IPdfLayoutChild<IPdfLayoutChildParagraph>.VerticalOptions(LayoutAlignment a) { VerticalOptions(a); return this; }
 
-    
+    IPdfLayoutChildParagraph IPdfParagraph<IPdfLayoutChildParagraph>.Culture(string culture) { Culture(culture); return this; }
+
+
 
     IPdfGridChildParagraph IPdfStylableElement<IPdfGridChildParagraph>.Style(PdfStyleIdentifier k) { Style(k); return this; }
-
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.FontSize(float s) { FontSize(s); return this; }
     IPdfGridChildParagraph IPdfParagraph<IPdfGridChildParagraph>.TextColor(Color c) { TextColor(c); return this; }
@@ -210,4 +213,6 @@ internal class PdfParagraphBuilder :
     IPdfGridChildParagraph IPdfGridChild<IPdfGridChildParagraph>.Column(int c) { Column(c); return this; }
     IPdfGridChildParagraph IPdfGridChild<IPdfGridChildParagraph>.RowSpan(int s) { RowSpan(s); return this; }
     IPdfGridChildParagraph IPdfGridChild<IPdfGridChildParagraph>.ColumnSpan(int s) { ColumnSpan(s); return this; }
+
+    IPdfPageChildParagraph IPdfParagraph<IPdfPageChildParagraph>.Culture(string culture) { Culture(culture); return this; }
 }

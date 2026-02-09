@@ -22,7 +22,10 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
     internal string Text { get; private set; }
     internal bool IsContinuation { get; private set; } = false;
 
-// --- Backing Properties ---
+    internal string? Culture { get; set; }
+
+
+
     internal PdfStyledProperty<PdfFontIdentifier?> FontFamilyProp { get; } = new(null);
     internal PdfStyledProperty<float> FontSizeProp { get; } = new(DefaultFontSize);
     internal PdfStyledProperty<Color?> TextColorProp { get; } = new(null);
@@ -36,7 +39,8 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
     internal PdfStyledProperty<float> WordSpacingProp { get; } = new(DefaultWordSpacing);
     internal PdfStyledProperty<float> LineSpacingProp { get; } = new(DefaultLineSpacing);
 
-// --- Core API ---
+
+
     internal PdfFontIdentifier? CurrentFontFamily => FontFamilyProp.Value;
     internal float CurrentFontSize => FontSizeProp.Value;
     internal Color? CurrentTextColor => TextColorProp.Value;
@@ -52,7 +56,8 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
 
     internal PdfFontRegistration? ResolvedFontRegistration { get; set; }
 
-    // --- Spans Support ---
+
+
     internal IReadOnlyList<PdfSpanData> Spans { get; private set; } = [];
     internal bool HasSpans => Spans.Count > 0;
 
@@ -63,6 +68,7 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
     {
         Text = text ?? string.Empty;
         IsContinuation = true;
+        Culture = original.Culture;
 
         FontFamilyProp.Set(original.FontFamilyProp.Value, PdfPropertyPriority.Local);
         FontSizeProp.Set(original.FontSizeProp.Value, PdfPropertyPriority.Local);
@@ -70,7 +76,7 @@ internal class PdfParagraphData : PdfElementData, IPdfTextStyles
         HorizontalTextAlignmentProp.Set(original.HorizontalTextAlignmentProp.Value, PdfPropertyPriority.Local);
         VerticalTextAlignmentProp.Set(original.VerticalTextAlignmentProp.Value, PdfPropertyPriority.Local);
         FontAttributesProp.Set(original.FontAttributesProp.Value, PdfPropertyPriority.Local);
-LineBreakModeProp.Set(original.LineBreakModeProp.Value, PdfPropertyPriority.Local);
+        LineBreakModeProp.Set(original.LineBreakModeProp.Value, PdfPropertyPriority.Local);
         TextDecorationsProp.Set(original.TextDecorationsProp.Value, PdfPropertyPriority.Local);
         TextTransformProp.Set(original.TextTransformProp.Value, PdfPropertyPriority.Local);
         CharacterSpacingProp.Set(original.CharacterSpacingProp.Value, PdfPropertyPriority.Local);
@@ -97,7 +103,6 @@ LineBreakModeProp.Set(original.LineBreakModeProp.Value, PdfPropertyPriority.Loca
     }
 
     #region IPdfTextStyles Implementation
-
     void IPdfTextStyles.ApplyFontFamily(PdfFontIdentifier? family)
     {
         FontFamilyProp.Set(family, PdfPropertyPriority.Local);
@@ -128,9 +133,6 @@ LineBreakModeProp.Set(original.LineBreakModeProp.Value, PdfPropertyPriority.Loca
         TextTransformProp.Set(transform, PdfPropertyPriority.Local);
     }
 
-    void IPdfTextStyles.ApplyStyle(PdfStyleIdentifier key)
-    {
-    }
-
+    void IPdfTextStyles.ApplyStyle(PdfStyleIdentifier key) { }
     #endregion
 }

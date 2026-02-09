@@ -8,6 +8,7 @@ namespace MauiPdfGenerator.Common.Models.Views;
 internal class PdfSpanData : IPdfTextStyles
 {
     internal int TextLength { get; set; }
+    internal string? Culture { get; set; }
 
     internal PdfStyledProperty<PdfFontIdentifier?> FontFamilyProp { get; } = new(null);
     internal PdfStyledProperty<float?> FontSizeProp { get; } = new(null);
@@ -31,7 +32,6 @@ internal class PdfSpanData : IPdfTextStyles
     internal PdfSpanData() { }
 
     #region IPdfTextStyles Implementation
-
     void IPdfTextStyles.ApplyFontFamily(PdfFontIdentifier? family)
     {
         if (family.HasValue)
@@ -65,9 +65,6 @@ internal class PdfSpanData : IPdfTextStyles
         TextTransformProp.Set(transform, PdfPropertyPriority.Local);
     }
 
-    void IPdfTextStyles.ApplyStyle(PdfStyleIdentifier key)
-    {
-    }
-
+    void IPdfTextStyles.ApplyStyle(PdfStyleIdentifier key) { }
     #endregion
 }

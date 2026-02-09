@@ -35,7 +35,7 @@ public partial class MainPage : ContentPage
                     rd.Style<IPdfParagraph>("Title", s =>
                     {
                         s.FontSize(24);
-                        s.FontAttributes(FontAttributes.Bold); 
+                        s.FontAttributes(FontAttributes.Bold);
                         s.TextColor(Colors.DarkBlue);
                         s.HorizontalTextAlignment(TextAlignment.Center);
                     });
@@ -226,43 +226,135 @@ public partial class MainPage : ContentPage
                     c.Spacing(15).Padding(20);
                     c.Children(ch =>
                     {
-                        ch.Paragraph("دعم الكتابة من اليمين إلى اليسار - العربية (ar-SA)").Style(PdfStyles.Title);
+                        ch.Paragraph("عرض الفقرات").Style(PdfStyles.Title);
 
-                        ch.Paragraph("توضح هذه الصفحة تدفق النص من اليمين إلى اليسار والمحاذاة للمحتوى العربي.").Style(PdfStyles.Note);
+                        ch.Paragraph("توضح هذه الوثيقة جميع ميزات الفقرات بما في ذلك الخطوط والمحاذاة والتباعد ودعم التدويل.").Style(PdfStyles.Note);
 
                         ch.HorizontalLine();
 
-                        ch.Paragraph("1. محاذاة النص في اللغات RTL").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("في اللغات RTL، 'البداية' تتماشى إلى اليمين و'النهاية' إلى اليسار.").Style(PdfStyles.Note);
-                        ch.Paragraph("نص محاذٍ للبداية (Start) - في RTL، يظهر هذا الجانب الأيمن.").HorizontalTextAlignment(TextAlignment.Start).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("نص محاذٍ للوسط (Center) - نص متمركز في سياق RTL.").HorizontalTextAlignment(TextAlignment.Center).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("نص محاذٍ للنهاية (End) - في RTL، يظهر هذا الجانب الأيسر.").HorizontalTextAlignment(TextAlignment.End).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("نص مُبرَّر يملأ الحافة اليمنى واليسرى معاً.").HorizontalTextAlignment(TextAlignment.Justify).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("١. خصائص الخط والنمط").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("تعدل هذه الخصائص مظهر النص نفسه.").Style(PdfStyles.Note);
+                        ch.Paragraph(sp =>
+                        {
+                            sp.Text("عائلة الخط: ");
+                            sp.Text("Harmattan").Culture("en-US");
+                            sp.Text(".");
+                        }).FontFamily(PdfFonts.Harmattan);
+                        ch.Paragraph("حجم الخط: ١٦ نقطة.").FontSize(16);
+                        ch.Paragraph("سمات الخط: غامق.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("سمات الخط: مائل.").FontAttributes(FontAttributes.Italic);
+                        ch.Paragraph("سمات الخط: غامق + مائل.").FontAttributes(FontAttributes.Bold | FontAttributes.Italic);
+                        ch.Paragraph("زخارف النص: تحته خط.").TextDecorations(TextDecorations.Underline);
+                        ch.Paragraph("زخارف النص: يتوسطه خط.").TextDecorations(TextDecorations.Strikethrough);
+                        ch.Paragraph("تحويل النص: أحرف كبيرة.").TextTransform(TextTransform.Uppercase);
+                        ch.Paragraph("تحويل النص: أحرف صغيرة.").TextTransform(TextTransform.Lowercase);
+                        ch.Paragraph("لون النص: أحمر.").TextColor(Colors.Red);
                         ch.HorizontalLine();
 
-                        ch.Paragraph("2. خصائص التباعد").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("خصائص التباعد تعمل بنفس الطريقة للغات RTL و LTR.").Style(PdfStyles.Note);
-
-                        ch.Paragraph("تباعد الأحرف (2): تباعد أكبر بين الحروف.").CharacterSpacing(2).BackgroundColor(Colors.LightYellow);
-                        ch.Paragraph("تباعد الكلمات (2): تباعد أكبر بين الكلمات.").WordSpacing(2).BackgroundColor(Colors.LightGreen);
-                        ch.Paragraph("ارتفاع السطر (1.5): ارتفاع سطر أكبر للقراءة السهلة.").LineSpacing(1.5f).BackgroundColor(Colors.LightPink);
-
-                        ch.Paragraph("تباعد مدمج: جميع خصائص التباعد مطبقة معاً.").CharacterSpacing(1.5f).WordSpacing(2f).LineSpacing(1.8f).BackgroundColor(Colors.Honeydew);
+                        ch.Paragraph(sp =>
+                        {
+                            sp.Text("هذا ").TextTransform(TextTransform.Uppercase);
+                            sp.Text("نص مع").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
+                            sp.Text(" نطاقات");
+                        })
+                        .TextColor(Colors.Blue).TextDecorations(TextDecorations.Underline);
+                        ch.Paragraph(sp =>
+                        {
+                            sp.Text("ملاحظة: ").Style(PdfStyles.NoteTitle);
+                            sp.Text("أفضل مولد ملفات ").Style(PdfStyles.NoteMsg);
+                            sp.Text("PDF").Style(PdfStyles.NoteMsg).Culture("en-US");
+                            sp.Text(" لـ ").Style(PdfStyles.NoteMsg);
+                            sp.Text(".NET MAUI").Style(PdfStyles.NoteMsg).Culture("en-US");
+                        });
                         ch.HorizontalLine();
 
-                        ch.Paragraph("3. محتوى مختلط עם نطاقات").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("إظهار النطاقات والأنماط في سياق RTL.").Style(PdfStyles.Note);
+                        ch.Paragraph("٢. محاذاة النص (المحاذاة الأفقية)").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("المحاذاة الأفقية داخل مربع الفقرة. يستخدم 'البداية' و'النهاية' لدعم التدويل (يتكيف تلقائياً مع اللغات من اليسار إلى اليمين ومن اليمين إلى اليسار).").Style(PdfStyles.Note);
+                        ch.Paragraph("نص محاذى للبداية (السلوك الافتراضي).").HorizontalTextAlignment(TextAlignment.Start).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("نص محاذى للوسط.").HorizontalTextAlignment(TextAlignment.Center).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("نص محاذى للنهاية.").HorizontalTextAlignment(TextAlignment.End).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("النص المبرر يملأ كلا الحافتين، مثالي للفقرات الطويلة. لوريم إيبسوم دولور سيت أميت، كونسيكتيتور أديبيسيسينغ إيليت. سيد دو إيوسمود تيمبور إنسيديدونت أوت لابوري إت دولوري ماغنا أليكوا.")
+                            .HorizontalTextAlignment(TextAlignment.Justify).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("ملاحظة: يُستخدم 'لون الخلفية' لتصور حدود مربع الفقرة.").Style(PdfStyles.Note).Padding(5).BackgroundColor(Colors.AliceBlue);
+                        ch.HorizontalLine();
+
+                        ch.Paragraph("٣. نموذج الصندوق والموضع").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("تؤثر هذه الخصائص على مربع الفقرة (الحجم والتباعد والموضع). المحاذاة العمودية مرئية فقط عندما يكون للمربع ارتفاع صريح.").Style(PdfStyles.Note);
+                        ch.Paragraph("الحشو: مساحة داخلية ١٠ نقاط.").Padding(10).BackgroundColor(Colors.LightPink);
+                        ch.Paragraph("الهامش: مساحة خارجية ١٠ نقاط.").Margin(10).BackgroundColor(Colors.LightBlue);
+                        ch.Paragraph("طلب العرض ٣٠٠ نقطة، متمركز أفقياً.").WidthRequest(300).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightGreen);
+                        ch.Paragraph("طلب الارتفاع ٥٠ نقطة، نص متمركز عمودياً.").HeightRequest(50).VerticalTextAlignment(TextAlignment.Center).BackgroundColor(Colors.LightSteelBlue);
+                        ch.Paragraph("ملاحظة: 'لون الخلفية' يجعل المربع مرئياً لفهم كيف تؤثر الخصائص على التخطيط.").Style(PdfStyles.Note).Padding(5).BackgroundColor(Colors.AliceBlue);
+                        ch.HorizontalLine();
+
+                        ch.Paragraph("٤. وضع كسر السطر").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("يتحكم في كيفية التفاف النص أو اقتطاعه عند تجاوز عرض الحاوية.").Style(PdfStyles.Note);
+
+                        var longTextAr = "لوريم إيبسوم دولور سيت أميت، كونسيكتيتور أديبيسيسينغ إيليت. سيد دو إيوسمود تيمبور إنسيديدونت أوت لابوري إت دولوري ماغنا أليكوا.";
+                        ch.Paragraph("التفاف الكلمات (افتراضي): يلتف النص عند حدود الكلمات.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextAr);
+                        ch.Paragraph("بدون التفاف: النص لا يلتف ويفيض.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextAr).LineBreakMode(LineBreakMode.NoWrap);
+                        ch.Paragraph("التفاف الأحرف: يلتف النص عند حدود الأحرف.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextAr).LineBreakMode(LineBreakMode.CharacterWrap);
+                        ch.Paragraph("اقتطاع البداية: يقتطع من البداية.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextAr).LineBreakMode(LineBreakMode.HeadTruncation);
+                        ch.Paragraph("اقتطاع الوسط: يقتطع من الوسط.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextAr).LineBreakMode(LineBreakMode.MiddleTruncation);
+                        ch.Paragraph("اقتطاع النهاية: يقتطع من النهاية.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextAr).LineBreakMode(LineBreakMode.TailTruncation);
+                        ch.HorizontalLine();
+
+                        ch.Paragraph("٥. خصائص التباعد (الحرف، الكلمة، السطر)").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("تتحكم هذه الخصائص في تباعد النص داخل الفقرات.").Style(PdfStyles.Note);
+
+                        ch.Paragraph("تباعد الأحرف (افتراضي: ٠): تباعد الأحرف العادي.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("تباعد أحرف مخصص (٢): مساحة متزايدة بين كل حرف للتأكيد والقراءة.").CharacterSpacing(2).BackgroundColor(Colors.LightYellow);
+                        ch.Paragraph("تباعد أحرف مخصص (٤): تباعد أحرف واسع لتأثيرات خاصة.").CharacterSpacing(4).BackgroundColor(Colors.LightCoral);
+
+                        ch.Paragraph("تباعد الكلمات (افتراضي: ٠): تباعد الكلمات العادي.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("تباعد كلمات مخصص (٢): مساحة متزايدة بين الكلمات لقراءة أفضل في العناوين.").WordSpacing(2).BackgroundColor(Colors.LightGreen);
+                        ch.Paragraph("تباعد كلمات مخصص (٣): تباعد كلمات واسع جداً لأغراض زخرفية.").WordSpacing(3).BackgroundColor(Colors.LightCyan);
+
+                        ch.Paragraph("تباعد الأسطر (افتراضي: ١): ارتفاع السطر العادي (١٠٠٪).").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("تباعد أسطر مخصص (١.٥): ارتفاع سطر ١٥٠٪ لقراءة أفضل. توضح هذه الفقرة تباعد الأسطر المتزايد الذي يجعل النص أسهل في القراءة، خاصة للأشخاص الذين يعانون من عسر القراءة أو ضعف البصر.").LineSpacing(1.5f).BackgroundColor(Colors.LightPink);
+                        ch.Paragraph("تباعد أسطر مخصص (٢): نص بتباعد مزدوج، يُستخدم عادة في الأوراق الأكاديمية للتعليقات.").LineSpacing(2f).BackgroundColor(Colors.Lavender);
+
+                        ch.Paragraph("تباعد مدمج: تباعد الأحرف (١.٥)، تباعد الكلمات (٢)، تباعد الأسطر (١.٨) جميعها مطبقة معاً لتأثير بصري فريد.").CharacterSpacing(1.5f).WordSpacing(2f).LineSpacing(1.8f).BackgroundColor(Colors.Honeydew);
+                        ch.HorizontalLine();
+
+                        ch.Paragraph("٦. الاستخدام المتقدم للنطاقات").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("نطاقات متعددة بأنماط مختلفة داخل فقرة واحدة.").Style(PdfStyles.Note);
 
                         ch.Paragraph(s =>
                         {
-                            s.Text("هذا فقر يستخدم ");
-                            s.Text("أنماط متعددة").Style(PdfStyles.Highlight);
-                            s.Text(" في نص ");
-                            s.Text("من اليمين لليسار").Style(PdfStyles.Code);
-                            s.Text(". يمكن دمج ");
-                            s.Text("الأنماط المختلفة").Style(PdfStyles.Emphasis);
-                            s.Text(" بسلاسة.");
+                            s.Text("توضح هذه الفقرة ");
+                            s.Text("أنماط نطاقات متعددة").Style(PdfStyles.Highlight);
+                            s.Text(" في نفس ");
+                            s.Text("الفقرة").Style(PdfStyles.Code);
+                            s.Text(". يمكنك الجمع بين ");
+                            s.Text("مختلف").Style(PdfStyles.Emphasis);
+                            s.Text(" الأنماط مثل ");
+                            s.Text("غامق").FontAttributes(FontAttributes.Bold);
+                            s.Text("، ");
+                            s.Text("مائل").FontAttributes(FontAttributes.Italic);
+                            s.Text("، ");
+                            s.Text("مسطر").TextDecorations(TextDecorations.Underline);
+                            s.Text("، و");
+                            s.Text("ملون").TextColor(Colors.DarkGreen);
+                            s.Text(" نص بسلاسة.");
                         });
+                        ch.HorizontalLine();
+
+                        ch.Paragraph("٧. التركيب النهائي").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("الجمع بين خصائص متعددة لنتائج محددة.").Style(PdfStyles.Note);
+                        ch.Paragraph("خط كوميك، حجم ١٢، نص أحمر داكن، متمركز في مربع ٣٧٥ نقطة مع خلفية صفراء وحشو ١٥ نقطة.")
+                            .FontFamily(PdfFonts.Harmattan).FontSize(12).TextColor(Colors.DarkRed)
+                            .HorizontalTextAlignment(TextAlignment.Center)
+                            .HorizontalOptions(LayoutAlignment.Center)
+                            .WidthRequest(375)
+                            .BackgroundColor(Colors.LightYellow)
+                            .Padding(15);
                     });
                 })
                 .Build()
@@ -274,64 +366,130 @@ public partial class MainPage : ContentPage
                     c.Spacing(15).Padding(20);
                     c.Children(ch =>
                     {
-                        ch.Paragraph("תמיכה בכתיבה מימין לשמאל - עברית (he-IL)").Style(PdfStyles.Title);
+                        ch.Paragraph("הצגת פסקאות").Style(PdfStyles.Title);
 
-                        ch.Paragraph("דף זה מדגים זרימת טקסט מימין לשמאל ויישור לתוכן בעברית.").Style(PdfStyles.Note);
+                        ch.Paragraph("מסמך זה מדגים את כל תכונות הפסקה כולל גופנים, יישור, ריווח ותמיכה בבינאום.").Style(PdfStyles.Note);
 
                         ch.HorizontalLine();
 
-                        ch.Paragraph("1. יישור טקסט בעברית").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("טקסט עברי זורם באופן טבעי מימין לשמאל עם יישור נכון.").Style(PdfStyles.Note);
-                        ch.Paragraph("טקסט מיושר להתחלה (Start) - מופיע בצד ימין.").HorizontalTextAlignment(TextAlignment.Start).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("טקסט ממורכז (Center) - טקסט ממורכז.").HorizontalTextAlignment(TextAlignment.Center).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("טקסט מיושר לסוף (End) - מופיע בצד שמאל.").HorizontalTextAlignment(TextAlignment.End).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("א. מאפייני גופן וסגנון").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("מאפיינים אלה משנים את מראה הטקסט עצמו.").Style(PdfStyles.Note);
+                        ch.Paragraph("משפחת גופן: קומיק סמיבולד.").FontFamily(PdfFonts.VarelaRound);
+                        ch.Paragraph("גודל גופן: 16 נקודות.").FontSize(16);
+                        ch.Paragraph("תכונות גופן: מודגש.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("תכונות גופן: נטוי.").FontAttributes(FontAttributes.Italic);
+                        ch.Paragraph("תכונות גופן: מודגש + נטוי.").FontAttributes(FontAttributes.Bold | FontAttributes.Italic);
+                        ch.Paragraph("קישוטי טקסט: קו תחתון.").TextDecorations(TextDecorations.Underline);
+                        ch.Paragraph("קישוטי טקסט: קו חוצה.").TextDecorations(TextDecorations.Strikethrough);
+                        ch.Paragraph("המרת טקסט: אותיות גדולות.").TextTransform(TextTransform.Uppercase);
+                        ch.Paragraph("המרת טקסט: אותיות קטנות.").TextTransform(TextTransform.Lowercase);
+                        ch.Paragraph("צבע טקסט: אדום.").TextColor(Colors.Red);
                         ch.HorizontalLine();
 
-                        ch.Paragraph("2. דוגמאות רווח בין אותיות").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("CharacterSpacing(0): רווח רגיל (ברירת מחדל).").CharacterSpacing(0).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("CharacterSpacing(1): רווח קטן להדגשה.").CharacterSpacing(1).BackgroundColor(Colors.LightYellow);
-                        ch.Paragraph("CharacterSpacing(2): רווח בינוני.").CharacterSpacing(2).BackgroundColor(Colors.Orange);
-                        ch.Paragraph("CharacterSpacing(3): רווח גדול לאפקט חזותי.").CharacterSpacing(3).BackgroundColor(Colors.LightCoral);
-                        ch.Paragraph("CharacterSpacing(5): רווח גדול מאוד.").CharacterSpacing(5).BackgroundColor(Colors.MistyRose);
+                        ch.Paragraph(sp =>
+                        {
+                            sp.Text("זה ").TextTransform(TextTransform.Uppercase);
+                            sp.Text("טקסט עם").FontAttributes(FontAttributes.Bold).TextColor(Colors.Red);
+                            sp.Text(" טווחים");
+                        })
+                        .TextColor(Colors.Blue).TextDecorations(TextDecorations.Underline);
+                        ch.Paragraph(sp =>
+                        {
+                            sp.Text("הערה: ").Style(PdfStyles.NoteTitle);
+                            sp.Text("מחולל קבצי ").Style(PdfStyles.NoteMsg);
+                            sp.Text("PDF").Style(PdfStyles.NoteMsg).Culture("en-US");
+                            sp.Text(" הטוב ביותר עבור ").Style(PdfStyles.NoteMsg);
+                            sp.Text(".NET MAUI").Style(PdfStyles.NoteMsg).Culture("en-US");
+                        });
                         ch.HorizontalLine();
 
-                        ch.Paragraph("3. דוגמאות רווח בין מילים").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("WordSpacing(0): רווח רגיל (ברירת מחדל).").WordSpacing(0).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("WordSpacing(1): רווח קטן בין מילים.").WordSpacing(1).BackgroundColor(Colors.LightGreen);
-                        ch.Paragraph("WordSpacing(2): רווח בינוני לקריאות טובה.").WordSpacing(2).BackgroundColor(Colors.LightSeaGreen);
-                        ch.Paragraph("WordSpacing(3): רווח גדול למטרות דקורטיביות.").WordSpacing(3).BackgroundColor(Colors.LightCyan);
+                        ch.Paragraph("ב. יישור טקסט (יישור אופקי)").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("יישור אופקי בתוך תיבת הפסקה. משתמש ב'התחלה' ו'סוף' לתמיכה בבינאום (מסתגל אוטומטית לשפות LTR ו-RTL).").Style(PdfStyles.Note);
+                        ch.Paragraph("טקסט מיושר להתחלה (התנהגות ברירת מחדל).").HorizontalTextAlignment(TextAlignment.Start).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("טקסט מיושר למרכז.").HorizontalTextAlignment(TextAlignment.Center).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("טקסט מיושר לסוף.").HorizontalTextAlignment(TextAlignment.End).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("טקסט מיושר ממלא את שני הקצוות, אידיאלי לפסקאות ארוכות. לורם איפסום דולור סיט אמט, קונסקטטור אדיפיסינג אלית. סד דו איוסמוד טמפור אינסידידונט אוט לאבורה את דולורה מגנה אליקוא.")
+                            .HorizontalTextAlignment(TextAlignment.Justify).BackgroundColor(Colors.LightGray);
+                        ch.Paragraph("הערה: 'צבע רקע' משמש להמחשת גבולות תיבת הפסקה.").Style(PdfStyles.Note).Padding(5).BackgroundColor(Colors.AliceBlue);
                         ch.HorizontalLine();
 
-                        ch.Paragraph("4. דוגמאות גובה שורה").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("LineSpacing(1): גובה שורה רגיל (100%, ברירת מחדל).").LineSpacing(1).BackgroundColor(Colors.LightGray);
-                        ch.Paragraph("LineSpacing(1.2): גובה שורה 120% לקריאה נוחה.").LineSpacing(1.2f).BackgroundColor(Colors.LightBlue);
-                        ch.Paragraph("LineSpacing(1.5): גובה שורה 150% לקריאה קלה.").LineSpacing(1.5f).BackgroundColor(Colors.LightPink);
-                        ch.Paragraph("LineSpacing(2): גובה שורה כפול, נפוץ בעבודות אקדמיות.").LineSpacing(2f).BackgroundColor(Colors.Lavender);
+                        ch.Paragraph("ג. מודל תיבה ומיקום").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("מאפיינים אלה משפיעים על תיבת הפסקה (גודל, ריווח, מיקום). יישור אנכי גלוי רק כאשר לתיבה יש גובה מפורש.").Style(PdfStyles.Note);
+                        ch.Paragraph("ריפוד: 10 נקודות מרווח פנימי.").Padding(10).BackgroundColor(Colors.LightPink);
+                        ch.Paragraph("שוליים: 10 נקודות מרווח חיצוני.").Margin(10).BackgroundColor(Colors.LightBlue);
+                        ch.Paragraph("בקשת רוחב 300 נקודות, ממורכז אופקית.").WidthRequest(300).HorizontalOptions(LayoutAlignment.Center).BackgroundColor(Colors.LightGreen);
+                        ch.Paragraph("בקשת גובה 50 נקודות, טקסט ממורכז אנכית.").HeightRequest(50).VerticalTextAlignment(TextAlignment.Center).BackgroundColor(Colors.LightSteelBlue);
+                        ch.Paragraph("הערה: 'צבע רקע' הופך את התיבה לגלויה כדי להבין כיצד מאפיינים משפיעים על הפריסה.").Style(PdfStyles.Note).Padding(5).BackgroundColor(Colors.AliceBlue);
                         ch.HorizontalLine();
 
-                        ch.Paragraph("5. רווח משולב").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("כל מאפייני הרווח משולבים לאפקט חזותי ייחודי.").Style(PdfStyles.Note);
-                        ch.Paragraph("CharacterSpacing(2) + WordSpacing(2) + LineSpacing(1.5): שילוב של כל מאפייני הריווח.").CharacterSpacing(2f).WordSpacing(2f).LineSpacing(1.5f).BackgroundColor(Colors.Honeydew);
-                        ch.Paragraph("CharacterSpacing(3) + WordSpacing(1) + LineSpacing(1.8): דוגמה נוספת עם ערכים שונים.").CharacterSpacing(3f).WordSpacing(1f).LineSpacing(1.8f).BackgroundColor(Colors.Wheat);
+                        ch.Paragraph("ד. מצב שבירת שורה").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("שולט כיצד הטקסט נעטף או נחתך בעת חריגה מרוחב המיכל.").Style(PdfStyles.Note);
+
+                        var longTextHe = "לורם איפסום דולור סיט אמט, קונסקטטור אדיפיסינג אלית. סד דו איוסמוד טמפור אינסידידונט אוט לאבורה את דולורה מגנה אליקוא.";
+                        ch.Paragraph("עטיפת מילים (ברירת מחדל): הטקסט נעטף בגבולות המילים.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextHe);
+                        ch.Paragraph("ללא עטיפה: הטקסט לא נעטף ועולה על גדותיו.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextHe).LineBreakMode(LineBreakMode.NoWrap);
+                        ch.Paragraph("עטיפת תווים: הטקסט נעטף בגבולות התווים.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextHe).LineBreakMode(LineBreakMode.CharacterWrap);
+                        ch.Paragraph("קיטום בראש: נחתך בהתחלה.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextHe).LineBreakMode(LineBreakMode.HeadTruncation);
+                        ch.Paragraph("קיטום באמצע: נחתך באמצע.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextHe).LineBreakMode(LineBreakMode.MiddleTruncation);
+                        ch.Paragraph("קיטום בסוף: נחתך בסוף.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph(longTextHe).LineBreakMode(LineBreakMode.TailTruncation);
                         ch.HorizontalLine();
 
-                        ch.Paragraph("6. תוכן מעורב עם טווחים").Style(PdfStyles.SectionHeader);
-                        ch.Paragraph("טווחים מעוצבים עובדים בצורה חלקה בהקשר RTL.").Style(PdfStyles.Note);
+                        ch.Paragraph("ה. מאפייני ריווח (תו, מילה, שורה)").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("מאפיינים אלה שולטים בריווח הטקסט בתוך פסקאות.").Style(PdfStyles.Note);
+
+                        ch.Paragraph("ריווח תווים (ברירת מחדל: 0): ריווח תווים רגיל.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("ריווח תווים מותאם אישית (2): מרווח מוגבר בין כל תו להדגשה וקריאות.").CharacterSpacing(2).BackgroundColor(Colors.LightYellow);
+                        ch.Paragraph("ריווח תווים מותאם אישית (4): ריווח תווים רחב לאפקטים מיוחדים.").CharacterSpacing(4).BackgroundColor(Colors.LightCoral);
+
+                        ch.Paragraph("ריווח מילים (ברירת מחדל: 0): ריווח מילים רגיל.").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("ריווח מילים מותאם אישית (2): מרווח מוגבר בין מילים לקריאות טובה יותר בכותרות.").WordSpacing(2).BackgroundColor(Colors.LightGreen);
+                        ch.Paragraph("ריווח מילים מותאם אישית (3): ריווח מילים רחב מאוד למטרות דקורטיביות.").WordSpacing(3).BackgroundColor(Colors.LightCyan);
+
+                        ch.Paragraph("ריווח שורות (ברירת מחדל: 1): גובה שורה רגיל (100%).").FontAttributes(FontAttributes.Bold);
+                        ch.Paragraph("ריווח שורות מותאם אישית (1.5): גובה שורה של 150% לקריאות טובה יותר. פסקה זו מדגימה ריווח שורות מוגבר שהופך את הטקסט לקל יותר לקריאה, במיוחד עבור אנשים עם דיסלקציה או לקויות ראייה.").LineSpacing(1.5f).BackgroundColor(Colors.LightPink);
+                        ch.Paragraph("ריווח שורות מותאם אישית (2): טקסט ברווח כפול, נפוץ בעבודות אקדמיות להערות.").LineSpacing(2f).BackgroundColor(Colors.Lavender);
+
+                        ch.Paragraph("ריווח משולב: ריווח תווים (1.5), ריווח מילים (2), ריווח שורות (1.8) כולם מיושמים יחד לאפקט ויזואלי ייחודי.").CharacterSpacing(1.5f).WordSpacing(2f).LineSpacing(1.8f).BackgroundColor(Colors.Honeydew);
+                        ch.HorizontalLine();
+
+                        ch.Paragraph("ו. שימוש מתקדם בטווחים").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("מספר טווחים מעוצבים בתוך פסקה אחת.").Style(PdfStyles.Note);
 
                         ch.Paragraph(s =>
                         {
                             s.Text("פסקה זו מדגימה ");
-                            s.Text("טקסט מודגש").Style(PdfStyles.Highlight);
-                            s.Text(" עם ");
-                            s.Text("קוד").Style(PdfStyles.Code);
-                            s.Text(" בתוך ");
-                            s.Text("טקסט עברי").Style(PdfStyles.Emphasis);
-                            s.Text(". ניתן לשלב ");
-                            s.Text("סגנונות שונים").FontAttributes(FontAttributes.Bold);
-                            s.Text(" בצורה ");
-                            s.Text("חלקה").TextDecorations(TextDecorations.Underline);
-                            s.Text(" ויפה.");
+                            s.Text("סגנונות טווח מרובים").Style(PdfStyles.Highlight);
+                            s.Text(" באותה ");
+                            s.Text("פסקה").Style(PdfStyles.Code);
+                            s.Text(". אתה יכול לשלב ");
+                            s.Text("שונים").Style(PdfStyles.Emphasis);
+                            s.Text(" סגנונות כמו ");
+                            s.Text("מודגש").FontAttributes(FontAttributes.Bold);
+                            s.Text(", ");
+                            s.Text("נטוי").FontAttributes(FontAttributes.Italic);
+                            s.Text(", ");
+                            s.Text("קו תחתון").TextDecorations(TextDecorations.Underline);
+                            s.Text(", ו");
+                            s.Text("צבעוני").TextColor(Colors.DarkGreen);
+                            s.Text(" טקסט בצורה חלקה.");
                         });
+                        ch.HorizontalLine();
+
+                        ch.Paragraph("ז. הרכב סופי").Style(PdfStyles.SectionHeader);
+                        ch.Paragraph("שילוב מספר מאפיינים לתוצאות ספציפיות.").Style(PdfStyles.Note);
+                        ch.Paragraph("גופן קומיק, גודל 12, טקסט אדום כהה, ממורכז בתיבה של 375 נקודות עם רקע צהוב וריפוד של 15 נקודות.")
+                            .FontFamily(PdfFonts.VarelaRound).FontSize(12).TextColor(Colors.DarkRed)
+                            .HorizontalTextAlignment(TextAlignment.Center)
+                            .HorizontalOptions(LayoutAlignment.Center)
+                            .WidthRequest(375)
+                            .BackgroundColor(Colors.LightYellow)
+                            .Padding(15);
                     });
                 })
                 .Build()

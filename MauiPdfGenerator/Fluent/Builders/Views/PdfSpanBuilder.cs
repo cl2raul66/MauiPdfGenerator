@@ -8,9 +8,9 @@ using MauiPdfGenerator.Fluent.Models;
 namespace MauiPdfGenerator.Fluent.Builders.Views;
 
 internal class PdfSpanBuilder :
-    IPdfBuildableSpan,  
-    IPdfSpan, 
-    IPdfTextStyles 
+    IPdfBuildableSpan,
+    IPdfSpan,
+    IPdfTextStyles
 {
     private readonly PdfSpanData _model;
     private readonly PdfFontRegistryBuilder _fontRegistry;
@@ -25,6 +25,7 @@ internal class PdfSpanBuilder :
 
     internal PdfSpanData GetModel() => _model;
 
+
     public IPdfBuildableSpan Style(PdfStyleIdentifier key)
     {
         ((IPdfTextStyles)this).ApplyStyle(key);
@@ -33,7 +34,7 @@ internal class PdfSpanBuilder :
 
     public IPdfBuildableSpan Text(string text) => this;
 
-
+    public IPdfBuildableSpan Culture(string culture) { _model.Culture = culture; return this; }
 
     public IPdfBuildableSpan FontFamily(PdfFontIdentifier? family) { ((IPdfTextStyles)this).ApplyFontFamily(family); return this; }
     public IPdfBuildableSpan FontSize(float size) { ((IPdfTextStyles)this).ApplyFontSize(size); return this; }
@@ -71,8 +72,11 @@ internal class PdfSpanBuilder :
     IPdfBuildableSpan IPdfElement<IPdfBuildableSpan>.BackgroundColor(Color? c) => this;
 
 
-    
+
     IPdfSpan IPdfSpan.Text(string text) => this;
+
+    IPdfSpan IPdfSpanStyles.Culture(string culture) { return Culture(culture); }
+
 
     IPdfSpan IPdfSpanStyles.FontFamily(PdfFontIdentifier? f) { FontFamily(f); return this; }
     IPdfSpan IPdfSpanStyles.FontSize(float s) { FontSize(s); return this; }
@@ -91,7 +95,7 @@ internal class PdfSpanBuilder :
     IPdfSpan IPdfElement<IPdfSpan>.HeightRequest(double h) => this;
     IPdfSpan IPdfElement<IPdfSpan>.BackgroundColor(Color? c) => this;
 
-        
+
 
     void IPdfTextStyles.ApplyFontFamily(PdfFontIdentifier? family)
     {
@@ -150,6 +154,10 @@ internal class PdfSpanBuilder :
         if (source.TextTransformProp.Priority > PdfPropertyPriority.Default)
         {
             target.TextTransformProp.Set(source.TextTransformProp.Value, PdfPropertyPriority.Local);
+        }
+        if (!string.IsNullOrEmpty(source.Culture))
+        {
+            target.Culture = source.Culture;
         }
     }
 }

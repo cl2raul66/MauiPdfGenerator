@@ -11,4 +11,5 @@ public interface IPdfBuildableSpan :
     IPdfElement<IPdfBuildableSpan>
 {
     new IPdfBuildableSpan Text(string text);
+    new IPdfBuildableSpan Culture(string culture);
 }

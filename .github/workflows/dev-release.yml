@@ -21,19 +21,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract versions from PR body
+      - name: Extract versions and Prepare Release
         id: extract_version
         shell: pwsh
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
-          $prBody = @'
-          ${{ github.event.pull_request.body }}
-          '@
+          $prBody = $env:PR_BODY
 
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           Write-Host "Analizando cuerpo del PR"
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          # Buscar ver(main): x.x.x-preview
+          # 1. Extraer versiones
           $mainVersion = $null
           if ($prBody -match '(?i)ver\s*\(\s*main\s*\)\s*:\s*(\d+\.\d+\.\d+-preview)') {
             $mainVersion = $matches[1]
@@ -42,7 +43,6 @@ jobs:
             Write-Host "ver(main) no encontrado - se omitira paquete Core"
           }
 
-          # Buscar ver(sourceGenerators): x.x.x-preview
           $sourceGenVersion = $null
           if ($prBody -match '(?i)ver\s*\(\s*sourceGenerators\s*\)\s*:\s*(\d+\.\d+\.\d+-preview)') {
             $sourceGenVersion = $matches[1]
@@ -51,22 +51,53 @@ jobs:
             Write-Host "ver(sourceGenerators) no encontrado - se omitira paquete SourceGenerators"
           }
 
-          # Validar que al menos uno fue encontrado
+          # 2. Validar que al menos uno fue encontrado
           if (-not $mainVersion -and -not $sourceGenVersion) {
             Write-Host ""
-            Write-Host "No se encontró ninguna versión válida. Workflow terminado." 
-            echo "::warning::No se encontraron versiones en el PR body" 
+            Write-Host "No se encontro ninguna version valida. Workflow terminado."
+            echo "::warning::No se encontraron versiones en el PR body"
             echo "SKIP_WORKFLOW=true" >> $env:GITHUB_OUTPUT
             exit 0
           }
 
-          # Exportar variables
-          echo "MAIN_VERSION=$mainVersion" >> $env:GITHUB_OUTPUT
-          echo "SOURCEGEN_VERSION=$sourceGenVersion" >> $env:GITHUB_OUTPUT
-          echo "HAS_MAIN=$($null -ne $mainVersion)" >> $env:GITHUB_OUTPUT
-          echo "HAS_SOURCEGEN=$($null -ne $sourceGenVersion)" >> $env:GITHUB_OUTPUT
+          # 3. Determinar version del Release (prioridad: Main > SourceGen)
+          $releaseVersion = if ($mainVersion) { $mainVersion } else { $sourceGenVersion }
+
+          # 4. Construir cuerpo del Release en Markdown
+          $bodyMsg = "## Preview Release`n`nEsta es una version preview automatica desde development.`n`n### Paquetes publicados"
+
+          if ($mainVersion) {
+            $bodyMsg += "`n- **RandAMediaLabGroup.MauiPdfGenerator** ``$mainVersion``"
+          }
+          if ($sourceGenVersion) {
+            $bodyMsg += "`n- **RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators** ``$sourceGenVersion``"
+          }
+
+          $bodyMsg += "`n`n### PR Original`n$($env:PR_URL)"
+
+          # 5. Exportar outputs
+          # Body multilinea: usar delimitador EOF para evitar errores de sintaxis YAML
+          $delimiter = "EOF-$(Get-Random)"
+          "RELEASE_BODY<<$delimiter" >> $env:GITHUB_OUTPUT
+          $bodyMsg >> $env:GITHUB_OUTPUT
+          "$delimiter" >> $env:GITHUB_OUTPUT
+
+          echo "RELEASE_VERSION=$releaseVersion" >> $env:GITHUB_OUTPUT
+
+          # Solo exportar versiones que existen para evitar <Version></Version> en .csproj
+          if ($mainVersion)      { echo "MAIN_VERSION=$mainVersion"           >> $env:GITHUB_OUTPUT }
+          if ($sourceGenVersion) { echo "SOURCEGEN_VERSION=$sourceGenVersion" >> $env:GITHUB_OUTPUT }
+
+          $hasMain      = if ($mainVersion)      { 'true' } else { 'false' }
+          $hasSourceGen = if ($sourceGenVersion) { 'true' } else { 'false' }
+          echo "HAS_MAIN=$hasMain"           >> $env:GITHUB_OUTPUT
+          echo "HAS_SOURCEGEN=$hasSourceGen" >> $env:GITHUB_OUTPUT
 
           Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          Write-Host "RELEASE_VERSION : $releaseVersion"
+          Write-Host "HAS_MAIN        : $hasMain"
+          Write-Host "HAS_SOURCEGEN   : $hasSourceGen"
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Update project versions
@@ -77,21 +108,19 @@ jobs:
           Write-Host "Actualizando versiones en proyectos"
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          # Actualizar MauiPdfGenerator
-          if ("${{ steps.extract_version.outputs.HAS_MAIN }}" -eq "True") {
-            $version = "${{ steps.extract_version.outputs.MAIN_VERSION }}"
-            $coreProj = "MauiPdfGenerator/MauiPdfGenerator.csproj"
-            (Get-Content $coreProj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content $coreProj
+          if ("${{ steps.extract_version.outputs.HAS_MAIN }}" -eq "true") {
+            $version  = "${{ steps.extract_version.outputs.MAIN_VERSION }}"
+            $projFile = "MauiPdfGenerator/MauiPdfGenerator.csproj"
+            (Get-Content $projFile) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content $projFile
             Write-Host "Core actualizado a: $version"
           } else {
             Write-Host "Core omitido (no hay version)"
           }
 
-          # Actualizar SourceGenerators
-          if ("${{ steps.extract_version.outputs.HAS_SOURCEGEN }}" -eq "True") {
-            $version = "${{ steps.extract_version.outputs.SOURCEGEN_VERSION }}"
-            $sourceGenProj = "MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj"
-            (Get-Content $sourceGenProj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content $sourceGenProj
+          if ("${{ steps.extract_version.outputs.HAS_SOURCEGEN }}" -eq "true") {
+            $version  = "${{ steps.extract_version.outputs.SOURCEGEN_VERSION }}"
+            $projFile = "MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj"
+            (Get-Content $projFile) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content $projFile
             Write-Host "SourceGenerators actualizado a: $version"
           } else {
             Write-Host "SourceGenerators omitido (no hay version)"
@@ -100,7 +129,7 @@ jobs:
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Setup .NET 10
-        if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true'  
+        if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -111,19 +140,37 @@ jobs:
         timeout-minutes: 15
 
       - name: Build & Pack Core package
-        if: steps.extract_version.outputs.HAS_MAIN == 'True'
+        if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true' && steps.extract_version.outputs.HAS_MAIN == 'true'
+        shell: pwsh
         run: |
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release 
+          Write-Host "Restaurando Core..."
+          dotnet restore MauiPdfGenerator/MauiPdfGenerator.csproj /p:Configuration=Release
+          if ($LASTEXITCODE -ne 0) { Write-Error "Restore fallido"; exit 1 }
+
+          Write-Host "Compilando Core..."
           dotnet build MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-restore
+          if ($LASTEXITCODE -ne 0) { Write-Error "Build fallido"; exit 1 }
+
+          Write-Host "Empaquetando Core..."
           dotnet pack MauiPdfGenerator/MauiPdfGenerator.csproj --configuration Release --no-build --output ./nupkgs
+          if ($LASTEXITCODE -ne 0) { Write-Error "Pack fallido"; exit 1 }
 
       - name: Build & Pack SourceGenerators package
-        if: steps.extract_version.outputs.HAS_SOURCEGEN == 'True'
+        if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true' && steps.extract_version.outputs.HAS_SOURCEGEN == 'true'
+        shell: pwsh
         run: |
-          dotnet restore MauiPdfGenerator/MauiPdfGenerator.SourceGenerators.csproj /p:Configuration=Release 
+          Write-Host "Restaurando SourceGenerators..."
+          dotnet restore MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj /p:Configuration=Release
+          if ($LASTEXITCODE -ne 0) { Write-Error "Restore fallido"; exit 1 }
+
+          Write-Host "Compilando SourceGenerators..."
           dotnet build MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-restore
+          if ($LASTEXITCODE -ne 0) { Write-Error "Build fallido"; exit 1 }
+
+          Write-Host "Empaquetando SourceGenerators..."
           dotnet pack MauiPdfGenerator.SourceGenerators/MauiPdfGenerator.SourceGenerators.csproj --configuration Release --no-build --output ./nupkgs
-      
+          if ($LASTEXITCODE -ne 0) { Write-Error "Pack fallido"; exit 1 }
+
       - name: List generated packages
         if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true'
         shell: pwsh
@@ -146,9 +193,10 @@ jobs:
             exit 0
           }
 
-          $packages = Get-ChildItem ./nupkgs/*.nupkg
+          $packages       = Get-ChildItem ./nupkgs/*.nupkg
           $publishedCount = 0
-          $totalPackages = $packages.Count
+          $failedCount    = 0
+          $totalPackages  = $packages.Count
 
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           Write-Host "Publicando paquetes PREVIEW a NuGet"
@@ -158,38 +206,34 @@ jobs:
             Write-Host ""
             Write-Host "Procesando: $($package.Name)"
 
-            try {
-              dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate 2>&1
-              
+            dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+            if ($LASTEXITCODE -eq 0) {
               $publishedCount++
-            } catch {
-              Write-Host "Error capturado: $($_.Exception.Message)"
+              Write-Host "OK: $($package.Name)"
+            } else {
+              $failedCount++
+              Write-Host "::error::Error al publicar $($package.Name). Exit Code: $LASTEXITCODE"
             }
           }
 
           Write-Host ""
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           Write-Host "Resumen:"
-          Write-Host "   Publicados: $publishedCount / $totalPackages"
+          Write-Host "   Publicados : $publishedCount / $totalPackages"
+          Write-Host "   Fallidos   : $failedCount / $totalPackages"
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          if ($failedCount -gt 0) { exit 1 }
 
       - name: Create GitHub Release
         if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.extract_version.outputs.MAIN_VERSION || steps.extract_version.outputs.SOURCEGEN_VERSION }}
-          name: "Preview Release"
+          tag_name: v${{ steps.extract_version.outputs.RELEASE_VERSION }}
+          name: "Preview Release v${{ steps.extract_version.outputs.RELEASE_VERSION }}"
           prerelease: true
           body: |
-            ## Preview Release
-
-            Esta es una version preview automatica desde development.
-
-            ### Paquetes publicados
-            ${{ steps.extract_version.outputs.HAS_MAIN == 'True' && format('- RandAMediaLabGroup.MauiPdfGenerator {0}', steps.extract_version.outputs.MAIN_VERSION) || '' }}
-            ${{ steps.extract_version.outputs.HAS_SOURCEGEN == 'True' && format('- RandAMediaLabGroup.MauiPdfGenerator.SourceGenerators {0}', steps.extract_version.outputs.SOURCEGEN_VERSION) || '' }}
-
-            ### PR Original
-            ${{ github.event.pull_request.html_url }}
+            ${{ steps.extract_version.outputs.RELEASE_BODY }}
         env:
           GITHUB_TOKEN: ${{ secrets.INTERNAL_GITHUB_TOKEN }}

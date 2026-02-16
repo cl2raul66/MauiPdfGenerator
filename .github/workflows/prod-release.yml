@@ -239,12 +239,10 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.extract_version.outputs.SKIP_WORKFLOW != 'true'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.extract_version.outputs.RELEASE_VERSION }}
           name: "Stable Release v${{ steps.extract_version.outputs.RELEASE_VERSION }}"
           prerelease: false
           body: |
             ${{ steps.extract_version.outputs.RELEASE_BODY }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.INTERNAL_GITHUB_TOKEN }}

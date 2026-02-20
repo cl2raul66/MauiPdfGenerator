@@ -55,7 +55,7 @@ internal class SkComposer : IPdfCoreGenerator
             for (int i = 0; i < documentData.Pages.Count; i++)
             {
                 var pageDefinition = documentData.Pages[i];
-                _logger.LogDebug("Processing Page Definition {PageIndex}", i + 1);
+                _logger.LogDebug("Processing Page Definition {PageIndex} of type {PageType}", i + 1, pageDefinition.GetType().Name);
 
                 var context = new PdfGenerationContext(pageDefinition, fontRegistry, layoutState, _logger, _elementRendererFactory, _diagnosticSink);
                 IPageRenderer pageRenderer = _pageRendererFactory.GetRenderer(pageDefinition);

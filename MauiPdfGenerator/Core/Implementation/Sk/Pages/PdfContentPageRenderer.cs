@@ -1,4 +1,5 @@
 ﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Pages;
 using MauiPdfGenerator.Core.Implementation.Sk.Utils;
 using MauiPdfGenerator.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -10,11 +11,14 @@ internal class PdfContentPageRenderer : IPageRenderer
 {
     public async Task<List<IReadOnlyList<PdfLayoutInfo>>> LayoutAsync(PdfGenerationContext context)
     {
-        context.Logger.LogDebug("Starting layout orchestration for page definition. Root layout is {LayoutType}.", context.PageData.Content.GetType().Name);
+        if (context.PageData is not PdfContentPageData contentPageData)
+            throw new InvalidOperationException($"Invalid page data type. Expected {nameof(PdfContentPageData)}, but got {context.PageData.GetType().Name}.");
+
+        context.Logger.LogDebug("Starting layout orchestration for ContentPage.");
 
         var pageBlocks = new List<IReadOnlyList<PdfLayoutInfo>>();
-        var pageSize = SkiaUtils.GetSkPageSize(context.PageData.Size, context.PageData.Orientation);
-        var pageMargins = context.PageData.Padding;
+        var pageSize = SkiaUtils.GetSkPageSize(contentPageData.Size, contentPageData.Orientation);
+        var pageMargins = contentPageData.Padding;
 
         var contentRect = new PdfRect(
             (float)pageMargins.Left,
@@ -23,7 +27,7 @@ internal class PdfContentPageRenderer : IPageRenderer
             pageSize.Height - (float)pageMargins.VerticalThickness
         );
 
-        PdfLayoutElementData? layoutToProcess = context.PageData.Content;
+        PdfLayoutElementData? layoutToProcess = contentPageData.Content;
 
         while (layoutToProcess is not null)
         {

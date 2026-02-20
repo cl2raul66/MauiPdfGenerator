@@ -7,10 +7,11 @@ using MauiPdfGenerator.Fluent.Interfaces.Builders;
 using MauiPdfGenerator.Fluent.Interfaces.Configuration;
 using MauiPdfGenerator.Fluent.Interfaces.Layouts;
 using MauiPdfGenerator.Fluent.Interfaces.Pages;
-using MauiPdfGenerator.Fluent.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace MauiPdfGenerator.Fluent.Builders;
+
+using global::MauiPdfGenerator.Fluent.Builders.Pages;
 
 internal class PdfDocumentBuilder : IPdfDocument
 {
@@ -21,7 +22,12 @@ internal class PdfDocumentBuilder : IPdfDocument
     private readonly ILogger _logger;
     private readonly IDiagnosticSink _diagnosticSink;
 
-    public PdfDocumentBuilder(PdfFontRegistryBuilder fontRegistry, ILoggerFactory loggerFactory, IDiagnosticSink diagnosticSink, IPdfCoreGenerator pdfGenerationService, string? defaultPath = null)
+    public PdfDocumentBuilder(
+        PdfFontRegistryBuilder fontRegistry,
+        ILoggerFactory loggerFactory,
+        IDiagnosticSink diagnosticSink,
+        IPdfCoreGenerator pdfGenerationService,
+        string? defaultPath = null)
     {
         _filePath = defaultPath;
         _pages = [];
@@ -46,16 +52,23 @@ internal class PdfDocumentBuilder : IPdfDocument
         return this;
     }
 
-    public IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class
+    public IPdfContentPage<TLayout> ContentPage<TLayout>() where TLayout : class
     {
-var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry, _diagnosticSink);
+        var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder, _configurationBuilder.FontRegistry, _diagnosticSink);
         _pages.Add(pageBuilder);
         return pageBuilder;
     }
 
-    public IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage()
+    public IPdfContentPage<IPdfVerticalStackLayout> ContentPage()
     {
         return ContentPage<IPdfVerticalStackLayout>();
+    }
+
+    public IPdfReportPage ReportPage()
+    {
+        var pageBuilder = new PdfReportPageBuilder(this, _configurationBuilder, _configurationBuilder.FontRegistry, _diagnosticSink);
+        _pages.Add(pageBuilder);
+        return pageBuilder;
     }
 
     public Task SaveAsync()
@@ -74,47 +87,12 @@ var pageBuilder = new PdfContentPageBuilder<TLayout>(this, _configurationBuilder
             throw new ArgumentNullException(nameof(path), "File path cannot be null or empty.");
         }
 
-        var styleResolver = new StyleResolver(
-            _configurationBuilder.ResourceDictionary,
-            _diagnosticSink,
-            _configurationBuilder.FontRegistry);
-
         var pageDataList = new List<PdfPageData>();
 
         foreach (var pageBuilder in _pages)
         {
-            if (pageBuilder is IPdfContentPageBuilder contentPageBuilder)
-            {
-                var content = contentPageBuilder.GetContent();
-
-                var pageElements = new List<PdfElementData>();
-                if (content is not null)
-                {
-                    Traverse(content, pageElements);
-                }
-
-                styleResolver.ApplyStyles(pageElements, contentPageBuilder.PageResources);
-
-var pageData = new PdfPageData(
-                    contentPageBuilder.GetEffectivePageSize(),
-                    contentPageBuilder.GetEffectivePageOrientation(),
-                    contentPageBuilder.GetEffectivePadding(),
-                    contentPageBuilder.GetEffectiveBackgroundColor(),
-                    contentPageBuilder.GetContent(),
-                    contentPageBuilder.GetPageDefaultFontFamily(),
-                    contentPageBuilder.GetPageDefaultFontSize(),
-                    contentPageBuilder.GetPageDefaultTextColor(),
-                    contentPageBuilder.GetPageDefaultFontAttributes(),
-                    contentPageBuilder.GetPageDefaultTextDecorations(),
-                    contentPageBuilder.GetPageDefaultTextTransform(),
-                    contentPageBuilder.GetEffectiveCulture()
-                );
-                pageDataList.Add(pageData);
-            }
-            else
-            {
-                _logger.LogWarning("Unknown page builder type found: {PageBuilderType}. Skipping page.", pageBuilder.GetType().FullName);
-            }
+            var pageData = pageBuilder.BuildPageData();
+            pageDataList.Add(pageData);
         }
 
         if (pageDataList.Count == 0)
@@ -122,7 +100,7 @@ var pageData = new PdfPageData(
             throw new InvalidOperationException("Cannot save PDF document: No pages have been added or processed.");
         }
 
-var meta = _configurationBuilder.MetaDataBuilder;
+        var meta = _configurationBuilder.MetaDataBuilder;
         var documentData = new PdfDocumentData(
             pageDataList.AsReadOnly(),
             meta.GetTitle, meta.GetAuthor, meta.GetSubject, meta.GetKeywords,
@@ -144,18 +122,6 @@ var meta = _configurationBuilder.MetaDataBuilder;
         {
             _logger.LogError(ex, "An unexpected error occurred while saving the PDF.");
             throw new PdfGenerationException($"An unexpected error occurred while saving the PDF: {ex.Message}", ex);
-        }
-    }
-
-    private void Traverse(PdfElementData element, List<PdfElementData> list)
-    {
-        list.Add(element);
-        if (element is PdfLayoutElementData layout)
-        {
-            foreach (var child in layout.GetChildren)
-            {
-                Traverse(child, list);
-            }
         }
     }
 }

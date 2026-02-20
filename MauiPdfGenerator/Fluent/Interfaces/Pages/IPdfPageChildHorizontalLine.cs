@@ -4,7 +4,7 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 public interface IPdfPageChildHorizontalLine : 
     IPdfHorizontalLine<IPdfPageChildHorizontalLine>, 
-    IPdfPageChild<IPdfPageChildHorizontalLine>,
+    IPdfSectionChild<IPdfPageChildHorizontalLine>,
     IPdfStylableElement<IPdfPageChildHorizontalLine>
 {
 }

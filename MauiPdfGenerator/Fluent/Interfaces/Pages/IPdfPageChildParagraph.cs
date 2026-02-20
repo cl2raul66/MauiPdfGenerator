@@ -4,7 +4,7 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 public interface IPdfPageChildParagraph : 
     IPdfParagraph<IPdfPageChildParagraph>, 
-    IPdfPageChild<IPdfPageChildParagraph>,
+    IPdfSectionChild<IPdfPageChildParagraph>,
     IPdfStylableElement<IPdfPageChildParagraph>
 {
 }

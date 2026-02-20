@@ -31,3 +31,10 @@ public enum FontDestinationType
     OnlyPDF,
     Both
 }
+
+public enum PdfPageOccurrence
+{
+    AllPages,
+    FirstPageOnly,
+    ExcludeFirstPage
+}

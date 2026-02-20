@@ -1,13 +1,14 @@
-﻿using MauiPdfGenerator.Fluent.Enums;
+using MauiPdfGenerator.Fluent.Enums;
 using MauiPdfGenerator.Fluent.Models;
 
-namespace MauiPdfGenerator.Common.Models;
+namespace MauiPdfGenerator.Common.Models.Pages;
 
-internal abstract record PdfPageData(
+internal record PdfContentPageData(
     PageSizeType Size,
     PageOrientationType Orientation,
     Thickness Padding,
     Color? BackgroundColor,
+    PdfLayoutElementData Content, 
     PdfFontIdentifier? PageDefaultFontFamily,
     float PageDefaultFontSize,
     Color PageDefaultTextColor,
@@ -15,4 +16,8 @@ internal abstract record PdfPageData(
     TextDecorations PageDefaultTextDecorations,
     TextTransform PageDefaultTextTransform,
     string Culture
+) : PdfPageData(
+    Size, Orientation, Padding, BackgroundColor,
+    PageDefaultFontFamily, PageDefaultFontSize, PageDefaultTextColor,
+    PageDefaultFontAttributes, PageDefaultTextDecorations, PageDefaultTextTransform, Culture
 );

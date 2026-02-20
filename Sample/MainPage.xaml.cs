@@ -425,7 +425,7 @@ public partial class MainPage : ContentPage
                         ch.Paragraph("ד. מצב שבירת שורה").Style(PdfStyles.SectionHeader);
                         ch.Paragraph("שולט כיצד הטקסט נעטף או נחתך בעת חריגה מרוחב המיכל.").Style(PdfStyles.Note);
 
-                        var longTextHe = "לורם איפסום דולור סיט אמט, קונסקטטור אדיפיסינג אלית. סד דו איוסמוד טמפור אינסידידונט אוט לאבורה את דולורה מגנה אליקוא.";
+                        var longTextHe = "לורם إيبسום دولור סיט אميت, קונסקטטור אדיפיסינג אלית. סד דו איוסמוד טמפור إنסידידונט אוט לאבורה את דולורה מגנה אליקוא.";
                         ch.Paragraph("עטיפת מילים (ברירת מחדל): הטקסט נעטף בגבולות המילים.").FontAttributes(FontAttributes.Bold);
                         ch.Paragraph(longTextHe);
                         ch.Paragraph("ללא עטיפה: הטקסט לא נעטף ועולה על גדותיו.").FontAttributes(FontAttributes.Bold);
@@ -471,11 +471,11 @@ public partial class MainPage : ContentPage
                             s.Text("שונים").Style(PdfStyles.Emphasis);
                             s.Text(" סגנונות כמו ");
                             s.Text("מודגש").FontAttributes(FontAttributes.Bold);
-                            s.Text(", ");
+                            s.Text("، ");
                             s.Text("נטוי").FontAttributes(FontAttributes.Italic);
-                            s.Text(", ");
+                            s.Text("، ");
                             s.Text("קו תחתון").TextDecorations(TextDecorations.Underline);
-                            s.Text(", ו");
+                            s.Text("، ו");
                             s.Text("צבעוני").TextColor(Colors.DarkGreen);
                             s.Text(" טקסט בצורה חלקה.");
                         });
@@ -483,7 +483,7 @@ public partial class MainPage : ContentPage
 
                         ch.Paragraph("ז. הרכב סופי").Style(PdfStyles.SectionHeader);
                         ch.Paragraph("שילוב מספר מאפיינים לתוצאות ספציפיות.").Style(PdfStyles.Note);
-                        ch.Paragraph("גופן קומיק, גודל 12, טקסט אדום כהה, ממורכז בתיבה של 375 נקודות עם רקע צהוב וריפוד של 15 נקודות.")
+                        ch.Paragraph("גופן קומיק, גודל ١٢، טקסט אדום כהה، ממרכז ב תיבה של ٣٧٥ נקודות עם רקע צהוב וריפוד של ١٥ נקודות.")
                             .FontFamily(PdfFonts.VarelaRound).FontSize(12).TextColor(Colors.DarkRed)
                             .HorizontalTextAlignment(TextAlignment.Center)
                             .HorizontalOptions(LayoutAlignment.Center)
@@ -1019,6 +1019,52 @@ public partial class MainPage : ContentPage
             await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
         }
         catch (Exception ex) { await DisplayAlertAsync("Error", ex.Message, "OK"); }
+    }
+
+    private async void GenerateSimpleReportPage_Clicked(object sender, EventArgs e)
+    {
+        string targetFilePath = Path.Combine(FileSystem.CacheDirectory, "Simple-Report.pdf");
+        try
+        {
+            var doc = pdfDocFactory.CreateDocument();
+            await doc
+                .Configuration(cfg => cfg.MetaData(data => data.Title("Reporte Simple")))
+                .ReportPage()
+                .Header(h =>
+                {
+                    h.Spacing(5);
+                    h.Children(ch =>
+                    {
+                        ch.Paragraph("Titulo").HorizontalTextAlignment(TextAlignment.Center);
+                    });
+                })
+                .Content(c =>
+                {
+                    c.Spacing(5);
+                    c.Children(ch =>
+                    {                        
+                        ch.Paragraph("Este es el cuerpo o contenido del reporte simple.");
+                    });
+                })
+                .Footer(f =>
+                {
+                    f.Spacing(5);
+                    f.Children(ch =>
+                    {
+                        ch.Paragraph("by R and A Media Lab, Group")
+                            .HorizontalTextAlignment(TextAlignment.Center)
+                            .FontAttributes(FontAttributes.Italic);
+                    });
+                })
+                .Build()
+                .SaveAsync(targetFilePath);
+
+            await Launcher.OpenAsync(new OpenFileRequest { File = new ReadOnlyFile(targetFilePath) });
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Error", $"Error generando PDF: {ex.Message}", "OK");
+        }
     }
 
     async Task<Stream> GetSampleImageStream()

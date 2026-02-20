@@ -13,6 +13,8 @@ public interface IPdfDocument
 
     IPdfDocument Resources(Action<IPdfResourceBuilder> resourceBuilder);
 
-    IPdfConfigurablePage<TLayout> ContentPage<TLayout>() where TLayout : class;
-    IPdfConfigurablePage<IPdfVerticalStackLayout> ContentPage();
+    IPdfContentPage<TLayout> ContentPage<TLayout>() where TLayout : class;
+    IPdfContentPage<IPdfVerticalStackLayout> ContentPage();
+
+    IPdfReportPage ReportPage();
 }

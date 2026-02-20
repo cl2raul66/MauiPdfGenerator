@@ -4,7 +4,7 @@ using MauiPdfGenerator.Fluent.Interfaces.Views;
 
 namespace MauiPdfGenerator.Fluent.Interfaces.Builders;
 
-public interface IPageContentBuilder
+public interface IPdfSectionChildBuilder
 {
     IPdfPageChildParagraph Paragraph(string text);
     IPdfPageChildParagraph Paragraph(Action<IPdfSpanText> configure);

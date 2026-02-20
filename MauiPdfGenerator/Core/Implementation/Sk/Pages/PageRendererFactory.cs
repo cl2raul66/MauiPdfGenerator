@@ -1,18 +1,18 @@
 ﻿using MauiPdfGenerator.Common.Models;
+using MauiPdfGenerator.Common.Models.Pages;
 
 namespace MauiPdfGenerator.Core.Implementation.Sk.Pages;
 
 internal class PageRendererFactory
 {
     public IPageRenderer GetRenderer(PdfPageData pageData)
-    { 
-        // Por ahora, solo tenemos un tipo de página.
-        // En el futuro, aquí podríamos tener un switch basado en un
-        // nuevo 'pageData.PageType' enum.
-        // switch (pageData.PageType) {
-        //     case PageType.Calendar: return new CalendarPageRenderer();
-        //     default: return new PdfContentPageRenderer();
-        // }
-        return new PdfContentPageRenderer();
+    {
+        return pageData switch
+        {
+            PdfReportPageData => new PdfReportPageRenderer(),
+            PdfContentPageData => new PdfContentPageRenderer(),
+
+            _ => throw new NotSupportedException($"Page type '{pageData.GetType().Name}' is not supported by the PageRendererFactory.")
+        };
     }
 }

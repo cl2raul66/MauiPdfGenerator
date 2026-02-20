@@ -4,7 +4,7 @@ namespace MauiPdfGenerator.Fluent.Interfaces.Pages;
 
 public interface IPdfPageChildImage : 
     IPdfImage<IPdfPageChildImage>, 
-    IPdfPageChild<IPdfPageChildImage>,
+    IPdfSectionChild<IPdfPageChildImage>,
     IPdfStylableElement<IPdfPageChildImage>
 {
 }
